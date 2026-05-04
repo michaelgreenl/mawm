@@ -1,0 +1,13 @@
+{
+  "stateMachine": "initiatives",
+  "bundleVersion": "v0",
+  "schemaVersion": "1.0.0",
+  "sourcePackage": "@mawm/core/state",
+  "sourceVersion": "0.0.0",
+  "installedBy": {
+    "package": "@mawm/cli",
+    "version": "0.0.0"
+  },
+  "lastMigratedBy": null,
+  "lastMigratedAt": null
+}

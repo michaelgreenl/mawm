@@ -1,0 +1,1 @@
+- [ ] change "{.maw,maw,maw-cli}" to "{.mawm,mawm,mawm-cli}" 

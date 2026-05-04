@@ -1,0 +1,12 @@
+{
+  "workflows": [
+    {
+      "id": "base",
+      "displayName": "Base",
+      "description": "Built-in MAWM base workflow",
+      "path": "./graphs/base",
+      "workflowVersion": "0.0.0",
+      "runtimeRegistryKey": "base"
+    }
+  ]
+}

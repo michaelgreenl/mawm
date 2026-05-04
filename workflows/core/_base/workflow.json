@@ -1,0 +1,74 @@
+{
+  "id": "base",
+  "displayName": "Base",
+  "description": "Built-in MAWM base workflow",
+  "workflowVersion": "0.0.0",
+  "stateMachine": "initiatives",
+  "coreUtils": {
+    "version": "0.0.0",
+    "assets": [
+      "src/prompts/guidance/general.md",
+      "src/prompts/guidance/runtime/bun-pm-node-runtime.md",
+      "src/prompts/coding/clean-code-ts.md",
+      "src/transitions/exit.js",
+      "src/plugins/graph-transition.js",
+      "src/plugins/secret-guard.js",
+      "src/tools/openviking-find.js",
+      "src/tools/inject-variant.js"
+    ]
+  },
+  "runtimeRegistryKey": "base",
+  "openCodeSchema": {
+    "version": "https://opencode.ai/config.json",
+    "checksum": "<vendored-opencode-schema-checksum>"
+  },
+  "transitions": {
+    "exit": {
+      "agent": ["planner", "manager"],
+      "handoff": null,
+      "payload": null
+    },
+    "execute": {
+      "agent": "planner",
+      "handoff": {
+        "from": "planner",
+        "to": "manager"
+      },
+      "payload": {
+        "phasePlanPath": {
+          "required": true,
+          "type": "project-root-relative-active-phase-plan-path"
+        },
+        "brief": {
+          "required": true,
+          "type": "string"
+        },
+        "startStep": {
+          "required": false,
+          "type": "phase-step-number"
+        }
+      }
+    },
+    "replan": {
+      "agent": "manager",
+      "handoff": {
+        "from": "manager",
+        "to": "planner"
+      },
+      "payload": {
+        "phasePlanPath": {
+          "required": true,
+          "type": "project-root-relative-active-phase-plan-path"
+        },
+        "brief": {
+          "required": true,
+          "type": "string"
+        },
+        "currentStep": {
+          "required": false,
+          "type": "phase-step-number"
+        }
+      }
+    }
+  }
+}

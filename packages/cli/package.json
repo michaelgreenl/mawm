@@ -1,0 +1,12 @@
+{
+  "name": "@mawm/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "bin": {
+    "mawm": "./dist/index.js"
+  },
+  "files": [
+    "assets",
+    "dist"
+  ]
+}
