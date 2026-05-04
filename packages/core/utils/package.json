@@ -3,9 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@opencode-ai/plugin": "1.14.28"
+  },
   "exports": {
     "./opencode/plugins/*.ts": "./dist/opencode/plugins/*.ts",
     "./opencode/tools/*.ts": "./dist/opencode/tools/*.ts",
+    "./graph/*.ts": "./dist/graph/*.ts",
     "./prompts/*.md": "./dist/prompts/*.md"
   }
 }
