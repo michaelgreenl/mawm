@@ -6,7 +6,6 @@
   "workspaces": [
     "packages/cli",
     "packages/core/*",
-    "workflows/_templates/*",
     "workflows/core/*"
   ],
   "devDependencies": {
