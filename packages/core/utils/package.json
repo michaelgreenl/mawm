@@ -2,5 +2,10 @@
   "name": "@mawm/core/utils",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "exports": {
+    "./opencode/plugins/*.ts": "./dist/opencode/plugins/*.ts",
+    "./opencode/tools/*.ts": "./dist/opencode/tools/*.ts",
+    "./prompts/*.md": "./dist/prompts/*.md"
+  }
 }

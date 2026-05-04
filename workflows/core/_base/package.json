@@ -2,5 +2,8 @@
   "name": "@mawm/workflows/base",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@mawm/core/utils": "workspace:*"
+  }
 }
