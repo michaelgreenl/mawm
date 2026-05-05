@@ -2,6 +2,7 @@
 > `.mawm/initiatives/active/<initiative-slug>/phases/active/<phase-slug>/plan.md`
 
 > Planner notes
+>
 > - Clear every ambiguity before writing. Ask questions first when assumptions are not locked.
 > - This file is the current source of truth for the phase while it lives under `phases/active/`. Keep it aligned with the parent initiative plan, `roadmap.md`, sibling active phase docs, and the current codebase.
 > - When sequencing, scope, or code reality changes, update every affected active doc in the same pass. Delete stale text instead of layering corrections.

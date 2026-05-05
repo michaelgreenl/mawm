@@ -2,6 +2,7 @@
 > `.mawm/initiatives/active/<initiative-slug>/phases/active/<phase-slug>/steps/active/<nn>-<step-slug>/plan.md`
 
 > Planner notes
+>
 > - Clear every ambiguity before writing. Ask questions first when assumptions are not locked.
 > - This file is the current source of truth for one executable step while it lives under `steps/active/`. It is a focused coder handoff, not a replacement for the parent phase `plan.md`.
 > - Keep it aligned with the parent phase plan, parent initiative plan, `roadmap.md`, and current codebase. When the contract changes, update every affected active doc in the same pass.

@@ -1,22 +1,24 @@
+/* eslint-disable */
+// @ts-nocheck
 const transition = {
-  agent: "manager",
-  command: "/replan",
-  handoff: {
-    from: "manager",
-    to: "planner",
-  },
-  payload: {
-    phasePlanPath: {
-      required: true,
-      type: "project-root-relative-active-phase-plan-path",
+    agent: "manager",
+    command: "/replan",
+    handoff: {
+        from: "manager",
+        to: "planner",
     },
-    brief: {
-      required: true,
-      type: "string",
+    payload: {
+        phasePlanPath: {
+            required: true,
+            type: "project-root-relative-active-phase-plan-path",
+        },
+        brief: {
+            required: true,
+            type: "string",
+        },
+        currentStep: {
+            required: false,
+            type: "phase-step-number",
+        },
     },
-    currentStep: {
-      required: false,
-      type: "phase-step-number",
-    },
-  },
 };

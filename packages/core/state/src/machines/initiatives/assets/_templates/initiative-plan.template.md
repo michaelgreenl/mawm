@@ -2,6 +2,7 @@
 > `.mawm/initiatives/active/<initiative-slug>/plan.md`
 
 > Planner notes
+>
 > - Clear every ambiguity before writing. Ask questions first when assumptions are not locked.
 > - This file is the current source of truth for the initiative while it lives under `active/`. Keep it aligned with `roadmap.md`, active phase docs, and the current codebase.
 > - When direction or code reality changes, update this file and every impacted active doc in the same pass. Delete stale text instead of layering corrections.
@@ -38,8 +39,8 @@
 
 ## Responsibility Split
 
-| Concern | Owner |
-| --- | --- |
+| Concern     | Owner                   |
+| ----------- | ----------------------- |
 | `<concern>` | `<repo/team/component>` |
 | `<concern>` | `<repo/team/component>` |
 

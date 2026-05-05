@@ -1,15 +1,15 @@
 ---
 description: Planning-only agent that writes roadmap, initiative, phase, and step plan docs after clearing assumptions
 permission:
-    edit: allow
-    inject-variant: allow
-    openviking-find: allow
-    question: allow
-    websearch: allow
-    task:
-        'explore': allow
-        'general': allow
-    skill: deny
+  edit: allow
+  inject-variant: allow
+  openviking-find: allow
+  question: allow
+  websearch: allow
+  task:
+    "explore": allow
+    "general": allow
+  skill: deny
 ---
 
 # SYSTEM PROMPT (planner)
@@ -75,7 +75,7 @@ Read the relevant context before proposing structure:
   - `.mawm/initiatives/_templates/initiative-plan.template.md`
   - `.mawm/initiatives/_templates/phase-plan.template.md`
   - `.mawm/initiatives/_templates/step-plan.template.md`
-Source-of-truth priority:
+    Source-of-truth priority:
 
 - `.mawm/initiatives/roadmap.md`, active initiative `plan.md` files, active phase `plan.md` files, active step `plan.md` files, current code, and maintained usage/docs are the current contract.
 - `.mawm/initiatives/archived/` and `phases/complete/` docs are history/logs only.

@@ -7,12 +7,12 @@ import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 // - preserve the workflow-owned OpenViking config exception once defined
 // - stay read-only with respect to agent prompts and tool registrations
 export const secretGuard: Plugin = async () => {
-  return {};
+    return {};
 };
 
 const secretGuardModule = {
-  id: "secret-guard",
-  server: secretGuard,
+    id: "secret-guard",
+    server: secretGuard,
 } satisfies PluginModule;
 
 export default secretGuardModule;

@@ -2,6 +2,7 @@
 > `.mawm/initiatives/roadmap.md`
 
 > Planner notes
+>
 > - This file is for long-range initiative direction, sequencing, and tradeoffs. Do not turn it into a phase plan or task list.
 > - Treat this roadmap and every linked active plan as one current-state source of truth. When strategy changes, update them together and delete stale text instead of layering corrections.
 > - `archived/` initiatives and `phases/complete/` docs are historical only. Reference them from active planning only when absolutely necessary.
@@ -61,11 +62,11 @@
 
 ## Initiative Ledger
 
-| Initiative | State | Horizon | Why it matters | Depends on | Working doc |
-| --- | --- | --- | --- | --- | --- |
-| `<initiative name>` | `active` | `Now` | <why this matters now> | `<dependency or none>` | `.mawm/initiatives/active/<initiative-slug>/plan.md` |
-| `<initiative name>` | `queued` | `Next` | <why this matters next> | `<dependency or none>` | `.mawm/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md` |
-| `<initiative name>` | `queued` | `Later` | <future opportunity or reason to keep visible> | `<dependency or none>` | `<optional draft path or note>` |
+| Initiative          | State    | Horizon | Why it matters                                 | Depends on             | Working doc                                                         |
+| ------------------- | -------- | ------- | ---------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| `<initiative name>` | `active` | `Now`   | <why this matters now>                         | `<dependency or none>` | `.mawm/initiatives/active/<initiative-slug>/plan.md`                |
+| `<initiative name>` | `queued` | `Next`  | <why this matters next>                        | `<dependency or none>` | `.mawm/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md` |
+| `<initiative name>` | `queued` | `Later` | <future opportunity or reason to keep visible> | `<dependency or none>` | `<optional draft path or note>`                                     |
 
 ## Now
 

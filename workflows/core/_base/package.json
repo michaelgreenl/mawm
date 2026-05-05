@@ -7,9 +7,12 @@
     "@mawm/core/utils": "workspace:*"
   },
   "scripts": {
-    "build": "<add-build>",
-    "typecheck": "<add-typecheck>",
-    "lint": "<add-eslint>",
-    "format": "<add-prettier>"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src",
+    "lint": "eslint src",
+    "lint:all": "bun lint && bun format:check"
   }
 }

@@ -25,10 +25,10 @@ All code in `src/` and anything that ships in `dist/` must use Node-compatible A
 Tests run via Vitest through the project's `bun run test` script. Do not use `bun:test`.
 
 ```ts
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-it('example', () => {
-    expect(1).toBe(1);
+it("example", () => {
+  expect(1).toBe(1);
 });
 ```
 

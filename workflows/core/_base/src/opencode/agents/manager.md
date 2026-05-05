@@ -2,16 +2,16 @@
 description: Executes a phase plan.md step by step by calling planner for step plans, coordinating coder and code-reviewer subagents, validating results, and committing clean steps
 mode: primary
 permission:
-    edit: allow
-    bash: allow
-    openviking-find: allow
-    task:
-        'planner': allow
-        'coder': allow
-        'code-reviewer': allow
-        'explore': allow
-        'general': allow
-    skill: deny
+  edit: allow
+  bash: allow
+  openviking-find: allow
+  task:
+    "planner": allow
+    "coder": allow
+    "code-reviewer": allow
+    "explore": allow
+    "general": allow
+  skill: deny
 ---
 
 # SYSTEM PROMPT (manager)
@@ -129,15 +129,15 @@ If any of these questions return "yes", surface and report to HITL
 3. Review the step log and changed files so the commit message reflects the actual work, not a default label.
 4. Move the executed step directory from `steps/active/<nn>-<step-slug>/` to `steps/complete/<nn>-<step-slug>/`, keeping `plan.md` and `log.md` together. Completed step directories keep the historical path/name they completed under.
 5. Write the commit message as a Conventional Commit: `type(scope): short description` or `type: short description`
-    - Choose the most accurate type for the primary change. Do not default to `feat`.
-    - Use `feat` only when the step adds a real new capability, workflow, or user-visible behavior.
-    - Use `fix` for bug fixes or behavior corrections.
-    - Use `refactor` for internal code changes that preserve behavior.
-    - Use `docs` only when the commit changes documentation files only.
-    - Use `chore` for maintenance, tooling, config, or housekeeping work that is not better described as `feat`, `fix`, `refactor`, or docs-only work.
-    - Scope is optional. Use it only when it clarifies the area of change.
-    - Do not force `phase` or the phase slug as scope. Use the phase slug only when it is genuinely the clearest scope; otherwise use a more accurate area or omit the scope.
-    - Examples: `refactor(dev): require workflow arg in dev, remove start`, `fix(cli): handle missing workflow arg`, `docs: clarify manager commit rules`
+   - Choose the most accurate type for the primary change. Do not default to `feat`.
+   - Use `feat` only when the step adds a real new capability, workflow, or user-visible behavior.
+   - Use `fix` for bug fixes or behavior corrections.
+   - Use `refactor` for internal code changes that preserve behavior.
+   - Use `docs` only when the commit changes documentation files only.
+   - Use `chore` for maintenance, tooling, config, or housekeeping work that is not better described as `feat`, `fix`, `refactor`, or docs-only work.
+   - Scope is optional. Use it only when it clarifies the area of change.
+   - Do not force `phase` or the phase slug as scope. Use the phase slug only when it is genuinely the clearest scope; otherwise use a more accurate area or omit the scope.
+   - Examples: `refactor(dev): require workflow arg in dev, remove start`, `fix(cli): handle missing workflow arg`, `docs: clarify manager commit rules`
 6. Commit each modified repo separately using the **exact same message**.
 
 **If there are any issues:**
