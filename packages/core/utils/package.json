@@ -11,5 +11,11 @@
     "./opencode/tools/*.ts": "./dist/opencode/tools/*.ts",
     "./graph/*.ts": "./dist/graph/*.ts",
     "./prompts/*.md": "./dist/prompts/*.md"
+  },
+  "scripts": {
+    "build": "<add-build>",
+    "typecheck": "<add-typecheck>",
+    "lint": "<add-eslint>",
+    "format": "<add-prettier>"
   }
 }

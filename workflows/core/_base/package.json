@@ -5,5 +5,11 @@
   "type": "module",
   "devDependencies": {
     "@mawm/core/utils": "workspace:*"
+  },
+  "scripts": {
+    "build": "<add-build>",
+    "typecheck": "<add-typecheck>",
+    "lint": "<add-eslint>",
+    "format": "<add-prettier>"
   }
 }

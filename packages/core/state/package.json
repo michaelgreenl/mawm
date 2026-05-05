@@ -2,5 +2,11 @@
   "name": "@mawm/core/state",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "build": "<add-build>",
+    "typecheck": "<add-typecheck>",
+    "lint": "<add-eslint>",
+    "format": "<add-prettier>"
+  }
 }

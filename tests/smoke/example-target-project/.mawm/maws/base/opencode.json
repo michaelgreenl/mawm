@@ -1,7 +1,7 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["./prompts/general.md", "./prompts/bun-pm-node-runtime.md"],
-  "plugins": ["./plugins/secret-guard.js", "./plugins/graph-transition.js"],
+  "plugins": ["./plugins/secret-guard.ts", "./plugins/graph-transition.ts"],
   "model": "openai/gpt-5.4",
   "variant": "xhigh",
   "agent": {
