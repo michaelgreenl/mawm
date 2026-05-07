@@ -6,7 +6,8 @@ const scan = defineSubCommand({
     description: "Scans a target project using `ov add-resource`",
     usage: "ov scan <target-path> [...openviking-args]",
     args: [arg("target", { required: false, defaultValue: "." })],
-    run({ args }) {
+    // eslint-disable-next-line
+    run({ args, context }) {
         const target = args.target;
 
         console.log(`target: ${target}`);

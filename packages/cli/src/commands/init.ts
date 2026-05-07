@@ -4,7 +4,8 @@ const init = defineCommand({
     name: "init",
     description: "Initializing MAWM within a project",
     usage: "init",
-    run() {
+    // eslint-disable-next-line
+    run({ context }) {
         console.log("command: init");
         return 0;
     },

@@ -6,7 +6,8 @@ const run = defineSubCommand({
     description: "Executes installed workflows",
     usage: "workflow run <workflow>",
     args: [arg("workflow", { required: true })],
-    run({ args }) {
+    // eslint-disable-next-line
+    run({ args, context }) {
         if (!args.workflow) {
             // required arg error
             return 1;

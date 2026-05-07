@@ -5,7 +5,8 @@ const server = defineSubCommand({
     parent: "ov",
     description: "Starts an OpenViking server",
     usage: "ov server",
-    run() {
+    // eslint-disable-next-line
+    run({ context }) {
         console.log("command: ov server");
         return 0;
     },

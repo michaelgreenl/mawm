@@ -1,3 +1,4 @@
+/* eslint-disable */
 // @ts-nocheck
 const GITIGNORE_ENTRY = ".maw/openviking/";
 const GRAPH_ROOT = ".maw/graphs";

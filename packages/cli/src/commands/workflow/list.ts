@@ -5,7 +5,8 @@ const list = defineSubCommand({
     parent: "workflow",
     description: "Lists installed workflows",
     usage: "workflow list",
-    run() {
+    // eslint-disable-next-line
+    run({ context }) {
         console.log("command: workflow list");
         return 0;
     },
