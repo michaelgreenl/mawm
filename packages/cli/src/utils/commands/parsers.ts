@@ -8,6 +8,9 @@ const commandMap = new Map<string, Command>(commands.map((command) => [command.n
 
 type CommandName = (typeof commands)[number]["name"];
 
+const isHelpFlag = (value: string | undefined): boolean =>
+    value !== undefined && HELP_FLAGS.has(value);
+
 export const outputHelp = (): string =>
     [
         "Usage: mawm <command>",
@@ -36,7 +39,7 @@ export const outputSubCommandHelp = (subCommand: SubCommand): string =>
 export const parseCommandName = (args: readonly string[]): CommandName | undefined => {
     const candidate = args[0];
 
-    if (!candidate || HELP_FLAGS.has(candidate)) {
+    if (!candidate || isHelpFlag(candidate)) {
         return undefined;
     }
 
@@ -78,22 +81,22 @@ function parsePositionalArgs<const TArgs extends readonly AnyArgDef[]>(
 
         const token = tokens[index];
 
-        if (token === undefined) {
-            if (def.defaultValue !== undefined) {
-                result[def.name] = def.defaultValue;
-                continue;
-            }
-
-            if (def.required) {
-                throw new Error(`Missing required argument: ${def.name}`);
-            }
-
-            result[def.name] = undefined;
+        if (token !== undefined) {
+            result[def.name] = coerceValue(type, token);
+            index += 1;
             continue;
         }
 
-        result[def.name] = coerceValue(type, token);
-        index += 1;
+        if (def.defaultValue !== undefined) {
+            result[def.name] = def.defaultValue;
+            continue;
+        }
+
+        if (def.required) {
+            throw new Error(`Missing required argument: ${def.name}`);
+        }
+
+        result[def.name] = undefined;
     }
 
     return result as InferArgs<TArgs>;
@@ -104,20 +107,34 @@ function outputArgumentError(message: string, usage: string | undefined): number
     return 1;
 }
 
+async function runCommandTarget<const TArgs extends readonly AnyArgDef[]>(
+    target: Pick<Command<TArgs> | SubCommand<TArgs>, "args" | "run">,
+    tokens: readonly string[],
+    context: CommandContext,
+    usage: string | undefined,
+): Promise<number> {
+    try {
+        const args = parsePositionalArgs(target.args, tokens);
+        return target.run ? await target.run({ args, context }) : 0;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return outputArgumentError(message, usage);
+    }
+}
+
 async function parseSubCommand(
     command: Command,
     remaining: readonly string[],
     context: CommandContext,
 ): Promise<number> {
-    const subCommandName = remaining[0];
+    const [subCommandName, ...subCommandTokens] = remaining;
 
-    if (!subCommandName || HELP_FLAGS.has(subCommandName)) {
+    if (!subCommandName || isHelpFlag(subCommandName)) {
         process.stdout.write(`${outputCommandHelp(command)}\n`);
         return 0;
     }
 
-    const subCommands = command.subCommands ?? [];
-    const subCommand = subCommands.find((candidate) => candidate.name === subCommandName);
+    const subCommand = command.subCommands?.find((candidate) => candidate.name === subCommandName);
 
     if (!subCommand) {
         process.stderr.write(
@@ -126,66 +143,47 @@ async function parseSubCommand(
         return 1;
     }
 
-    const subCommandTokens = remaining.slice(1);
-
-    if (subCommandTokens[0] && HELP_FLAGS.has(subCommandTokens[0])) {
+    if (isHelpFlag(subCommandTokens[0])) {
         process.stdout.write(`${outputSubCommandHelp(subCommand)}\n`);
         return 0;
     }
 
-    try {
-        const subCommandArgs = parsePositionalArgs(subCommand.args, subCommandTokens);
-        return await subCommand.run({ args: subCommandArgs, context });
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return outputArgumentError(
-            message,
-            subCommand.usage ?? `${command.name} ${subCommand.name}`,
-        );
-    }
+    return runCommandTarget(
+        subCommand,
+        subCommandTokens,
+        context,
+        subCommand.usage ?? `${command.name} ${subCommand.name}`,
+    );
 }
 
 export async function parseCommand(
     args: readonly string[],
     context: CommandContext,
 ): Promise<number> {
-    if (args[0] === undefined || HELP_FLAGS.has(args[0])) {
+    const [commandName, ...remaining] = args;
+
+    if (!commandName || isHelpFlag(commandName)) {
         process.stdout.write(`${outputHelp()}\n`);
         return 0;
-    }
-
-    const commandName = parseCommandName(args);
-
-    if (!commandName) {
-        process.stderr.write(`Unknown command: ${args[0]}\n\n${outputHelp()}\n`);
-        return 1;
     }
 
     const command = commandMap.get(commandName);
 
     if (!command) {
-        process.stderr.write(`Unknown command: ${args[0]}\n`);
+        process.stderr.write(`Unknown command: ${commandName}\n\n${outputHelp()}\n`);
         return 1;
     }
 
-    const remaining = args.slice(1);
-
-    if (command.subCommands && command.subCommands.length > 0) {
-        return await parseSubCommand(command, remaining, context);
+    if (command.subCommands?.length) {
+        return parseSubCommand(command, remaining, context);
     }
 
-    if (remaining[0] && HELP_FLAGS.has(remaining[0])) {
+    if (isHelpFlag(remaining[0])) {
         process.stdout.write(
             `Usage: mawm ${command.usage ?? command.name}${command.description ? ` - ${command.description}` : ""}\n`,
         );
         return 0;
     }
 
-    try {
-        const commandArgs = parsePositionalArgs(command.args, remaining);
-        return command.run ? await command.run({ args: commandArgs, context }) : 0;
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return outputArgumentError(message, command.usage ?? command.name);
-    }
+    return runCommandTarget(command, remaining, context, command.usage ?? command.name);
 }
