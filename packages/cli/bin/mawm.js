@@ -5,16 +5,19 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const dir = dirname(fileURLToPath(import.meta.url));
-const entry = [resolve(dir, "../dist/index.js"), resolve(dir, "../cli/dist/index.js")].find(
-    existsSync,
-);
+const entry = resolve(dir, "../dist/index.js");
 
-if (!entry) {
+if (!existsSync(entry)) {
     process.stderr.write("Unable to locate @mawm/cli entrypoint.\n");
     process.exit(1);
 }
 
 const { runCli } = await import(pathToFileURL(entry).href);
+
+if (typeof runCli !== "function") {
+    process.stderr.write("Unable to load @mawm/cli entrypoint.\n");
+    process.exit(1);
+}
 
 runCli(process.argv.slice(2)).then(
     (code) => {

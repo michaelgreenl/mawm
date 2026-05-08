@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import type { CommandContext } from "./utils/commands/types.js";
 import { parseCommand } from "./utils/commands/parsers.js";
 
-const runCli = async (args: readonly string[] = process.argv.slice(2)): Promise<number> => {
+export const runCli = async (args: readonly string[] = process.argv.slice(2)): Promise<number> => {
     const context: CommandContext = {
         cwd: process.cwd(),
         env: process.env,
