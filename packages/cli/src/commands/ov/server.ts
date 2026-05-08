@@ -7,6 +7,8 @@ const server = defineSubCommand({
     usage: "ov server",
     // eslint-disable-next-line
     run({ context }) {
+        // TODO: Start openviking server using configs from `<target-project>/.mawm/`
+
         console.log("command: ov server");
         return 0;
     },

@@ -8,12 +8,9 @@ const run = defineSubCommand({
     args: [arg("workflow", { required: true })],
     // eslint-disable-next-line
     run({ args, context }) {
-        if (!args.workflow) {
-            // required arg error
-            return 1;
-        }
+        // TODO: find `<target-project>/.mawm/maws/<workflow>` and execute the workflow
 
-        const workflow: string = args.workflow;
+        const workflow = args.workflow;
         console.log(`workflow: ${workflow}`);
         return 0;
     },

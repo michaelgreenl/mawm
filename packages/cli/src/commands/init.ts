@@ -6,6 +6,8 @@ const init = defineCommand({
     usage: "init",
     // eslint-disable-next-line
     run({ context }) {
+        // TODO: non-destructively initialize `<target-project>/.mawm/`
+
         console.log("command: init");
         return 0;
     },

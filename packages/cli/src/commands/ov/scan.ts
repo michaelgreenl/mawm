@@ -8,8 +8,11 @@ const scan = defineSubCommand({
     args: [arg("target", { required: false, defaultValue: "." })],
     // eslint-disable-next-line
     run({ args, context }) {
-        const target = args.target;
+        // TODO: Use openviking's `ov add-resource` to index the target
+        //  use configs from `<target-project>/.mawm/`
+        //  store in openviking db in `<target-project>/.mawm/openviking/`
 
+        const target = args.target;
         console.log(`target: ${target}`);
         return 0;
     },

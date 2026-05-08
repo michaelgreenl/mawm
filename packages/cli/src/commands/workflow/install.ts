@@ -8,10 +8,7 @@ const install = defineSubCommand({
     args: [arg("workflow", { required: true })],
     // eslint-disable-next-line
     run({ args, context }) {
-        if (!args.workflow) {
-            // required arg error
-            return 1;
-        }
+        // TODO: index ../../../assets/workflows/manifest.json and install given workflow
 
         const workflow = args.workflow;
         console.log(`workflow: ${workflow}`);
