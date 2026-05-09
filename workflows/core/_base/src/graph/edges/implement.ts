@@ -1,24 +1,17 @@
-/* eslint-disable */
-// @ts-nocheck
-const transition = {
+import { StateSchema } from "@langchain/langgraph";
+import { z } from "zod/v4";
+
+export const ImplementPayloadSchema = new StateSchema({
+    phasePlanPath: z.string(),
+    brief: z.string(),
+    startStep: z.number().int().positive().optional(),
+});
+
+export const implementTransition = {
     agent: "planner",
-    command: "/implement",
+    userCommand: "/implement",
     handoff: {
         from: "planner",
         to: "manager",
     },
-    payload: {
-        phasePlanPath: {
-            required: true,
-            type: "project-root-relative-active-phase-plan-path",
-        },
-        brief: {
-            required: true,
-            type: "string",
-        },
-        startStep: {
-            required: false,
-            type: "phase-step-number",
-        },
-    },
-};
+} as const;

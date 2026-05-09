@@ -1,24 +1,17 @@
-/* eslint-disable */
-// @ts-nocheck
-const transition = {
+import { StateSchema } from "@langchain/langgraph";
+import { z } from "zod/v4";
+
+export const ReplanPayloadSchema = new StateSchema({
+    phasePlanPath: z.string(),
+    brief: z.string(),
+    startStep: z.number().int().positive().optional(),
+});
+
+export const replanTransition = {
     agent: "manager",
-    command: "/replan",
+    userCommand: "/replan",
     handoff: {
         from: "manager",
         to: "planner",
     },
-    payload: {
-        phasePlanPath: {
-            required: true,
-            type: "project-root-relative-active-phase-plan-path",
-        },
-        brief: {
-            required: true,
-            type: "string",
-        },
-        currentStep: {
-            required: false,
-            type: "phase-step-number",
-        },
-    },
-};
+} as const;
