@@ -39,13 +39,9 @@
 ### Verification
 
 - Never claim tests were run unless command output is provided.
-- For any code change, propose runnable commands for: typecheck, linting, unit tests, and e2e/integration (if present).
-- If you add tests, provide at least one acceptance check that isn't a brand-new unit test.
-
-### Structural / High-Blast-Radius Changes
-
-- Split into PR-sized steps.
-- Introduce new structure before migrating to it — don't rewrite everything at once.
-- Changes spanning workspaces go in two PRs unless purely config.
+- For any code change, propose runnable commands for:
+  - typecheck
+  - linting (includes formatting)
+  - e2e/integration/unit (if present).
 
 ---
