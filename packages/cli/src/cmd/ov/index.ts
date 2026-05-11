@@ -1,4 +1,4 @@
-import { defineCommand } from "../../../types/commands.js";
+import { defineCommand } from "../../types/commands.js";
 import scan from "./scan.js";
 import server from "./server.js";
 

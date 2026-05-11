@@ -1,4 +1,4 @@
-import commands from "../cmd/surface/index.js";
+import commands from "./index.js";
 
 import type {
     AnyArgDef,

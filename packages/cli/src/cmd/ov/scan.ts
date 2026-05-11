@@ -1,4 +1,4 @@
-import { defineSubCommand, arg } from "../../../types/commands.js";
+import { defineSubCommand, arg } from "../../types/commands.js";
 
 const scan = defineSubCommand({
     name: "scan",

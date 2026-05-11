@@ -1,4 +1,4 @@
-import { defineCommand } from "../../types/commands.js";
+import { defineCommand } from "../types/commands.js";
 
 const init = defineCommand({
     name: "init",

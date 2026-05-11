@@ -1,4 +1,4 @@
-import { defineSubCommand, arg } from "../../../types/commands.js";
+import { defineSubCommand, arg } from "../../types/commands.js";
 
 const install = defineSubCommand({
     name: "install",
