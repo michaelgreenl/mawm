@@ -1,4 +1,4 @@
-import type { Simplify, UnionToIntersection } from "../../types/utils.js";
+import type { Simplify, UnionToIntersection } from "./utils.d.js";
 
 export type ValueTypeName = "string" | "number" | "boolean";
 

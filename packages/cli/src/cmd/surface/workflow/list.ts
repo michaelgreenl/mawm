@@ -1,4 +1,4 @@
-import { defineSubCommand } from "../../utils/commands/types.js";
+import { defineSubCommand } from "../../../types/commands.js";
 
 const list = defineSubCommand({
     name: "list",

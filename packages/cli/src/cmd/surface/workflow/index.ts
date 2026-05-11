@@ -1,4 +1,4 @@
-import { defineCommand } from "../../utils/commands/types.js";
+import { defineCommand } from "../../../types/commands.js";
 import install from "./install.js";
 import run from "./run.js";
 import list from "./list.js";

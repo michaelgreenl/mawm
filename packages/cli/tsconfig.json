@@ -18,5 +18,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": true
   },
-  "include": ["src/**/*", "assets"]
+  "include": ["src/**/*"]
 }

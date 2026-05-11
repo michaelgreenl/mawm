@@ -1,6 +1,13 @@
-import commands from "../../commands/index.js";
+import commands from "../cmd/surface/index.js";
 
-import type { AnyArgDef, ArgDef, Command, CommandContext, InferArgs, SubCommand } from "./types.js";
+import type {
+    AnyArgDef,
+    ArgDef,
+    Command,
+    CommandContext,
+    InferArgs,
+    SubCommand,
+} from "../types/commands.js";
 
 const HELP_FLAGS = new Set(["-h", "--help", "help"]);
 
