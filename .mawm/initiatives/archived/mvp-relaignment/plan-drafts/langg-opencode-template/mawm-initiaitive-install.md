@@ -1,3 +1,0 @@
-- [ ] add an initiatives/ to this templates target-project scaffold for an area agents can work in under `<target-project>/.mawm/initiatives/`
-    - update agent prompts so they align with new initiative structure
-    - if there's another initiative directory already present when installing a workflow, no updates are made.

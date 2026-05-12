@@ -15037,6 +15037,7 @@ function uuid5(name, namespace) {
 }
 
 // node_modules/.bun/@langchain+langgraph-checkpoint@1.0.2+1e4baf892d6d77cf/node_modules/@langchain/langgraph-checkpoint/dist/serde/types.js
+var TASKS2 = "__pregel_tasks";
 var ERROR3 = "__error__";
 var SCHEDULED = "__scheduled__";
 var INTERRUPT2 = "__interrupt__";
@@ -48706,6 +48707,220 @@ var WRITES_IDX_MAP = {
   [INTERRUPT2]: -3,
   [RESUME2]: -4
 };
+function getCheckpointId(config2) {
+  return config2.configurable?.checkpoint_id || config2.configurable?.thread_ts || "";
+}
+
+// node_modules/.bun/@langchain+langgraph-checkpoint@1.0.2+1e4baf892d6d77cf/node_modules/@langchain/langgraph-checkpoint/dist/memory.js
+function _generateKey(threadId, checkpointNamespace, checkpointId) {
+  return JSON.stringify([
+    threadId,
+    checkpointNamespace,
+    checkpointId
+  ]);
+}
+function _parseKey(key) {
+  const [threadId, checkpointNamespace, checkpointId] = JSON.parse(key);
+  return {
+    threadId,
+    checkpointNamespace,
+    checkpointId
+  };
+}
+var MemorySaver = class extends BaseCheckpointSaver {
+  storage = {};
+  writes = {};
+  constructor(serde) {
+    super(serde);
+  }
+  async _migratePendingSends(mutableCheckpoint, threadId, checkpointNs, parentCheckpointId) {
+    const deseriablizableCheckpoint = mutableCheckpoint;
+    const parentKey = _generateKey(threadId, checkpointNs, parentCheckpointId);
+    const pendingSends = await Promise.all(Object.values(this.writes[parentKey] ?? {}).filter(([_taskId, channel]) => channel === TASKS2).map(async ([_taskId, _channel, writes]) => await this.serde.loadsTyped("json", writes)));
+    deseriablizableCheckpoint.channel_values ??= {};
+    deseriablizableCheckpoint.channel_values[TASKS2] = pendingSends;
+    deseriablizableCheckpoint.channel_versions ??= {};
+    deseriablizableCheckpoint.channel_versions[TASKS2] = Object.keys(deseriablizableCheckpoint.channel_versions).length > 0 ? maxChannelVersion(...Object.values(deseriablizableCheckpoint.channel_versions)) : this.getNextVersion(undefined);
+  }
+  async getTuple(config2) {
+    const thread_id = config2.configurable?.thread_id;
+    const checkpoint_ns = config2.configurable?.checkpoint_ns ?? "";
+    let checkpoint_id = getCheckpointId(config2);
+    if (checkpoint_id) {
+      const saved = this.storage[thread_id]?.[checkpoint_ns]?.[checkpoint_id];
+      if (saved !== undefined) {
+        const [checkpoint, metadata, parentCheckpointId] = saved;
+        const key = _generateKey(thread_id, checkpoint_ns, checkpoint_id);
+        const deserializedCheckpoint = await this.serde.loadsTyped("json", checkpoint);
+        if (deserializedCheckpoint.v < 4 && parentCheckpointId !== undefined)
+          await this._migratePendingSends(deserializedCheckpoint, thread_id, checkpoint_ns, parentCheckpointId);
+        const pendingWrites = await Promise.all(Object.values(this.writes[key] || {}).map(async ([taskId, channel, value]) => {
+          return [
+            taskId,
+            channel,
+            await this.serde.loadsTyped("json", value)
+          ];
+        }));
+        const checkpointTuple = {
+          config: config2,
+          checkpoint: deserializedCheckpoint,
+          metadata: await this.serde.loadsTyped("json", metadata),
+          pendingWrites
+        };
+        if (parentCheckpointId !== undefined)
+          checkpointTuple.parentConfig = { configurable: {
+            thread_id,
+            checkpoint_ns,
+            checkpoint_id: parentCheckpointId
+          } };
+        return checkpointTuple;
+      }
+    } else {
+      const checkpoints = this.storage[thread_id]?.[checkpoint_ns];
+      if (checkpoints !== undefined) {
+        checkpoint_id = Object.keys(checkpoints).sort((a, b) => b.localeCompare(a))[0];
+        const [checkpoint, metadata, parentCheckpointId] = checkpoints[checkpoint_id];
+        const key = _generateKey(thread_id, checkpoint_ns, checkpoint_id);
+        const deserializedCheckpoint = await this.serde.loadsTyped("json", checkpoint);
+        if (deserializedCheckpoint.v < 4 && parentCheckpointId !== undefined)
+          await this._migratePendingSends(deserializedCheckpoint, thread_id, checkpoint_ns, parentCheckpointId);
+        const pendingWrites = await Promise.all(Object.values(this.writes[key] || {}).map(async ([taskId, channel, value]) => {
+          return [
+            taskId,
+            channel,
+            await this.serde.loadsTyped("json", value)
+          ];
+        }));
+        const checkpointTuple = {
+          config: { configurable: {
+            thread_id,
+            checkpoint_id,
+            checkpoint_ns
+          } },
+          checkpoint: deserializedCheckpoint,
+          metadata: await this.serde.loadsTyped("json", metadata),
+          pendingWrites
+        };
+        if (parentCheckpointId !== undefined)
+          checkpointTuple.parentConfig = { configurable: {
+            thread_id,
+            checkpoint_ns,
+            checkpoint_id: parentCheckpointId
+          } };
+        return checkpointTuple;
+      }
+    }
+  }
+  async* list(config2, options) {
+    let { before, limit, filter } = options ?? {};
+    const threadIds = config2.configurable?.thread_id ? [config2.configurable?.thread_id] : Object.keys(this.storage);
+    const configCheckpointNamespace = config2.configurable?.checkpoint_ns;
+    const configCheckpointId = config2.configurable?.checkpoint_id;
+    for (const threadId of threadIds)
+      for (const checkpointNamespace of Object.keys(this.storage[threadId] ?? {})) {
+        if (configCheckpointNamespace !== undefined && checkpointNamespace !== configCheckpointNamespace)
+          continue;
+        const checkpoints = this.storage[threadId]?.[checkpointNamespace] ?? {};
+        const sortedCheckpoints = Object.entries(checkpoints).sort((a, b) => b[0].localeCompare(a[0]));
+        for (const [checkpointId, [checkpoint, metadataStr, parentCheckpointId]] of sortedCheckpoints) {
+          if (configCheckpointId && checkpointId !== configCheckpointId)
+            continue;
+          if (before && before.configurable?.checkpoint_id && checkpointId >= before.configurable.checkpoint_id)
+            continue;
+          const metadata = await this.serde.loadsTyped("json", metadataStr);
+          if (filter && !Object.entries(filter).every(([key2, value]) => metadata[key2] === value))
+            continue;
+          if (limit !== undefined) {
+            if (limit <= 0)
+              break;
+            limit -= 1;
+          }
+          const key = _generateKey(threadId, checkpointNamespace, checkpointId);
+          const writes = Object.values(this.writes[key] || {});
+          const pendingWrites = await Promise.all(writes.map(async ([taskId, channel, value]) => {
+            return [
+              taskId,
+              channel,
+              await this.serde.loadsTyped("json", value)
+            ];
+          }));
+          const deserializedCheckpoint = await this.serde.loadsTyped("json", checkpoint);
+          if (deserializedCheckpoint.v < 4 && parentCheckpointId !== undefined)
+            await this._migratePendingSends(deserializedCheckpoint, threadId, checkpointNamespace, parentCheckpointId);
+          const checkpointTuple = {
+            config: { configurable: {
+              thread_id: threadId,
+              checkpoint_ns: checkpointNamespace,
+              checkpoint_id: checkpointId
+            } },
+            checkpoint: deserializedCheckpoint,
+            metadata,
+            pendingWrites
+          };
+          if (parentCheckpointId !== undefined)
+            checkpointTuple.parentConfig = { configurable: {
+              thread_id: threadId,
+              checkpoint_ns: checkpointNamespace,
+              checkpoint_id: parentCheckpointId
+            } };
+          yield checkpointTuple;
+        }
+      }
+  }
+  async put(config2, checkpoint, metadata) {
+    const preparedCheckpoint = copyCheckpoint(checkpoint);
+    const threadId = config2.configurable?.thread_id;
+    const checkpointNamespace = config2.configurable?.checkpoint_ns ?? "";
+    if (threadId === undefined)
+      throw new Error('Failed to put checkpoint. The passed RunnableConfig is missing a required "thread_id" field in its "configurable" property. When using a checkpointer, you must pass a "thread_id" so the checkpointer knows which conversation thread to persist state for. Example: graph.stream(input, { configurable: { thread_id: "my-thread-id" } })');
+    if (!this.storage[threadId])
+      this.storage[threadId] = {};
+    if (!this.storage[threadId][checkpointNamespace])
+      this.storage[threadId][checkpointNamespace] = {};
+    const [[, serializedCheckpoint], [, serializedMetadata]] = await Promise.all([this.serde.dumpsTyped(preparedCheckpoint), this.serde.dumpsTyped(metadata)]);
+    this.storage[threadId][checkpointNamespace][checkpoint.id] = [
+      serializedCheckpoint,
+      serializedMetadata,
+      config2.configurable?.checkpoint_id
+    ];
+    return { configurable: {
+      thread_id: threadId,
+      checkpoint_ns: checkpointNamespace,
+      checkpoint_id: checkpoint.id
+    } };
+  }
+  async putWrites(config2, writes, taskId) {
+    const threadId = config2.configurable?.thread_id;
+    const checkpointNamespace = config2.configurable?.checkpoint_ns;
+    const checkpointId = config2.configurable?.checkpoint_id;
+    if (threadId === undefined)
+      throw new Error('Failed to put writes. The passed RunnableConfig is missing a required "thread_id" field in its "configurable" property. When using a checkpointer, you must pass a "thread_id" so the checkpointer knows which conversation thread to persist state for. Example: graph.stream(input, { configurable: { thread_id: "my-thread-id" } })');
+    if (checkpointId === undefined)
+      throw new Error(`Failed to put writes. The passed RunnableConfig is missing a required "checkpoint_id" field in its "configurable" property.`);
+    const outerKey = _generateKey(threadId, checkpointNamespace, checkpointId);
+    const outerWrites_ = this.writes[outerKey];
+    if (this.writes[outerKey] === undefined)
+      this.writes[outerKey] = {};
+    await Promise.all(writes.map(async ([channel, value], idx) => {
+      const [, serializedValue] = await this.serde.dumpsTyped(value);
+      const innerKey = [taskId, WRITES_IDX_MAP[channel] || idx];
+      const innerKeyStr = `${innerKey[0]},${innerKey[1]}`;
+      if (innerKey[1] >= 0 && outerWrites_ && innerKeyStr in outerWrites_)
+        return;
+      this.writes[outerKey][innerKeyStr] = [
+        taskId,
+        channel,
+        serializedValue
+      ];
+    }));
+  }
+  async deleteThread(threadId) {
+    delete this.storage[threadId];
+    for (const key of Object.keys(this.writes))
+      if (_parseKey(key).threadId === threadId)
+        delete this.writes[key];
+  }
+};
 
 // node_modules/.bun/@langchain+langgraph-checkpoint@1.0.2+1e4baf892d6d77cf/node_modules/@langchain/langgraph-checkpoint/dist/store/base.js
 var InvalidNamespaceError = class extends Error {
@@ -75154,6 +75369,7 @@ var createGraph = (cfg = {}) => {
     graph.addEdge(from, to);
   }
   return graph.compile({
+    checkpointer: new MemorySaver,
     name: cfg.name ?? DEFAULT_GRAPH_NAME
   });
 };

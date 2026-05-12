@@ -21,8 +21,8 @@
   ],
   "scripts": {
     "build": "node ../../scripts/build/cli.js",
-    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "lint": "eslint src",

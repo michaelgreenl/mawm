@@ -1,1 +1,0 @@
-- [ ] remove workflow local langgraph.json asset, a langgraph.json at the target-project's root can be setup so langgraph.json.graphs is configured for installed workflows. Then, on a workflows installation, the graph entry point will just need to be added to langgraph.json.graphs.
