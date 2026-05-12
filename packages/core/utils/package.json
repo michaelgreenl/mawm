@@ -4,9 +4,13 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@langchain/core": "^1.1.45",
+    "@langchain/langgraph": "^1.3.0",
     "@opencode-ai/plugin": "1.14.28"
   },
   "exports": {
+    "./langgraph/nodes/interactive.ts": "./src/langgraph/nodes/interactive.ts",
+    "./langgraph/nodes/*.ts": "./src/langgraph/nodes/*.ts",
     "./opencode/plugins/*.ts": "./dist/opencode/plugins/*.ts",
     "./opencode/tools/*.ts": "./dist/opencode/tools/*.ts",
     "./graph/*.ts": "./dist/graph/*.ts",

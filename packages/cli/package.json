@@ -28,5 +28,9 @@
     "lint": "eslint src",
     "lint:all": "bun lint && bun format:check",
     "hooks": "husky"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.45",
+    "@langchain/langgraph": "^1.3.0"
   }
 }

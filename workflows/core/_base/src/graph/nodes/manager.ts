@@ -1,7 +1,5 @@
-import { StateAnnotation } from "../state";
+import { createInteractiveNode } from "../../../../../../packages/core/utils/src/langgraph/nodes/interactive.ts";
 
-const manager: typeof StateAnnotation.Node = () => {
-    return {};
-};
+const manager = createInteractiveNode("manager");
 
 export default manager;

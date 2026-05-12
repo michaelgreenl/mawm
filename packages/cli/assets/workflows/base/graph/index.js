@@ -74829,16 +74829,314 @@ var StateAnnotation = Annotation.Root({
   startStep: optionalStep()
 });
 
+// packages/core/utils/src/opencode/session.ts
+import { Buffer as Buffer2 } from "node:buffer";
+import { spawn } from "node:child_process";
+import { createServer } from "node:net";
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+function getSessionKey(threadID, nodeName) {
+  return `${threadID}:${nodeName}`;
+}
+function getAuthInfo(env) {
+  const password = env["OPENCODE_SERVER_PASSWORD"];
+  if (!password) {
+    return;
+  }
+  return {
+    username: env["OPENCODE_SERVER_USERNAME"] ?? "opencode",
+    password
+  };
+}
+function getAuthHeaders(env) {
+  const auth = getAuthInfo(env);
+  if (!auth) {
+    return;
+  }
+  return {
+    Authorization: "Basic " + Buffer2.from(`${auth.username}:${auth.password}`).toString("base64")
+  };
+}
+function buildAttachCommand(serverUrl, sessionID) {
+  return ["opencode", "attach", serverUrl, "--session", sessionID];
+}
+function buildSessionMetadata(env, nodeName, serverUrl, sessionID) {
+  const auth = getAuthInfo(env);
+  return {
+    nodeName,
+    sessionID,
+    serverUrl,
+    attachCommand: buildAttachCommand(serverUrl, sessionID),
+    auth: auth ? {
+      username: auth.username,
+      passwordEnvVar: "OPENCODE_SERVER_PASSWORD"
+    } : undefined
+  };
+}
+async function getFreePort() {
+  return await new Promise((resolve, reject) => {
+    const server = createServer();
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        reject(new Error("Failed to allocate a local port."));
+        return;
+      }
+      server.close(() => resolve(address.port));
+    });
+    server.on("error", reject);
+  });
+}
+async function closeChildProcess(child, exitTask) {
+  if (child.exitCode !== null) {
+    await exitTask.catch(() => {
+      return;
+    });
+    return;
+  }
+  child.kill("SIGTERM");
+  const exited = await Promise.race([
+    exitTask.then(() => true).catch(() => true),
+    sleep(1000).then(() => false)
+  ]);
+  if (!exited && child.exitCode === null) {
+    child.kill("SIGKILL");
+    await exitTask.catch(() => {
+      return;
+    });
+  }
+}
+async function waitForServerReady(child, url3) {
+  await new Promise((resolve, reject) => {
+    const stdout = child.stdout;
+    const stderr = child.stderr;
+    let stderrBuffer = "";
+    const cleanup = () => {
+      stdout?.off("data", onStdout);
+      stderr?.off("data", onStderr);
+      child.off("exit", onExit);
+      child.off("error", onError);
+      clearTimeout(timeout);
+    };
+    const finish = (error95) => {
+      cleanup();
+      if (error95) {
+        reject(error95);
+        return;
+      }
+      resolve();
+    };
+    const onStdout = (chunk) => {
+      if (chunk.toString().includes(url3)) {
+        finish();
+      }
+    };
+    const onStderr = (chunk) => {
+      stderrBuffer += chunk.toString();
+    };
+    const onExit = () => {
+      const details = stderrBuffer.trim();
+      finish(new Error(details ? `OpenCode server exited before it was ready: ${details}` : "OpenCode server exited before it was ready."));
+    };
+    const onError = (error95) => {
+      finish(error95);
+    };
+    const timeout = setTimeout(() => {
+      finish(new Error("Timed out waiting for the OpenCode server to start."));
+    }, 5000);
+    stdout?.on("data", onStdout);
+    stderr?.on("data", onStderr);
+    child.once("exit", onExit);
+    child.once("error", onError);
+  });
+}
+async function startServer(cwd, env, port) {
+  const child = spawn("opencode", ["serve", "--hostname", "127.0.0.1", "--port", String(port)], {
+    cwd,
+    env,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const url3 = `http://127.0.0.1:${port}`;
+  const exitTask = new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("exit", () => resolve());
+  });
+  try {
+    await waitForServerReady(child, url3);
+  } catch (error95) {
+    await closeChildProcess(child, exitTask);
+    throw error95;
+  }
+  return {
+    url: url3,
+    async close() {
+      await closeChildProcess(child, exitTask);
+    }
+  };
+}
+async function readSessionID(response) {
+  const payload = await response.json();
+  const sessionID = payload.data?.id ?? payload.id;
+  if (!sessionID) {
+    throw new Error("OpenCode session response did not include a session ID.");
+  }
+  return sessionID;
+}
+async function seedSessionAgent(serverUrl, sessionID, nodeName, authHeaders) {
+  const response = await fetch(`${serverUrl}/session/${sessionID}/message`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...authHeaders
+    },
+    body: JSON.stringify({
+      agent: nodeName,
+      noReply: true,
+      parts: [
+        {
+          type: "text",
+          text: `${nodeName} session initialized for LangGraph.`
+        }
+      ]
+    }),
+    signal: AbortSignal.timeout(1e4)
+  });
+  if (response.ok) {
+    return;
+  }
+  const body = await response.text();
+  throw new Error(`Failed to prime the OpenCode ${nodeName} session (${response.status} ${response.statusText}). ${body}`.trim());
+}
+async function createSession(serverUrl, nodeName, authHeaders) {
+  const response = await fetch(`${serverUrl}/session`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...authHeaders
+    },
+    body: JSON.stringify({
+      title: `LangGraph node: ${nodeName}`
+    }),
+    signal: AbortSignal.timeout(1e4)
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Failed to create the OpenCode ${nodeName} session (${response.status} ${response.statusText}). ${body}`.trim());
+  }
+  const sessionID = await readSessionID(response);
+  await seedSessionAgent(serverUrl, sessionID, nodeName, authHeaders);
+  return { id: sessionID };
+}
+function createInteractiveSessionManager(runtime) {
+  const activeSessions = new Map;
+  return {
+    async ensureSession(nodeName, threadID) {
+      const key = getSessionKey(threadID, nodeName);
+      const existing = activeSessions.get(key);
+      if (existing) {
+        return existing.session;
+      }
+      const authHeaders = getAuthHeaders(runtime.env);
+      const port = await runtime.getFreePort();
+      const server = await runtime.startServer(port, authHeaders);
+      try {
+        const session = await runtime.createSession(server.url, nodeName, authHeaders);
+        const metadata = buildSessionMetadata(runtime.env, nodeName, server.url, session.id);
+        activeSessions.set(key, {
+          session: metadata,
+          closeServer: server.close
+        });
+        return metadata;
+      } catch (error95) {
+        await server.close().catch(() => {
+          return;
+        });
+        throw error95;
+      }
+    },
+    async closeSession(threadID, nodeName) {
+      const key = getSessionKey(threadID, nodeName);
+      const active = activeSessions.get(key);
+      if (!active) {
+        return;
+      }
+      activeSessions.delete(key);
+      await active.closeServer().catch(() => {
+        return;
+      });
+    },
+    async closeAllSessions() {
+      const sessions = [...activeSessions.values()];
+      activeSessions.clear();
+      await Promise.all(sessions.map(async (session) => {
+        await session.closeServer().catch(() => {
+          return;
+        });
+      }));
+    }
+  };
+}
+var interactiveSessionManager = createInteractiveSessionManager({
+  cwd: process.cwd(),
+  env: process.env,
+  getFreePort,
+  startServer: async (port) => await startServer(process.cwd(), process.env, port),
+  createSession
+});
+
+// packages/core/utils/src/langgraph/nodes/interactive.ts
+function getThreadID(config3) {
+  const threadID = config3?.configurable?.["thread_id"];
+  if (typeof threadID !== "string" || threadID.length === 0) {
+    throw new Error("Interactive nodes require config.configurable.thread_id so the OpenCode session can be resumed cleanly.");
+  }
+  return threadID;
+}
+function buildInterruptValue(session) {
+  return {
+    type: "opencode-session",
+    nodeName: session.nodeName,
+    sessionID: session.sessionID,
+    serverUrl: session.serverUrl,
+    attachCommand: session.attachCommand,
+    auth: session.auth
+  };
+}
+function normalizeResumeUpdate(resume) {
+  if (resume === undefined) {
+    return {};
+  }
+  if (typeof resume === "string") {
+    return {
+      messages: [{ role: "human", content: resume }]
+    };
+  }
+  return {
+    ...resume.phasePlanPath !== undefined ? { phasePlanPath: resume.phasePlanPath } : {},
+    ...resume.brief !== undefined ? { brief: resume.brief } : {},
+    ...resume.startStep !== undefined ? { startStep: resume.startStep } : {},
+    ...resume.messages !== undefined ? { messages: resume.messages } : {}
+  };
+}
+function createInteractiveNode(nodeName, sessionManager = interactiveSessionManager) {
+  return async (_state4, config3) => {
+    const threadID = getThreadID(config3);
+    const session = await sessionManager.ensureSession(nodeName, threadID);
+    const resume = interrupt(buildInterruptValue(session));
+    await sessionManager.closeSession(threadID, nodeName);
+    return normalizeResumeUpdate(resume);
+  };
+}
+
 // workflows/core/_base/src/graph/nodes/planner.ts
-var planner = () => {
-  return {};
-};
+var planner = createInteractiveNode("planner");
 var planner_default = planner;
 
 // workflows/core/_base/src/graph/nodes/manager.ts
-var manager = () => {
-  return {};
-};
+var manager = createInteractiveNode("manager");
 var manager_default = manager;
 
 // workflows/core/_base/src/graph/nodes/index.ts

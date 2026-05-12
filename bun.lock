@@ -26,7 +26,11 @@
       "name": "@mawm/cli",
       "version": "0.0.0",
       "bin": {
-        "mawm": "./dist/index.js",
+        "mawm": "./bin/mawm.js",
+      },
+      "dependencies": {
+        "@langchain/core": "^1.1.45",
+        "@langchain/langgraph": "^1.3.0",
       },
     },
     "packages/core/state": {
@@ -37,6 +41,8 @@
       "name": "@mawm/core/utils",
       "version": "0.0.0",
       "dependencies": {
+        "@langchain/core": "^1.1.45",
+        "@langchain/langgraph": "^1.3.0",
         "@opencode-ai/plugin": "1.14.28",
       },
     },
