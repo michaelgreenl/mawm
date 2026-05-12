@@ -6,4 +6,4 @@ MAWM is a monorepo for building and distributing project-level agent workflows. 
 
 --- 
 
-* **PROJECT STATUS:** WIP/Pre-Implementation-Planning 🚧
+* **PROJECT STATUS:** Active Development 🚧
