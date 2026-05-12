@@ -5,6 +5,7 @@
   "private": true,
   "workspaces": [
     "packages/cli",
+    "packages/core",
     "packages/core/*",
     "workflows/core/*"
   ],

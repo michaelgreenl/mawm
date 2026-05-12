@@ -6,7 +6,7 @@ import {
     interactiveSessionManager,
     type InteractiveSession,
     type InteractiveSessionManager,
-} from "../../opencode/session.ts";
+} from "../../opencode/session-manager.ts";
 
 type InteractiveResume = {
     phasePlanPath?: string;

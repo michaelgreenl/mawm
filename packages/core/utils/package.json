@@ -9,12 +9,11 @@
     "@opencode-ai/plugin": "1.14.28"
   },
   "exports": {
-    "./langgraph/nodes/interactive.ts": "./src/langgraph/nodes/interactive.ts",
     "./langgraph/nodes/*.ts": "./src/langgraph/nodes/*.ts",
-    "./opencode/plugins/*.ts": "./dist/opencode/plugins/*.ts",
-    "./opencode/tools/*.ts": "./dist/opencode/tools/*.ts",
-    "./graph/*.ts": "./dist/graph/*.ts",
-    "./prompts/*.md": "./dist/prompts/*.md"
+    "./opencode/*.ts": "./src/opencode/*.ts",
+    "./opencode/plugins/*.ts": "./src/opencode/plugins/*.ts",
+    "./opencode/tools/*.ts": "./src/opencode/tools/*.ts",
+    "./prompts/*.md": "./src/prompts/*.md"
   },
   "scripts": {
     "build": "tsc",

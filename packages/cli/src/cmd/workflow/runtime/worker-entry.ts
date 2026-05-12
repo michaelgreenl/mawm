@@ -1,4 +1,4 @@
-import { interactiveSessionManager } from "./opencode/session.js";
+import { interactiveSessionManager } from "@mawm/core/utils/opencode/session-manager.js";
 import type { WorkerCommand, WorkerEvent, WorkerGraph } from "./protocol.ts";
 import { createWorkflowWorker } from "./langgraph/worker.js";
 
