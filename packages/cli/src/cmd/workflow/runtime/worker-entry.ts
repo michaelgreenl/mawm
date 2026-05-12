@@ -1,5 +1,5 @@
-import { interactiveSessionManager } from "@mawm/core/utils/opencode/session-manager.js";
 import type { WorkerCommand, WorkerEvent, WorkerGraph } from "./protocol.ts";
+import { interactiveSessionManager } from "./session-manager.js";
 import { createWorkflowWorker } from "./worker.js";
 
 async function loadGraph(): Promise<WorkerGraph> {
@@ -24,11 +24,9 @@ const graph = await loadGraph();
 
 const worker = createWorkflowWorker({
     graph,
+    sessionManager: interactiveSessionManager,
     send: async (event: WorkerEvent) => {
         process.send?.(event);
-    },
-    onClose: async () => {
-        await interactiveSessionManager.closeAllSessions();
     },
 });
 

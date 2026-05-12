@@ -14860,6 +14860,7 @@ function uuid5(name, namespace) {
 }
 
 // node_modules/.bun/@langchain+langgraph-checkpoint@1.0.2+5b0f869435d2e885/node_modules/@langchain/langgraph-checkpoint/dist/serde/types.js
+var TASKS2 = "__pregel_tasks";
 var ERROR3 = "__error__";
 var SCHEDULED = "__scheduled__";
 var INTERRUPT2 = "__interrupt__";
@@ -50491,6 +50492,220 @@ var WRITES_IDX_MAP = {
   [INTERRUPT2]: -3,
   [RESUME2]: -4
 };
+function getCheckpointId(config2) {
+  return config2.configurable?.checkpoint_id || config2.configurable?.thread_ts || "";
+}
+
+// node_modules/.bun/@langchain+langgraph-checkpoint@1.0.2+5b0f869435d2e885/node_modules/@langchain/langgraph-checkpoint/dist/memory.js
+function _generateKey(threadId, checkpointNamespace, checkpointId) {
+  return JSON.stringify([
+    threadId,
+    checkpointNamespace,
+    checkpointId
+  ]);
+}
+function _parseKey(key) {
+  const [threadId, checkpointNamespace, checkpointId] = JSON.parse(key);
+  return {
+    threadId,
+    checkpointNamespace,
+    checkpointId
+  };
+}
+var MemorySaver = class extends BaseCheckpointSaver {
+  storage = {};
+  writes = {};
+  constructor(serde) {
+    super(serde);
+  }
+  async _migratePendingSends(mutableCheckpoint, threadId, checkpointNs, parentCheckpointId) {
+    const deseriablizableCheckpoint = mutableCheckpoint;
+    const parentKey = _generateKey(threadId, checkpointNs, parentCheckpointId);
+    const pendingSends = await Promise.all(Object.values(this.writes[parentKey] ?? {}).filter(([_taskId, channel]) => channel === TASKS2).map(async ([_taskId, _channel, writes]) => await this.serde.loadsTyped("json", writes)));
+    deseriablizableCheckpoint.channel_values ??= {};
+    deseriablizableCheckpoint.channel_values[TASKS2] = pendingSends;
+    deseriablizableCheckpoint.channel_versions ??= {};
+    deseriablizableCheckpoint.channel_versions[TASKS2] = Object.keys(deseriablizableCheckpoint.channel_versions).length > 0 ? maxChannelVersion(...Object.values(deseriablizableCheckpoint.channel_versions)) : this.getNextVersion(undefined);
+  }
+  async getTuple(config2) {
+    const thread_id = config2.configurable?.thread_id;
+    const checkpoint_ns = config2.configurable?.checkpoint_ns ?? "";
+    let checkpoint_id = getCheckpointId(config2);
+    if (checkpoint_id) {
+      const saved = this.storage[thread_id]?.[checkpoint_ns]?.[checkpoint_id];
+      if (saved !== undefined) {
+        const [checkpoint, metadata, parentCheckpointId] = saved;
+        const key = _generateKey(thread_id, checkpoint_ns, checkpoint_id);
+        const deserializedCheckpoint = await this.serde.loadsTyped("json", checkpoint);
+        if (deserializedCheckpoint.v < 4 && parentCheckpointId !== undefined)
+          await this._migratePendingSends(deserializedCheckpoint, thread_id, checkpoint_ns, parentCheckpointId);
+        const pendingWrites = await Promise.all(Object.values(this.writes[key] || {}).map(async ([taskId, channel, value]) => {
+          return [
+            taskId,
+            channel,
+            await this.serde.loadsTyped("json", value)
+          ];
+        }));
+        const checkpointTuple = {
+          config: config2,
+          checkpoint: deserializedCheckpoint,
+          metadata: await this.serde.loadsTyped("json", metadata),
+          pendingWrites
+        };
+        if (parentCheckpointId !== undefined)
+          checkpointTuple.parentConfig = { configurable: {
+            thread_id,
+            checkpoint_ns,
+            checkpoint_id: parentCheckpointId
+          } };
+        return checkpointTuple;
+      }
+    } else {
+      const checkpoints = this.storage[thread_id]?.[checkpoint_ns];
+      if (checkpoints !== undefined) {
+        checkpoint_id = Object.keys(checkpoints).sort((a, b) => b.localeCompare(a))[0];
+        const [checkpoint, metadata, parentCheckpointId] = checkpoints[checkpoint_id];
+        const key = _generateKey(thread_id, checkpoint_ns, checkpoint_id);
+        const deserializedCheckpoint = await this.serde.loadsTyped("json", checkpoint);
+        if (deserializedCheckpoint.v < 4 && parentCheckpointId !== undefined)
+          await this._migratePendingSends(deserializedCheckpoint, thread_id, checkpoint_ns, parentCheckpointId);
+        const pendingWrites = await Promise.all(Object.values(this.writes[key] || {}).map(async ([taskId, channel, value]) => {
+          return [
+            taskId,
+            channel,
+            await this.serde.loadsTyped("json", value)
+          ];
+        }));
+        const checkpointTuple = {
+          config: { configurable: {
+            thread_id,
+            checkpoint_id,
+            checkpoint_ns
+          } },
+          checkpoint: deserializedCheckpoint,
+          metadata: await this.serde.loadsTyped("json", metadata),
+          pendingWrites
+        };
+        if (parentCheckpointId !== undefined)
+          checkpointTuple.parentConfig = { configurable: {
+            thread_id,
+            checkpoint_ns,
+            checkpoint_id: parentCheckpointId
+          } };
+        return checkpointTuple;
+      }
+    }
+  }
+  async* list(config2, options) {
+    let { before, limit, filter } = options ?? {};
+    const threadIds = config2.configurable?.thread_id ? [config2.configurable?.thread_id] : Object.keys(this.storage);
+    const configCheckpointNamespace = config2.configurable?.checkpoint_ns;
+    const configCheckpointId = config2.configurable?.checkpoint_id;
+    for (const threadId of threadIds)
+      for (const checkpointNamespace of Object.keys(this.storage[threadId] ?? {})) {
+        if (configCheckpointNamespace !== undefined && checkpointNamespace !== configCheckpointNamespace)
+          continue;
+        const checkpoints = this.storage[threadId]?.[checkpointNamespace] ?? {};
+        const sortedCheckpoints = Object.entries(checkpoints).sort((a, b) => b[0].localeCompare(a[0]));
+        for (const [checkpointId, [checkpoint, metadataStr, parentCheckpointId]] of sortedCheckpoints) {
+          if (configCheckpointId && checkpointId !== configCheckpointId)
+            continue;
+          if (before && before.configurable?.checkpoint_id && checkpointId >= before.configurable.checkpoint_id)
+            continue;
+          const metadata = await this.serde.loadsTyped("json", metadataStr);
+          if (filter && !Object.entries(filter).every(([key2, value]) => metadata[key2] === value))
+            continue;
+          if (limit !== undefined) {
+            if (limit <= 0)
+              break;
+            limit -= 1;
+          }
+          const key = _generateKey(threadId, checkpointNamespace, checkpointId);
+          const writes = Object.values(this.writes[key] || {});
+          const pendingWrites = await Promise.all(writes.map(async ([taskId, channel, value]) => {
+            return [
+              taskId,
+              channel,
+              await this.serde.loadsTyped("json", value)
+            ];
+          }));
+          const deserializedCheckpoint = await this.serde.loadsTyped("json", checkpoint);
+          if (deserializedCheckpoint.v < 4 && parentCheckpointId !== undefined)
+            await this._migratePendingSends(deserializedCheckpoint, threadId, checkpointNamespace, parentCheckpointId);
+          const checkpointTuple = {
+            config: { configurable: {
+              thread_id: threadId,
+              checkpoint_ns: checkpointNamespace,
+              checkpoint_id: checkpointId
+            } },
+            checkpoint: deserializedCheckpoint,
+            metadata,
+            pendingWrites
+          };
+          if (parentCheckpointId !== undefined)
+            checkpointTuple.parentConfig = { configurable: {
+              thread_id: threadId,
+              checkpoint_ns: checkpointNamespace,
+              checkpoint_id: parentCheckpointId
+            } };
+          yield checkpointTuple;
+        }
+      }
+  }
+  async put(config2, checkpoint, metadata) {
+    const preparedCheckpoint = copyCheckpoint(checkpoint);
+    const threadId = config2.configurable?.thread_id;
+    const checkpointNamespace = config2.configurable?.checkpoint_ns ?? "";
+    if (threadId === undefined)
+      throw new Error('Failed to put checkpoint. The passed RunnableConfig is missing a required "thread_id" field in its "configurable" property. When using a checkpointer, you must pass a "thread_id" so the checkpointer knows which conversation thread to persist state for. Example: graph.stream(input, { configurable: { thread_id: "my-thread-id" } })');
+    if (!this.storage[threadId])
+      this.storage[threadId] = {};
+    if (!this.storage[threadId][checkpointNamespace])
+      this.storage[threadId][checkpointNamespace] = {};
+    const [[, serializedCheckpoint], [, serializedMetadata]] = await Promise.all([this.serde.dumpsTyped(preparedCheckpoint), this.serde.dumpsTyped(metadata)]);
+    this.storage[threadId][checkpointNamespace][checkpoint.id] = [
+      serializedCheckpoint,
+      serializedMetadata,
+      config2.configurable?.checkpoint_id
+    ];
+    return { configurable: {
+      thread_id: threadId,
+      checkpoint_ns: checkpointNamespace,
+      checkpoint_id: checkpoint.id
+    } };
+  }
+  async putWrites(config2, writes, taskId) {
+    const threadId = config2.configurable?.thread_id;
+    const checkpointNamespace = config2.configurable?.checkpoint_ns;
+    const checkpointId = config2.configurable?.checkpoint_id;
+    if (threadId === undefined)
+      throw new Error('Failed to put writes. The passed RunnableConfig is missing a required "thread_id" field in its "configurable" property. When using a checkpointer, you must pass a "thread_id" so the checkpointer knows which conversation thread to persist state for. Example: graph.stream(input, { configurable: { thread_id: "my-thread-id" } })');
+    if (checkpointId === undefined)
+      throw new Error(`Failed to put writes. The passed RunnableConfig is missing a required "checkpoint_id" field in its "configurable" property.`);
+    const outerKey = _generateKey(threadId, checkpointNamespace, checkpointId);
+    const outerWrites_ = this.writes[outerKey];
+    if (this.writes[outerKey] === undefined)
+      this.writes[outerKey] = {};
+    await Promise.all(writes.map(async ([channel, value], idx) => {
+      const [, serializedValue] = await this.serde.dumpsTyped(value);
+      const innerKey = [taskId, WRITES_IDX_MAP[channel] || idx];
+      const innerKeyStr = `${innerKey[0]},${innerKey[1]}`;
+      if (innerKey[1] >= 0 && outerWrites_ && innerKeyStr in outerWrites_)
+        return;
+      this.writes[outerKey][innerKeyStr] = [
+        taskId,
+        channel,
+        serializedValue
+      ];
+    }));
+  }
+  async deleteThread(threadId) {
+    delete this.storage[threadId];
+    for (const key of Object.keys(this.writes))
+      if (_parseKey(key).threadId === threadId)
+        delete this.writes[key];
+  }
+};
 
 // node_modules/.bun/@langchain+langgraph-checkpoint@1.0.2+5b0f869435d2e885/node_modules/@langchain/langgraph-checkpoint/dist/store/base.js
 var InvalidNamespaceError = class extends Error {
@@ -58339,7 +58554,6 @@ var ReplanPayloadSchema = new StateSchema({
 var graphEdges = [
   [START, "planner"],
   ["planner", "manager"],
-  ["manager", "planner"],
   ["manager", END]
 ];
 var edges_default = graphEdges;
@@ -58365,264 +58579,6 @@ var StateAnnotation = Annotation.Root({
   startStep: optionalStep()
 });
 
-// packages/core/utils/src/opencode/session-manager.ts
-import { Buffer as Buffer2 } from "node:buffer";
-import { spawn } from "node:child_process";
-import { createServer } from "node:net";
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-function getSessionKey(threadID, nodeName) {
-  return `${threadID}:${nodeName}`;
-}
-function getAuthInfo(env) {
-  const password = env["OPENCODE_SERVER_PASSWORD"];
-  if (!password) {
-    return;
-  }
-  return {
-    username: env["OPENCODE_SERVER_USERNAME"] ?? "opencode",
-    password
-  };
-}
-function getAuthHeaders(env) {
-  const auth = getAuthInfo(env);
-  if (!auth) {
-    return;
-  }
-  return {
-    Authorization: "Basic " + Buffer2.from(`${auth.username}:${auth.password}`).toString("base64")
-  };
-}
-function buildAttachCommand(serverUrl, sessionID) {
-  return ["opencode", "attach", serverUrl, "--session", sessionID];
-}
-function buildSessionMetadata(env, nodeName, serverUrl, sessionID) {
-  const auth = getAuthInfo(env);
-  return {
-    nodeName,
-    sessionID,
-    serverUrl,
-    attachCommand: buildAttachCommand(serverUrl, sessionID),
-    auth: auth ? {
-      username: auth.username,
-      passwordEnvVar: "OPENCODE_SERVER_PASSWORD"
-    } : undefined
-  };
-}
-async function getFreePort() {
-  return await new Promise((resolve, reject) => {
-    const server = createServer();
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        reject(new Error("Failed to allocate a local port."));
-        return;
-      }
-      server.close(() => resolve(address.port));
-    });
-    server.on("error", reject);
-  });
-}
-async function closeChildProcess(child, exitTask) {
-  if (child.exitCode !== null) {
-    await exitTask.catch(() => {
-      return;
-    });
-    return;
-  }
-  child.kill("SIGTERM");
-  const exited = await Promise.race([
-    exitTask.then(() => true).catch(() => true),
-    sleep(1000).then(() => false)
-  ]);
-  if (!exited && child.exitCode === null) {
-    child.kill("SIGKILL");
-    await exitTask.catch(() => {
-      return;
-    });
-  }
-}
-async function waitForServerReady(child, url2) {
-  await new Promise((resolve, reject) => {
-    const stdout = child.stdout;
-    const stderr = child.stderr;
-    let stderrBuffer = "";
-    const cleanup = () => {
-      stdout?.off("data", onStdout);
-      stderr?.off("data", onStderr);
-      child.off("exit", onExit);
-      child.off("error", onError);
-      clearTimeout(timeout);
-    };
-    const finish = (error51) => {
-      cleanup();
-      if (error51) {
-        reject(error51);
-        return;
-      }
-      resolve();
-    };
-    const onStdout = (chunk) => {
-      if (chunk.toString().includes(url2)) {
-        finish();
-      }
-    };
-    const onStderr = (chunk) => {
-      stderrBuffer += chunk.toString();
-    };
-    const onExit = () => {
-      const details = stderrBuffer.trim();
-      finish(new Error(details ? `OpenCode server exited before it was ready: ${details}` : "OpenCode server exited before it was ready."));
-    };
-    const onError = (error51) => {
-      finish(error51);
-    };
-    const timeout = setTimeout(() => {
-      finish(new Error("Timed out waiting for the OpenCode server to start."));
-    }, 5000);
-    stdout?.on("data", onStdout);
-    stderr?.on("data", onStderr);
-    child.once("exit", onExit);
-    child.once("error", onError);
-  });
-}
-async function startServer(cwd, env, port) {
-  const child = spawn("opencode", ["serve", "--hostname", "127.0.0.1", "--port", String(port)], {
-    cwd,
-    env,
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  const url2 = `http://127.0.0.1:${port}`;
-  const exitTask = new Promise((resolve, reject) => {
-    child.once("error", reject);
-    child.once("exit", () => resolve());
-  });
-  try {
-    await waitForServerReady(child, url2);
-  } catch (error51) {
-    await closeChildProcess(child, exitTask);
-    throw error51;
-  }
-  return {
-    url: url2,
-    async close() {
-      await closeChildProcess(child, exitTask);
-    }
-  };
-}
-async function readSessionID(response) {
-  const payload = await response.json();
-  const sessionID = payload.data?.id ?? payload.id;
-  if (!sessionID) {
-    throw new Error("OpenCode session response did not include a session ID.");
-  }
-  return sessionID;
-}
-async function seedSessionAgent(serverUrl, sessionID, nodeName, authHeaders) {
-  const response = await fetch(`${serverUrl}/session/${sessionID}/message`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...authHeaders
-    },
-    body: JSON.stringify({
-      agent: nodeName,
-      noReply: true,
-      parts: [
-        {
-          type: "text",
-          text: `${nodeName} session initialized for LangGraph.`
-        }
-      ]
-    }),
-    signal: AbortSignal.timeout(1e4)
-  });
-  if (response.ok) {
-    return;
-  }
-  const body = await response.text();
-  throw new Error(`Failed to prime the OpenCode ${nodeName} session (${response.status} ${response.statusText}). ${body}`.trim());
-}
-async function createSession(serverUrl, nodeName, authHeaders) {
-  const response = await fetch(`${serverUrl}/session`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...authHeaders
-    },
-    body: JSON.stringify({
-      title: `LangGraph node: ${nodeName}`
-    }),
-    signal: AbortSignal.timeout(1e4)
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Failed to create the OpenCode ${nodeName} session (${response.status} ${response.statusText}). ${body}`.trim());
-  }
-  const sessionID = await readSessionID(response);
-  await seedSessionAgent(serverUrl, sessionID, nodeName, authHeaders);
-  return { id: sessionID };
-}
-function createInteractiveSessionManager(runtime) {
-  const activeSessions = new Map;
-  return {
-    async ensureSession(nodeName, threadID) {
-      const key = getSessionKey(threadID, nodeName);
-      const existing = activeSessions.get(key);
-      if (existing) {
-        return existing.session;
-      }
-      const authHeaders = getAuthHeaders(runtime.env);
-      const port = await runtime.getFreePort();
-      const server = await runtime.startServer(port, authHeaders);
-      try {
-        const session = await runtime.createSession(server.url, nodeName, authHeaders);
-        const metadata = buildSessionMetadata(runtime.env, nodeName, server.url, session.id);
-        activeSessions.set(key, {
-          session: metadata,
-          closeServer: server.close
-        });
-        return metadata;
-      } catch (error51) {
-        await server.close().catch(() => {
-          return;
-        });
-        throw error51;
-      }
-    },
-    async closeSession(threadID, nodeName) {
-      const key = getSessionKey(threadID, nodeName);
-      const active = activeSessions.get(key);
-      if (!active) {
-        return;
-      }
-      activeSessions.delete(key);
-      await active.closeServer().catch(() => {
-        return;
-      });
-    },
-    async closeAllSessions() {
-      const sessions = [...activeSessions.values()];
-      activeSessions.clear();
-      await Promise.all(sessions.map(async (session) => {
-        await session.closeServer().catch(() => {
-          return;
-        });
-      }));
-    }
-  };
-}
-var interactiveSessionManager = createInteractiveSessionManager({
-  cwd: process.cwd(),
-  env: process.env,
-  getFreePort,
-  startServer: async (port) => await startServer(process.cwd(), process.env, port),
-  createSession
-});
-
 // packages/core/utils/src/langgraph/nodes/interactive.ts
 function getThreadID(config2) {
   const threadID = config2?.configurable?.["thread_id"];
@@ -58631,14 +58587,10 @@ function getThreadID(config2) {
   }
   return threadID;
 }
-function buildInterruptValue(session) {
+function buildInterruptValue(nodeName) {
   return {
     type: "opencode-session",
-    nodeName: session.nodeName,
-    sessionID: session.sessionID,
-    serverUrl: session.serverUrl,
-    attachCommand: session.attachCommand,
-    auth: session.auth
+    nodeName
   };
 }
 function normalizeResumeUpdate(resume) {
@@ -58657,12 +58609,10 @@ function normalizeResumeUpdate(resume) {
     ...resume.messages !== undefined ? { messages: resume.messages } : {}
   };
 }
-function createInteractiveNode(nodeName, sessionManager = interactiveSessionManager) {
+function createInteractiveNode(nodeName) {
   return async (_state4, config2) => {
-    const threadID = getThreadID(config2);
-    const session = await sessionManager.ensureSession(nodeName, threadID);
-    const resume = interrupt(buildInterruptValue(session));
-    await sessionManager.closeSession(threadID, nodeName);
+    getThreadID(config2);
+    const resume = interrupt(buildInterruptValue(nodeName));
     return normalizeResumeUpdate(resume);
   };
 }
@@ -58690,7 +58640,8 @@ var createGraph = (cfg = {}) => {
     graph.addEdge(from, to);
   }
   return graph.compile({
-    name: cfg.name ?? DEFAULT_GRAPH_NAME
+    name: cfg.name ?? DEFAULT_GRAPH_NAME,
+    checkpointer: new MemorySaver
   });
 };
 var graph = createGraph();

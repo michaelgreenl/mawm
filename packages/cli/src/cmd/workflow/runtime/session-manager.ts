@@ -36,7 +36,6 @@ type SessionRecord = {
 };
 
 type InteractiveSessionRuntime = {
-    cwd: string;
     env: NodeJS.ProcessEnv;
     getFreePort(): Promise<number>;
     startServer(port: number, authHeaders?: AuthHeaders): Promise<ServerHandle>;
@@ -387,7 +386,6 @@ export function createInteractiveSessionManager(
 }
 
 export const interactiveSessionManager = createInteractiveSessionManager({
-    cwd: process.cwd(),
     env: process.env,
     getFreePort,
     startServer: async (port) => await startServer(process.cwd(), process.env, port),

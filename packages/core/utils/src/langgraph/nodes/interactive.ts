@@ -2,12 +2,6 @@ import type { RunnableConfig } from "@langchain/core/runnables";
 import type { BaseMessageLike } from "@langchain/core/messages";
 import { interrupt } from "@langchain/langgraph";
 
-import {
-    interactiveSessionManager,
-    type InteractiveSession,
-    type InteractiveSessionManager,
-} from "../../opencode/session-manager.ts";
-
 type InteractiveResume = {
     phasePlanPath?: string;
     brief?: string;
@@ -22,6 +16,11 @@ type InteractiveNodeUpdate = {
     messages?: BaseMessageLike[];
 };
 
+type InteractiveSessionRequest = {
+    type: "opencode-session";
+    nodeName: string;
+};
+
 function getThreadID(config?: RunnableConfig) {
     const threadID = config?.configurable?.["thread_id"];
 
@@ -34,14 +33,10 @@ function getThreadID(config?: RunnableConfig) {
     return threadID;
 }
 
-function buildInterruptValue(session: InteractiveSession) {
+function buildInterruptValue(nodeName: string): InteractiveSessionRequest {
     return {
         type: "opencode-session",
-        nodeName: session.nodeName,
-        sessionID: session.sessionID,
-        serverUrl: session.serverUrl,
-        attachCommand: session.attachCommand,
-        auth: session.auth,
+        nodeName,
     };
 }
 
@@ -66,17 +61,14 @@ function normalizeResumeUpdate(resume: InteractiveResume | string | undefined) {
 
 export function createInteractiveNode(
     nodeName: string,
-    sessionManager: InteractiveSessionManager = interactiveSessionManager,
 ): (_state: unknown, config?: RunnableConfig) => Promise<InteractiveNodeUpdate> {
     return async (_state, config) => {
-        const threadID = getThreadID(config);
-        const session = await sessionManager.ensureSession(nodeName, threadID);
-        const resume = interrupt(buildInterruptValue(session)) as
+        getThreadID(config);
+
+        const resume = interrupt(buildInterruptValue(nodeName)) as
             | InteractiveResume
             | string
             | undefined;
-
-        await sessionManager.closeSession(threadID, nodeName);
 
         return normalizeResumeUpdate(resume);
     };

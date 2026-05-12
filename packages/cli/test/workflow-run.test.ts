@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { runWorkflowCommand } from "../src/cmd/workflow/run.ts";
+import { runWorkflowCommand } from "../dist/cmd/workflow/run.js";
 
 async function withTempProject(run: (projectRoot: string) => Promise<void>): Promise<void> {
     const projectRoot = await mkdtemp(join(tmpdir(), "mawm-workflow-run-"));
@@ -140,11 +140,20 @@ describe("workflow run command", () => {
             assert.deepEqual(transportCalls, [
                 {
                     workerPath: fileURLToPath(
-                        new URL("../src/cmd/workflow/runtime/worker-entry.ts", import.meta.url),
+                        new URL("../dist/cmd/workflow/runtime/worker-entry.js", import.meta.url),
                     ),
                     workerArgs: [
                         pathToFileURL(
-                            join(repoRoot, "packages", "cli", "assets", "workflows", "base", "graph", "index.js"),
+                            join(
+                                repoRoot,
+                                "packages",
+                                "cli",
+                                "assets",
+                                "workflows",
+                                "base",
+                                "graph",
+                                "index.js",
+                            ),
                         ).href,
                     ],
                     cwd: projectRoot,

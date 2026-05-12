@@ -1,4 +1,4 @@
-import { StateGraph } from "@langchain/langgraph";
+import { MemorySaver, StateGraph } from "@langchain/langgraph";
 import graphEdges from "./edges";
 import { StateAnnotation } from "./state";
 import nodes from "./nodes";
@@ -18,6 +18,7 @@ export const createGraph = (cfg: GraphConfig = {}) => {
 
     return graph.compile({
         name: cfg.name ?? DEFAULT_GRAPH_NAME,
+        checkpointer: new MemorySaver(),
     });
 };
 

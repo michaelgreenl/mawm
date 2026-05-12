@@ -1,6 +1,9 @@
-export type OpencodeInterrupt = {
+export type OpencodeSessionRequest = {
     type: "opencode-session";
     nodeName: string;
+};
+
+export type OpencodeInterrupt = OpencodeSessionRequest & {
     sessionID: string;
     serverUrl: string;
     attachCommand: string[];

@@ -1,11 +1,18 @@
 import { Command } from "@langchain/langgraph";
 
-import type { OpencodeInterrupt, WorkerCommand, WorkerEvent, WorkerGraph } from "./protocol.d.ts";
+import type { InteractiveSessionManager } from "./session-manager.js";
+import type {
+    OpencodeSessionRequest,
+    WorkerCommand,
+    WorkerEvent,
+    WorkerGraph,
+} from "./protocol.d.ts";
 
 type WorkflowWorkerRuntime = {
     graph: WorkerGraph;
+    sessionManager: InteractiveSessionManager;
     send(event: WorkerEvent): Promise<void>;
-    onClose(): Promise<void>;
+    onClose?(): Promise<void>;
 };
 
 function getErrorMessage(error: unknown) {
@@ -16,23 +23,17 @@ function getErrorMessage(error: unknown) {
     return String(error);
 }
 
-function isOpencodeInterrupt(value: unknown): value is OpencodeInterrupt {
+function isOpencodeSessionRequest(value: unknown): value is OpencodeSessionRequest {
     if (!value || typeof value !== "object") {
         return false;
     }
 
-    const interrupt = value as Partial<OpencodeInterrupt>;
+    const interrupt = value as Partial<OpencodeSessionRequest>;
 
-    return (
-        interrupt.type === "opencode-session" &&
-        typeof interrupt.nodeName === "string" &&
-        typeof interrupt.sessionID === "string" &&
-        typeof interrupt.serverUrl === "string" &&
-        Array.isArray(interrupt.attachCommand)
-    );
+    return interrupt.type === "opencode-session" && typeof interrupt.nodeName === "string";
 }
 
-function getFirstInterrupt(result: unknown) {
+function getFirstInterruptRequest(result: unknown) {
     if (!result || typeof result !== "object") {
         return undefined;
     }
@@ -46,7 +47,7 @@ function getFirstInterrupt(result: unknown) {
     }
 
     for (const interrupt of maybeInterrupts) {
-        if (isOpencodeInterrupt(interrupt?.value)) {
+        if (isOpencodeSessionRequest(interrupt?.value)) {
             return interrupt.value;
         }
     }
@@ -58,6 +59,24 @@ export function createWorkflowWorker(runtime: WorkflowWorkerRuntime) {
     let threadID: string | undefined;
     let queue = Promise.resolve();
     let stopped = false;
+    let activeInterrupt: { threadID: string; nodeName: string } | undefined;
+
+    const closeActiveSession = async () => {
+        if (!activeInterrupt) {
+            return;
+        }
+
+        const session = activeInterrupt;
+        activeInterrupt = undefined;
+
+        await runtime.sessionManager.closeSession(session.threadID, session.nodeName);
+    };
+
+    const closeSessions = async () => {
+        await closeActiveSession();
+        await runtime.sessionManager.closeAllSessions();
+        await runtime.onClose?.();
+    };
 
     const invokeGraph = async (input: unknown) => {
         if (!threadID) {
@@ -72,9 +91,24 @@ export function createWorkflowWorker(runtime: WorkflowWorkerRuntime) {
             const result = await runtime.graph.invoke(input, {
                 configurable: { thread_id: threadID },
             });
-            const interrupt = getFirstInterrupt(result);
+            const interruptRequest = getFirstInterruptRequest(result);
 
-            if (interrupt) {
+            if (interruptRequest) {
+                await closeActiveSession();
+
+                const session = await runtime.sessionManager.ensureSession(
+                    interruptRequest.nodeName,
+                    threadID,
+                );
+                const interrupt = {
+                    type: "opencode-session" as const,
+                    ...session,
+                };
+
+                activeInterrupt = {
+                    threadID,
+                    nodeName: session.nodeName,
+                };
                 await runtime.send({ type: "interrupt", interrupt });
                 return;
             }
@@ -100,12 +134,13 @@ export function createWorkflowWorker(runtime: WorkflowWorkerRuntime) {
                 return;
 
             case "resume":
+                await closeActiveSession();
                 await invokeGraph(new Command({ resume: command.value ?? {} }));
                 return;
 
             case "stop":
                 stopped = true;
-                await runtime.onClose();
+                await closeSessions();
                 return;
         }
     };

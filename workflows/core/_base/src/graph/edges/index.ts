@@ -25,7 +25,7 @@ export const transitions = [
 const graphEdges = [
     [START, "planner"],
     ["planner", "manager"],
-    ["manager", "planner"],
+    // ["manager", "planner"],
     ["manager", END],
 ] as const satisfies readonly WorkflowGraphEdge[];
 
