@@ -1,6 +1,6 @@
 import { interactiveSessionManager } from "@mawm/core/utils/opencode/session-manager.js";
 import type { WorkerCommand, WorkerEvent, WorkerGraph } from "./protocol.ts";
-import { createWorkflowWorker } from "./langgraph/worker.js";
+import { createWorkflowWorker } from "./worker.js";
 
 async function loadGraph(): Promise<WorkerGraph> {
     const graphModuleURL = process.argv[2];

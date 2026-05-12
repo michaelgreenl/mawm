@@ -1,6 +1,6 @@
 import { Command } from "@langchain/langgraph";
 
-import type { OpencodeInterrupt, WorkerCommand, WorkerEvent, WorkerGraph } from "../protocol.ts";
+import type { OpencodeInterrupt, WorkerCommand, WorkerEvent, WorkerGraph } from "./protocol.d.ts";
 
 type WorkflowWorkerRuntime = {
     graph: WorkerGraph;
