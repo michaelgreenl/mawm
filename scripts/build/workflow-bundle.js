@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,10 +8,9 @@ export const getRepoRoot = () => {
     return resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 };
 
-export const getWorkflowBundlePaths = (workflowRoot, repoRoot = getRepoRoot()) => {
+export const getWorkflowBundlePaths = (workflowRoot) => {
     return {
         workflowRoot,
-        coreUtilsRoot: join(repoRoot, "packages", "core", "utils", "src"),
         outputRoot: join(workflowRoot, "dist"),
     };
 };
@@ -94,7 +94,11 @@ const changeExtension = (filePath, nextExtension) => {
     return `${filePath.slice(0, -extname(filePath).length)}${nextExtension}`;
 };
 
-const resolveCoreUtilsAsset = (assetPath, coreUtilsRoot, outputRoot) => {
+const resolveSharedAssetPath = (specifier, workflowRoot) => {
+    return createRequire(join(workflowRoot, "package.json")).resolve(specifier);
+};
+
+const resolveCoreUtilsAsset = (assetPath, workflowRoot, outputRoot) => {
     const relativeAssetPath = assetPath.startsWith("src/") ? assetPath.slice(4) : assetPath;
     const parts = relativeAssetPath.split("/");
     const assetName = parts.at(-1);
@@ -105,24 +109,21 @@ const resolveCoreUtilsAsset = (assetPath, coreUtilsRoot, outputRoot) => {
 
     if (parts[0] === "prompts") {
         return {
-            mode: "copy",
-            sourcePath: join(coreUtilsRoot, ...parts),
+            sourcePath: resolveSharedAssetPath(`@mawm/core/utils/${relativeAssetPath}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "prompts", assetName),
         };
     }
 
     if (parts[0] === "plugins") {
         return {
-            mode: "copy",
-            sourcePath: join(coreUtilsRoot, "opencode", "plugins", assetName),
+            sourcePath: resolveSharedAssetPath(`@mawm/core/utils/opencode/plugins/${assetName}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "plugins", assetName),
         };
     }
 
     if (parts[0] === "tools") {
         return {
-            mode: "copy",
-            sourcePath: join(coreUtilsRoot, "opencode", "tools", assetName),
+            sourcePath: resolveSharedAssetPath(`@mawm/core/utils/opencode/tools/${assetName}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "tools", assetName),
         };
     }
@@ -130,9 +131,9 @@ const resolveCoreUtilsAsset = (assetPath, coreUtilsRoot, outputRoot) => {
     throw new Error(`Unsupported workflow core asset path: ${assetPath}`);
 };
 
-const buildCoreUtilsAssets = async ({ workflowDefinition, coreUtilsRoot, outputRoot }) => {
+const buildCoreUtilsAssets = async ({ workflowDefinition, workflowRoot, outputRoot }) => {
     for (const assetPath of workflowDefinition.coreUtils?.assets ?? []) {
-        const resolvedAsset = resolveCoreUtilsAsset(assetPath, coreUtilsRoot, outputRoot);
+        const resolvedAsset = resolveCoreUtilsAsset(assetPath, workflowRoot, outputRoot);
         await copyFile(resolvedAsset.sourcePath, resolvedAsset.targetPath);
     }
 };
@@ -164,7 +165,7 @@ const bundleGraphEntries = async ({ workflowRoot, outputRoot, buildEntry }) => {
 };
 
 export const buildWorkflowBundle = async (
-    { workflowRoot, coreUtilsRoot, outputRoot },
+    { workflowRoot, outputRoot },
     { buildEntry = defaultBuildEntry } = {},
 ) => {
     const workflowDefinition = await readJson(join(workflowRoot, "src", "maw.json"));
@@ -178,7 +179,7 @@ export const buildWorkflowBundle = async (
             return !filePath.endsWith("index.ts");
         },
     );
-    await buildCoreUtilsAssets({ workflowDefinition, coreUtilsRoot, outputRoot });
+    await buildCoreUtilsAssets({ workflowDefinition, workflowRoot, outputRoot });
     await bundleGraphEntries({ workflowRoot, outputRoot, buildEntry });
 };
 
