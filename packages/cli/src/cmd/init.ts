@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { defineCommand } from "../types/commands.js";
 
 const CLI_ASSETS_ROOT = fileURLToPath(new URL("../../assets", import.meta.url));
-const INITIATIVES_ASSETS_ROOT = join(CLI_ASSETS_ROOT, "state", "initiatives", "v0");
+const INITIATIVES_ASSETS_ROOT = join(CLI_ASSETS_ROOT, "state", "initiatives");
 const OPENVIKING_ASSETS_ROOT = join(CLI_ASSETS_ROOT, "openviking");
 
 const exists = async (path: string): Promise<boolean> => {

@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 
 import { defineSubCommand, arg } from "../../types/commands.js";
 import type { CommandContext } from "../../types/commands.js";
-import type { OpencodeInterrupt } from "./runtime/protocol.ts";
-import { runInteractiveWorkflow } from "./runtime/parent.js";
-import { createProcessWorkflowTransport } from "./runtime/process-transport.js";
+import type { OpencodeInterrupt } from "../../workflow/runtime/protocol.js";
+import { runInteractiveWorkflow } from "../../workflow/runtime/parent.js";
+import { createProcessWorkflowTransport } from "../../workflow/runtime/process-transport.js";
 
 type WorkflowDefinition = {
     runtimeRegistryKey?: string;
@@ -65,7 +65,7 @@ function getWorkerExtension(moduleUrl: string) {
 
 function getWorkerPath(moduleUrl: string) {
     return fileURLToPath(
-        new URL(`./runtime/worker-entry${getWorkerExtension(moduleUrl)}`, moduleUrl),
+        new URL(`../../workflow/runtime/worker-entry${getWorkerExtension(moduleUrl)}`, moduleUrl),
     );
 }
 

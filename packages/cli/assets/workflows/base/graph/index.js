@@ -58536,21 +58536,21 @@ var MessagesZodState = exports_external.object({ messages: withLangGraph(exports
 // node_modules/.bun/@langchain+langgraph@1.3.0+3a9ec6cd4232cefb/node_modules/@langchain/langgraph/dist/index.js
 initializeAsyncLocalStorageSingleton();
 
-// workflows/core/_base/src/graph/edges/implement.ts
+// packages/workflows/base/src/graph/edges/implement.ts
 var ImplementPayloadSchema = new StateSchema({
   phasePlanPath: exports_external2.string(),
   brief: exports_external2.string(),
   startStep: exports_external2.number().int().positive().optional()
 });
 
-// workflows/core/_base/src/graph/edges/replan.ts
+// packages/workflows/base/src/graph/edges/replan.ts
 var ReplanPayloadSchema = new StateSchema({
   phasePlanPath: exports_external2.string(),
   brief: exports_external2.string(),
   startStep: exports_external2.number().int().positive().optional()
 });
 
-// workflows/core/_base/src/graph/edges/index.ts
+// packages/workflows/base/src/graph/edges/index.ts
 var graphEdges = [
   [START, "planner"],
   ["planner", "manager"],
@@ -58558,7 +58558,7 @@ var graphEdges = [
 ];
 var edges_default = graphEdges;
 
-// workflows/core/_base/src/graph/state.ts
+// packages/workflows/base/src/graph/state.ts
 var text = () => Annotation({
   reducer: (_left, right) => right,
   default: () => ""
@@ -58579,7 +58579,7 @@ var StateAnnotation = Annotation.Root({
   startStep: optionalStep()
 });
 
-// packages/core/utils/src/langgraph/nodes/interactive.ts
+// packages/utils/src/langgraph/nodes/interactive.ts
 function getThreadID(config2) {
   const threadID = config2?.configurable?.["thread_id"];
   if (typeof threadID !== "string" || threadID.length === 0) {
@@ -58617,22 +58617,22 @@ function createInteractiveNode(nodeName) {
   };
 }
 
-// workflows/core/_base/src/graph/nodes/planner.ts
+// packages/workflows/base/src/graph/nodes/planner.ts
 var planner = createInteractiveNode("planner");
 var planner_default = planner;
 
-// workflows/core/_base/src/graph/nodes/manager.ts
+// packages/workflows/base/src/graph/nodes/manager.ts
 var manager = createInteractiveNode("manager");
 var manager_default = manager;
 
-// workflows/core/_base/src/graph/nodes/index.ts
+// packages/workflows/base/src/graph/nodes/index.ts
 var nodes = {
   planner: planner_default,
   manager: manager_default
 };
 var nodes_default = nodes;
 
-// workflows/core/_base/src/graph/index.ts
+// packages/workflows/base/src/graph/index.ts
 var DEFAULT_GRAPH_NAME = "base-workflow";
 var createGraph = (cfg = {}) => {
   const graph = new StateGraph(StateAnnotation).addNode(nodes_default);

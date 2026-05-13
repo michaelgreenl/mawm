@@ -1,13 +1,11 @@
 {
   "name": "mawm",
-  "module": "index.ts",
   "type": "module",
   "private": true,
   "workspaces": [
     "packages/cli",
-    "packages/core",
-    "packages/core/*",
-    "workflows/core/*"
+    "packages/utils",
+    "packages/workflows/*"
   ],
   "scripts": {
     "format": "bun --workspaces --sequential --no-exit-on-error format",

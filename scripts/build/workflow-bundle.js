@@ -109,21 +109,21 @@ const resolveCoreUtilsAsset = (assetPath, workflowRoot, outputRoot) => {
 
     if (parts[0] === "prompts") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/core/utils/${relativeAssetPath}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(`@mawm/utils/${relativeAssetPath}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "prompts", assetName),
         };
     }
 
     if (parts[0] === "plugins") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/core/utils/opencode/plugins/${assetName}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(`@mawm/utils/opencode/plugins/${assetName}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "plugins", assetName),
         };
     }
 
     if (parts[0] === "tools") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/core/utils/opencode/tools/${assetName}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(`@mawm/utils/opencode/tools/${assetName}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "tools", assetName),
         };
     }
@@ -207,21 +207,17 @@ const expandWorkspacePattern = async (repoRoot, workspacePattern) => {
 export const discoverWorkflowRoots = async (repoRoot = getRepoRoot()) => {
     const rootPackage = await readJson(join(repoRoot, "package.json"));
     const workflowPatterns = (rootPackage.workspaces ?? []).filter((workspacePattern) => {
-        return workspacePattern.startsWith("workflows/");
+        return workspacePattern.startsWith("packages/workflows/");
     });
     const discoveredWorkflowRoots = [];
 
     for (const workflowPattern of workflowPatterns) {
         for (const workflowRoot of await expandWorkspacePattern(repoRoot, workflowPattern)) {
             try {
-                const workflowPackage = await readJson(join(workflowRoot, "package.json"));
+                await readJson(join(workflowRoot, "package.json"));
+                await readJson(join(workflowRoot, "src", "maw.json"));
 
-                if (
-                    typeof workflowPackage.name === "string" &&
-                    workflowPackage.name.startsWith("@mawm/workflows/")
-                ) {
-                    discoveredWorkflowRoots.push(resolve(workflowRoot));
-                }
+                discoveredWorkflowRoots.push(resolve(workflowRoot));
             } catch {
                 // Ignore non-package matches inside the workspace glob.
             }
@@ -251,7 +247,7 @@ const readWorkflowManifestEntry = async (workflowDistRoot) => {
 export const syncWorkflowDistToCliAssets = async (
     {
         repoRoot = getRepoRoot(),
-        cliWorkflowAssetsRoot = join(repoRoot, "packages", "cli", "assets", "workflows"),
+        cliWorkflowAssetsRoot = join(repoRoot, "packages", "cli", "src", "assets", "workflows"),
     } = {},
     { buildWorkflow = buildWorkspaceWorkflow, findWorkflowRoots = discoverWorkflowRoots } = {},
 ) => {

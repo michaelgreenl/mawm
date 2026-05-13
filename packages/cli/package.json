@@ -15,7 +15,6 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "assets",
     "bin",
     "dist"
   ],
@@ -32,8 +31,5 @@
   "dependencies": {
     "@langchain/core": "^1.1.46",
     "@langchain/langgraph": "^1.3.0"
-  },
-  "devDependencies": {
-    "@mawm/core": "workspace:*"
   }
 }
