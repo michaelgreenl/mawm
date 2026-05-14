@@ -1,5 +1,5 @@
 {
-  "name": "@mawm/base-workflow",
+  "name": "@mawm/workflow-base",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "zod": "^4.4.3"
   },
   "scripts": {
-    "build": "node ../_scripts/build-workflow.js",
+    "build": "node ./scripts/build.js",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "format": "prettier --write src",

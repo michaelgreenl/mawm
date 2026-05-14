@@ -1,7 +1,10 @@
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { buildWorkflowBundle, getWorkflowBundlePaths } from "../../../scripts/build/workflow-bundle.js";
+import {
+    buildWorkflowBundle,
+    getWorkflowBundlePaths,
+} from "../../../../scripts/build/workflow-bundle.js";
 
 const workflowRoot = resolve(process.argv[2] ?? process.cwd());
 

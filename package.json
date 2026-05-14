@@ -8,6 +8,8 @@
     "packages/workflows/*"
   ],
   "scripts": {
+    "build:cli": "bun --filter=@mawm/cli run build",
+    "build:workflow": "sh -c 'bun run --filter \"@mawm/workflow-$1\" build' --",
     "format": "bun --workspaces --sequential --no-exit-on-error format",
     "lint": "bun --workspaces --sequential --no-exit-on-error lint:all",
     "typecheck": "bun --workspaces --sequential --no-exit-on-error typecheck",

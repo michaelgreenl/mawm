@@ -6,7 +6,7 @@ import {
     getRepoRoot,
     runCommand,
     syncWorkflowDistToCliAssets,
-} from "./workflow-bundle.js";
+} from "../../../scripts/build/workflow-bundle.js";
 
 export const getDefaultCliBuildPaths = (repoRoot = getRepoRoot()) => {
     return {
