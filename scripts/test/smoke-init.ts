@@ -5,7 +5,7 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const smokeRoot = join(repoRoot, "tests", "smoke");
 const scratchRoot = join(smokeRoot, ".tmp");
 const artifactsRoot = join(scratchRoot, "artifacts");

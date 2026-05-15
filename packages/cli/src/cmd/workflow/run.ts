@@ -70,8 +70,7 @@ function getWorkerPath(moduleUrl: string) {
 }
 
 function getWorkflowGraphModuleUrl(runtimeRegistryKey: string, moduleUrl: string) {
-    return new URL(`../../../assets/workflows/${runtimeRegistryKey}/graph/index.js`, moduleUrl)
-        .href;
+    return new URL(`../../assets/workflows/${runtimeRegistryKey}/graph/index.js`, moduleUrl).href;
 }
 
 async function readWorkflowDefinition(

@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineSubCommand, arg } from "../../types/commands.js";
 
-const WORKFLOW_ASSETS_ROOT = fileURLToPath(new URL("../../../assets/workflows", import.meta.url));
+const WORKFLOW_ASSETS_ROOT = fileURLToPath(new URL("../../assets/workflows", import.meta.url));
 
 type WorkflowManifest = {
     workflows: {
