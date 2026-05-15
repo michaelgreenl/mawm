@@ -3,6 +3,7 @@ import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promi
 import { createRequire } from "node:module";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 export const getRepoRoot = () => {
     return resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -94,46 +95,102 @@ const changeExtension = (filePath, nextExtension) => {
     return `${filePath.slice(0, -extname(filePath).length)}${nextExtension}`;
 };
 
+const SHARED_ASSET_SPECIFIER_PREFIX = "@mawm/utils/";
+
 const resolveSharedAssetPath = (specifier, workflowRoot) => {
     return createRequire(join(workflowRoot, "package.json")).resolve(specifier);
 };
 
-const resolveCoreUtilsAsset = (assetPath, workflowRoot, outputRoot) => {
-    const relativeAssetPath = assetPath.startsWith("src/") ? assetPath.slice(4) : assetPath;
+const resolveSharedAsset = (specifier, workflowRoot, outputRoot) => {
+    if (!specifier.startsWith(SHARED_ASSET_SPECIFIER_PREFIX)) {
+        throw new Error(`Invalid workflow shared asset specifier: ${specifier}`);
+    }
+
+    const relativeAssetPath = specifier.slice(SHARED_ASSET_SPECIFIER_PREFIX.length);
     const parts = relativeAssetPath.split("/");
     const assetName = parts.at(-1);
 
     if (!assetName) {
-        throw new Error(`Invalid workflow core asset path: ${assetPath}`);
+        throw new Error(`Invalid workflow shared asset specifier: ${specifier}`);
     }
 
     if (parts[0] === "prompts") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/utils/${relativeAssetPath}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(specifier, workflowRoot),
             targetPath: join(outputRoot, "assets", "prompts", assetName),
         };
     }
 
     if (parts[0] === "plugins") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/utils/plugins/${assetName}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(specifier, workflowRoot),
             targetPath: join(outputRoot, "assets", "plugins", assetName),
         };
     }
 
     if (parts[0] === "tools") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/utils/tools/${assetName}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(specifier, workflowRoot),
             targetPath: join(outputRoot, "assets", "tools", assetName),
         };
     }
 
-    throw new Error(`Unsupported workflow core asset path: ${assetPath}`);
+    throw new Error(`Unsupported workflow shared asset specifier: ${specifier}`);
 };
 
-const buildCoreUtilsAssets = async ({ workflowDefinition, workflowRoot, outputRoot }) => {
-    for (const assetPath of workflowDefinition.coreUtils?.assets ?? []) {
-        const resolvedAsset = resolveCoreUtilsAsset(assetPath, workflowRoot, outputRoot);
+const collectAssetIndexFiles = async (rootDir) => {
+    const indexFiles = [];
+
+    for (const entry of await readdir(rootDir, { withFileTypes: true })) {
+        const entryPath = join(rootDir, entry.name);
+
+        if (entry.isDirectory()) {
+            indexFiles.push(...(await collectAssetIndexFiles(entryPath)));
+            continue;
+        }
+
+        if (entry.name === "index.ts") {
+            indexFiles.push(entryPath);
+        }
+    }
+
+    return indexFiles.sort();
+};
+
+const discoverSharedAssetSpecifiers = async (workflowRoot) => {
+    const assetIndexFiles = await collectAssetIndexFiles(join(workflowRoot, "src", "assets"));
+    const discoveredSpecifiers = new Set();
+
+    for (const indexFile of assetIndexFiles) {
+        const sourceText = await readFile(indexFile, "utf8");
+        const sourceFile = ts.createSourceFile(
+            indexFile,
+            sourceText,
+            ts.ScriptTarget.Latest,
+            true,
+            ts.ScriptKind.TS,
+        );
+
+        const visit = (node) => {
+            if (
+                (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+                node.text.startsWith(SHARED_ASSET_SPECIFIER_PREFIX)
+            ) {
+                discoveredSpecifiers.add(node.text);
+            }
+
+            ts.forEachChild(node, visit);
+        };
+
+        visit(sourceFile);
+    }
+
+    return [...discoveredSpecifiers].sort();
+};
+
+const copySharedAssets = async ({ workflowRoot, outputRoot }) => {
+    for (const specifier of await discoverSharedAssetSpecifiers(workflowRoot)) {
+        const resolvedAsset = resolveSharedAsset(specifier, workflowRoot, outputRoot);
         await copyFile(resolvedAsset.sourcePath, resolvedAsset.targetPath);
     }
 };
@@ -168,8 +225,6 @@ export const buildWorkflowBundle = async (
     { workflowRoot, outputRoot },
     { buildEntry = defaultBuildEntry } = {},
 ) => {
-    const workflowDefinition = await readJson(join(workflowRoot, "src", "maw.json"));
-
     await emptyDirectory(outputRoot);
     await copyFile(join(workflowRoot, "src", "maw.json"), join(outputRoot, "maw.json"));
     await copyDirectory(
@@ -179,7 +234,7 @@ export const buildWorkflowBundle = async (
             return !filePath.endsWith("index.ts");
         },
     );
-    await buildCoreUtilsAssets({ workflowDefinition, workflowRoot, outputRoot });
+    await copySharedAssets({ workflowRoot, outputRoot });
     await bundleGraphEntries({ workflowRoot, outputRoot, buildEntry });
 };
 
