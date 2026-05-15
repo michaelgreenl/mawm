@@ -5,7 +5,6 @@ hidden: true
 permission:
   edit: allow
   bash: allow
-  openviking-find: allow
   skill:
     "*": deny
     test-driven-development: allow
