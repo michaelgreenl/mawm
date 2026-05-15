@@ -1,4 +1,4 @@
-import { createInteractiveNode } from "@mawm/utils/langgraph/nodes/interactive.ts";
+import { createInteractiveNode } from "@mawm/utils/nodes/interactive.ts";
 
 const planner = createInteractiveNode("planner");
 

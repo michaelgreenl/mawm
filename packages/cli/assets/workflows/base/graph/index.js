@@ -58579,7 +58579,7 @@ var StateAnnotation = Annotation.Root({
   startStep: optionalStep()
 });
 
-// packages/utils/src/langgraph/nodes/interactive.ts
+// packages/utils/src/nodes/interactive.ts
 function getThreadID(config2) {
   const threadID = config2?.configurable?.["thread_id"];
   if (typeof threadID !== "string" || threadID.length === 0) {

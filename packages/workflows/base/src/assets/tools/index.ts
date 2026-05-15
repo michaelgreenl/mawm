@@ -1,2 +1,1 @@
-export { openvikingFind } from "@mawm/utils/opencode/tools/openviking-find.ts";
-export { injectVariant } from "@mawm/utils/opencode/tools/inject-variant.ts";
+export { injectVariant } from "@mawm/utils/tools/inject-variant.ts";

@@ -116,14 +116,14 @@ const resolveCoreUtilsAsset = (assetPath, workflowRoot, outputRoot) => {
 
     if (parts[0] === "plugins") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/utils/opencode/plugins/${assetName}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(`@mawm/utils/plugins/${assetName}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "plugins", assetName),
         };
     }
 
     if (parts[0] === "tools") {
         return {
-            sourcePath: resolveSharedAssetPath(`@mawm/utils/opencode/tools/${assetName}`, workflowRoot),
+            sourcePath: resolveSharedAssetPath(`@mawm/utils/tools/${assetName}`, workflowRoot),
             targetPath: join(outputRoot, "assets", "tools", assetName),
         };
     }

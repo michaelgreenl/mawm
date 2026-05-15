@@ -8,8 +8,8 @@
     "@opencode-ai/plugin": "1.14.28"
   },
   "exports": {
-    "./langgraph/*": "./src/langgraph/*",
-    "./opencode/*": "./src/opencode/*",
+    "./nodes/*": "./src/nodes/*",
+    "./tools/*": "./src/tools/*",
     "./prompts/*": "./src/prompts/*"
   },
   "scripts": {
