@@ -58,16 +58,7 @@ describe("init command", () => {
                 await collectFiles(join(projectRoot, ".mawm", "initiatives")),
                 await collectFiles(join(exampleRoot, "initiatives")),
             );
-            assert.equal(
-                await readFile(join(projectRoot, ".mawm", "ov.conf"), "utf8"),
-                await readFile(join(exampleRoot, "ov.conf"), "utf8"),
-            );
-            assert.equal(
-                await readFile(join(projectRoot, ".mawm", "ovcli.conf"), "utf8"),
-                await readFile(join(exampleRoot, "ovcli.conf"), "utf8"),
-            );
             assert.deepEqual(await readdir(join(projectRoot, ".mawm", "maws")), []);
-            assert.deepEqual(await readdir(join(projectRoot, ".mawm", "openviking")), []);
         });
     });
 
@@ -81,9 +72,10 @@ describe("init command", () => {
                 },
             });
 
-            await writeFile(join(projectRoot, ".mawm", "ov.conf"), "custom ov config\n");
-            await writeFile(join(projectRoot, ".mawm", "ovcli.conf"), "custom ov cli config\n");
-            await writeFile(join(projectRoot, ".mawm", "initiatives", "roadmap.md"), "# Custom roadmap\n");
+            await writeFile(
+                join(projectRoot, ".mawm", "initiatives", "roadmap.md"),
+                "# Custom roadmap\n",
+            );
             await mkdir(join(projectRoot, ".mawm", "maws", "custom-workflow"), { recursive: true });
             await writeFile(
                 join(projectRoot, ".mawm", "maws", "custom-workflow", "sentinel.txt"),
@@ -99,11 +91,6 @@ describe("init command", () => {
             });
 
             assert.equal(exitCode, 0);
-            assert.equal(await readFile(join(projectRoot, ".mawm", "ov.conf"), "utf8"), "custom ov config\n");
-            assert.equal(
-                await readFile(join(projectRoot, ".mawm", "ovcli.conf"), "utf8"),
-                "custom ov cli config\n",
-            );
             assert.equal(
                 await readFile(join(projectRoot, ".mawm", "initiatives", "roadmap.md"), "utf8"),
                 "# Custom roadmap\n",

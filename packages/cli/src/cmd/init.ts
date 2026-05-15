@@ -3,9 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineCommand } from "../types/commands.js";
 
-const CLI_ASSETS_ROOT = fileURLToPath(new URL("../../assets", import.meta.url));
+const CLI_ASSETS_ROOT = fileURLToPath(new URL("../assets", import.meta.url));
 const INITIATIVES_ASSETS_ROOT = join(CLI_ASSETS_ROOT, "state", "initiatives");
-const OPENVIKING_ASSETS_ROOT = join(CLI_ASSETS_ROOT, "openviking");
 
 const exists = async (path: string): Promise<boolean> => {
     try {
@@ -46,11 +45,8 @@ const init = defineCommand({
 
         await mkdir(mawmRoot, { recursive: true });
         await mkdir(join(mawmRoot, "maws"), { recursive: true });
-        await mkdir(join(mawmRoot, "openviking"), { recursive: true });
 
         await copyMissing(INITIATIVES_ASSETS_ROOT, join(mawmRoot, "initiatives"));
-        await copyMissing(join(OPENVIKING_ASSETS_ROOT, "ov.conf"), join(mawmRoot, "ov.conf"));
-        await copyMissing(join(OPENVIKING_ASSETS_ROOT, "ovcli.conf"), join(mawmRoot, "ovcli.conf"));
 
         console.log("Initialized .mawm scaffold.");
         return 0;
