@@ -23,7 +23,7 @@ describe("workflow run command", () => {
         await withTempProject(async (projectRoot) => {
             await mkdir(join(projectRoot, ".mawm", "maws", "base"), { recursive: true });
             await writeFile(
-                join(projectRoot, ".mawm", "maws", "base", "maw.json"),
+                join(projectRoot, ".mawm", "maws", "base", "mawm.json"),
                 `${JSON.stringify({ id: "base", runtimeRegistryKey: "base" }, null, 2)}\n`,
             );
 

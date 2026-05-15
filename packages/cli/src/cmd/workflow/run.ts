@@ -78,7 +78,7 @@ async function readWorkflowDefinition(
     runtime: WorkflowRunRuntime,
 ): Promise<WorkflowDefinition> {
     return JSON.parse(
-        await runtime.readFile(join(workflowRoot, "maw.json"), "utf8"),
+        await runtime.readFile(join(workflowRoot, "mawm.json"), "utf8"),
     ) as WorkflowDefinition;
 }
 

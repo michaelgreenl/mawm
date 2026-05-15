@@ -226,7 +226,7 @@ export const buildWorkflowBundle = async (
     { buildEntry = defaultBuildEntry } = {},
 ) => {
     await emptyDirectory(outputRoot);
-    await copyFile(join(workflowRoot, "src", "maw.json"), join(outputRoot, "maw.json"));
+    await copyFile(join(workflowRoot, "src", "mawm.json"), join(outputRoot, "mawm.json"));
     await copyDirectory(
         join(workflowRoot, "src", "assets"),
         join(outputRoot, "assets"),
@@ -270,7 +270,7 @@ export const discoverWorkflowRoots = async (repoRoot = getRepoRoot()) => {
         for (const workflowRoot of await expandWorkspacePattern(repoRoot, workflowPattern)) {
             try {
                 await readJson(join(workflowRoot, "package.json"));
-                await readJson(join(workflowRoot, "src", "maw.json"));
+                await readJson(join(workflowRoot, "src", "mawm.json"));
 
                 discoveredWorkflowRoots.push(resolve(workflowRoot));
             } catch {
@@ -287,7 +287,7 @@ const buildWorkspaceWorkflow = async ({ workflowRoot }) => {
 };
 
 const readWorkflowManifestEntry = async (workflowDistRoot) => {
-    const workflowDefinition = await readJson(join(workflowDistRoot, "maw.json"));
+    const workflowDefinition = await readJson(join(workflowDistRoot, "mawm.json"));
 
     return {
         id: workflowDefinition.id,
