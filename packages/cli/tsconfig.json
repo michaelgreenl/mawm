@@ -18,6 +18,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "assets/initiatives"],
   "exclude": ["src/assets/**/*.ts"]
 }

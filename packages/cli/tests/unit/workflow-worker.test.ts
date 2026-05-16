@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { createWorkflowWorker } from "../../src/workflow/runtime/worker.ts";
+import { createWorkflowWorker } from "../../src/runtime/worker.ts";
 
 const plannerSession = {
     nodeName: "planner",
@@ -25,7 +25,9 @@ describe("workflow worker", () => {
             graph: {
                 async invoke() {
                     return {
-                        __interrupt__: [{ value: { type: "opencode-session", nodeName: "planner" } }],
+                        __interrupt__: [
+                            { value: { type: "opencode-session", nodeName: "planner" } },
+                        ],
                     };
                 },
             },
@@ -63,7 +65,9 @@ describe("workflow worker", () => {
 
                     if (invocationCount === 1) {
                         return {
-                            __interrupt__: [{ value: { type: "opencode-session", nodeName: "planner" } }],
+                            __interrupt__: [
+                                { value: { type: "opencode-session", nodeName: "planner" } },
+                            ],
                         };
                     }
 
@@ -102,7 +106,9 @@ describe("workflow worker", () => {
             graph: {
                 async invoke() {
                     return {
-                        __interrupt__: [{ value: { type: "opencode-session", nodeName: "planner" } }],
+                        __interrupt__: [
+                            { value: { type: "opencode-session", nodeName: "planner" } },
+                        ],
                     };
                 },
             },
