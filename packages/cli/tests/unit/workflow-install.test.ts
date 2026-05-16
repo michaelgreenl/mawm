@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { delimiter, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import install from "../dist/cmd/workflow/install.js";
+import install from "../../dist/cmd/workflow/install.js";
 
-const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../../../..", import.meta.url));
 const exampleWorkflowRoot = join(
     repoRoot,
     "tests",
@@ -144,7 +144,7 @@ copyMissing(sourceRoot, path.join(process.cwd(), "skills"));
     };
 }
 
-describe("workflow install command", () => {
+describe("install command", () => {
     it("installs a bundled workflow scaffold that matches the smoke fixture", async () => {
         await withTempProject(async (projectRoot) => {
             const { env, logPath } = await createFakeSkillfish(projectRoot);
@@ -166,6 +166,40 @@ describe("workflow install command", () => {
                 await collectFilePaths(exampleWorkflowRoot),
             );
             assert.equal(await readFile(logPath, "utf8"), "install\n");
+        });
+    });
+
+    it("installs workflow assets without stale plugin or tool references", async () => {
+        await withTempProject(async (projectRoot) => {
+            const { env } = await createFakeSkillfish(projectRoot);
+
+            const exitCode = await install.run({
+                args: {
+                    workflow: "base",
+                },
+                context: {
+                    cwd: projectRoot,
+                    env,
+                    rawArgs: [],
+                },
+            });
+
+            assert.equal(exitCode, 0);
+
+            const installedFiles = await collectFiles(join(projectRoot, ".mawm", "maws", "base"));
+
+            assert.equal(installedFiles.has("plugins/secret-guard.ts"), false);
+            assert.equal(installedFiles.has("plugins/graph-transition.ts"), false);
+            assert.equal(installedFiles.has("tools/openviking-find.ts"), false);
+            assert.doesNotMatch(installedFiles.get("opencode.json") ?? "", /secret-guard|graph-transition/);
+
+            for (const [relativePath, contents] of installedFiles) {
+                if (!relativePath.startsWith("agents/") || !relativePath.endsWith(".md")) {
+                    continue;
+                }
+
+                assert.doesNotMatch(contents, /openviking-find/);
+            }
         });
     });
 

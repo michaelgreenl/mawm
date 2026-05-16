@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import list from "../dist/cmd/workflow/list.js";
+import list from "../../dist/cmd/workflow/list.js";
 
 async function withTempProject(run: (projectRoot: string) => Promise<void>): Promise<void> {
     const projectRoot = await mkdtemp(join(tmpdir(), "mawm-workflow-list-"));
@@ -45,7 +45,7 @@ async function captureStdout(
     }
 }
 
-describe("workflow list command", () => {
+describe("list command", () => {
     it("prints installed workflow ids in sorted order", async () => {
         await withTempProject(async (projectRoot) => {
             await mkdir(join(projectRoot, ".mawm", "maws", "zeta"), { recursive: true });

@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { defineSubCommand, arg } from "../../types/commands.js";
+import { defineCommand, arg } from "../../types/commands.js";
 import type { CommandContext } from "../../types/commands.js";
 import type { OpencodeInterrupt } from "../../workflow/runtime/protocol.js";
 import { runInteractiveWorkflow } from "../../workflow/runtime/parent.js";
@@ -170,11 +170,10 @@ export async function runWorkflowCommand(
     }
 }
 
-const run = defineSubCommand({
+const run = defineCommand({
     name: "run",
-    parent: "workflow",
     description: "Executes installed workflows",
-    usage: "workflow run <workflow>",
+    usage: "run <workflow>",
     args: [arg("workflow", { required: true })],
     async run(input) {
         return await runWorkflowCommand(input);

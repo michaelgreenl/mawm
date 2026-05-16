@@ -1,12 +1,11 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { defineSubCommand } from "../../types/commands.js";
+import { defineCommand } from "../../types/commands.js";
 
-const list = defineSubCommand({
+const list = defineCommand({
     name: "list",
-    parent: "workflow",
     description: "Lists installed workflows",
-    usage: "workflow list",
+    usage: "list",
     async run({ context }) {
         try {
             const workflowsRoot = join(context.cwd, ".mawm", "maws");

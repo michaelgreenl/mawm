@@ -1,4 +1,4 @@
-import commands from "./index.js";
+import commands from "./surface/index.js";
 
 import type {
     AnyArgDef,
@@ -11,12 +11,34 @@ import type {
 
 const HELP_FLAGS = new Set(["-h", "--help", "help"]);
 
-const commandMap = new Map<string, Command>(commands.map((command) => [command.name, command]));
+type KnownCommand = (typeof commands)[number];
 
-type CommandName = (typeof commands)[number]["name"];
+type CommandName = KnownCommand["name"];
+
+type CommandAlias = Exclude<NonNullable<KnownCommand["aliases"]>[number], undefined>;
+
+type CommandIdentifier = CommandName | CommandAlias;
+
+const commandMap = new Map<CommandIdentifier, KnownCommand>();
+
+for (const command of commands) {
+    commandMap.set(command.name, command);
+
+    for (const alias of command.aliases ?? []) {
+        commandMap.set(alias, command);
+    }
+}
 
 const isHelpFlag = (value: string | undefined): boolean =>
     value !== undefined && HELP_FLAGS.has(value);
+
+const resolveCommand = (commandName: string | undefined): KnownCommand | undefined => {
+    if (!commandName) {
+        return undefined;
+    }
+
+    return commandMap.get(commandName as CommandIdentifier);
+};
 
 export const outputHelp = (): string =>
     [
@@ -50,7 +72,7 @@ export const parseCommandName = (args: readonly string[]): CommandName | undefin
         return undefined;
     }
 
-    return commandMap.get(candidate)?.name;
+    return resolveCommand(candidate)?.name;
 };
 
 function coerceValue(type: ArgDef["type"], value: string): string | number | boolean {
@@ -174,7 +196,7 @@ export async function parseCommand(
         return 0;
     }
 
-    const command = commandMap.get(commandName);
+    const command = resolveCommand(commandName);
 
     if (!command) {
         process.stderr.write(`Unknown command: ${commandName}\n\n${outputHelp()}\n`);
@@ -192,5 +214,10 @@ export async function parseCommand(
         return 0;
     }
 
-    return runCommandTarget(command, remaining, context, command.usage ?? command.name);
+    return runCommandTarget(
+        command as Command<readonly AnyArgDef[], readonly SubCommand[], readonly string[]>,
+        remaining,
+        context,
+        command.usage ?? command.name,
+    );
 }

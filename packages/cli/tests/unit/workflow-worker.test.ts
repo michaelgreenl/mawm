@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { createWorkflowWorker } from "../src/cmd/workflow/runtime/worker.ts";
+import { createWorkflowWorker } from "../../src/workflow/runtime/worker.ts";
 
 const plannerSession = {
     nodeName: "planner",

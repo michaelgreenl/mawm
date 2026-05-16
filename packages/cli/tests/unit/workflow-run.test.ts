@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { runWorkflowCommand } from "../dist/cmd/workflow/run.js";
+import { runWorkflowCommand } from "../../dist/cmd/workflow/run.js";
 
 async function withTempProject(run: (projectRoot: string) => Promise<void>): Promise<void> {
     const projectRoot = await mkdtemp(join(tmpdir(), "mawm-workflow-run-"));
@@ -18,7 +18,7 @@ async function withTempProject(run: (projectRoot: string) => Promise<void>): Pro
     }
 }
 
-describe("workflow run command", () => {
+describe("run command", () => {
     it("runs an installed workflow with the interactive runtime", async () => {
         await withTempProject(async (projectRoot) => {
             await mkdir(join(projectRoot, ".mawm", "maws", "base"), { recursive: true });
@@ -59,7 +59,7 @@ describe("workflow run command", () => {
                     context: {
                         cwd: projectRoot,
                         env: { PATH: process.env.PATH ?? "" },
-                        rawArgs: ["workflow", "run", "base", "--thread-id", "thread-123"],
+                        rawArgs: ["run", "base", "--thread-id", "thread-123"],
                     },
                 },
                 {
@@ -126,7 +126,7 @@ describe("workflow run command", () => {
                 },
             );
 
-            const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
+            const repoRoot = fileURLToPath(new URL("../../../..", import.meta.url));
 
             assert.equal(exitCode, 0);
             assert.deepEqual(spawnCalls, [
@@ -140,7 +140,7 @@ describe("workflow run command", () => {
             assert.deepEqual(transportCalls, [
                 {
                     workerPath: fileURLToPath(
-                        new URL("../dist/cmd/workflow/runtime/worker-entry.js", import.meta.url),
+                        new URL("../../dist/workflow/runtime/worker-entry.js", import.meta.url),
                     ),
                     workerArgs: [
                         pathToFileURL(
@@ -148,6 +148,7 @@ describe("workflow run command", () => {
                                 repoRoot,
                                 "packages",
                                 "cli",
+                                "dist",
                                 "assets",
                                 "workflows",
                                 "base",
@@ -180,7 +181,7 @@ describe("workflow run command", () => {
                     context: {
                         cwd: projectRoot,
                         env: {},
-                        rawArgs: ["workflow", "run", "missing"],
+                        rawArgs: ["run", "missing"],
                     },
                 },
                 {

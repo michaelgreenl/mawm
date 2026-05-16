@@ -77,11 +77,12 @@ export type SubCommand<TArgs extends readonly AnyArgDef[] = AnyArgDefs> = {
 export type Command<
     TArgs extends readonly AnyArgDef[] = AnyArgDefs,
     TSubCommands extends readonly SubCommand[] = readonly SubCommand[],
+    TAliases extends readonly string[] = readonly string[],
 > = {
     name: string;
     description?: string;
     usage?: string;
-    aliases?: readonly string[];
+    aliases?: TAliases;
     args?: TArgs;
     subCommands?: TSubCommands;
     run?: CommandHandler<InferArgs<TArgs>>;
@@ -121,14 +122,15 @@ export function defineSubCommand<const TArgs extends readonly AnyArgDef[] = read
 export function defineCommand<
     const TArgs extends readonly AnyArgDef[] = readonly [],
     const TSubCommands extends readonly SubCommand[] = readonly [],
+    const TAliases extends readonly string[] = readonly [],
 >(def: {
     name: string;
     description?: string;
     usage?: string;
-    aliases?: readonly string[];
+    aliases?: TAliases;
     args?: TArgs;
     subCommands?: TSubCommands;
     run?: CommandHandler<InferArgs<TArgs>>;
-}): Command<TArgs, TSubCommands> {
+}): Command<TArgs, TSubCommands, TAliases> {
     return def;
 }

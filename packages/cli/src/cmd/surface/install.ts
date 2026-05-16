@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { access, copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineSubCommand, arg } from "../../types/commands.js";
+import { defineCommand, arg } from "../../types/commands.js";
 
 const WORKFLOW_ASSETS_ROOT = fileURLToPath(new URL("../../assets/workflows", import.meta.url));
 
@@ -196,11 +196,11 @@ const installWorkflowSkills = async (
     );
 };
 
-const install = defineSubCommand({
+const install = defineCommand({
     name: "install",
-    parent: "workflow",
+    aliases: ["i"],
     description: "Installs workflows into a target project",
-    usage: "workflow install <workflow>",
+    usage: "{i,install} <workflow>",
     args: [arg("workflow", { required: true })],
     async run({ args, context }) {
         try {

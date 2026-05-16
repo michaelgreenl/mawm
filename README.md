@@ -33,17 +33,17 @@ Initialize MAWM inside a project and run the bundled base workflow:
 
 ```sh
 mawm init
-mawm workflow install base
-mawm workflow list
-mawm workflow run base
+mawm install base
+mawm list
+mawm run base
 ```
 
 Or run it without a global install:
 
 ```sh
 npx @mawm/cli init
-npx @mawm/cli workflow install base
-npx @mawm/cli workflow run base
+npx @mawm/cli install base
+npx @mawm/cli run base
 ```
 
 Install the shared utilities package for workflow development:

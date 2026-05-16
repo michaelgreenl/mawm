@@ -3,7 +3,6 @@ description: Planning-only agent that writes roadmap, initiative, phase, and ste
 permission:
     edit: allow
     inject-variant: allow
-    openviking-find: allow
     question: allow
     websearch: allow
     task:

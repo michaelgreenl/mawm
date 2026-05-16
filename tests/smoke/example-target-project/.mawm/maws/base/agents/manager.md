@@ -4,7 +4,6 @@ mode: primary
 permission:
     edit: allow
     bash: allow
-    openviking-find: allow
     task:
         'planner': allow
         'coder': allow

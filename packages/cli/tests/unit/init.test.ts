@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import init from "../dist/cmd/init.js";
+import init from "../../dist/cmd/init.js";
 
-const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
-const exampleRoot = join(repoRoot, "tests", "smoke", "example-target-project", ".mawm");
+const repoRoot = fileURLToPath(new URL("../../../..", import.meta.url));
+const initiativesAssetsRoot = join(repoRoot, "packages", "cli", "assets", "state", "initiatives");
 
 async function collectFiles(root: string): Promise<Map<string, string>> {
     const files = new Map<string, string>();
@@ -56,7 +56,7 @@ describe("init command", () => {
             assert.equal(exitCode, 0);
             assert.deepEqual(
                 await collectFiles(join(projectRoot, ".mawm", "initiatives")),
-                await collectFiles(join(exampleRoot, "initiatives")),
+                await collectFiles(initiativesAssetsRoot),
             );
             assert.deepEqual(await readdir(join(projectRoot, ".mawm", "maws")), []);
         });

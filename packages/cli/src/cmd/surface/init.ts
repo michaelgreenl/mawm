@@ -1,7 +1,7 @@
 import { access, copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineCommand } from "../types/commands.js";
+import { defineCommand } from "../../types/commands.js";
 
 const CLI_ASSETS_ROOT = fileURLToPath(new URL("../assets", import.meta.url));
 const INITIATIVES_ASSETS_ROOT = join(CLI_ASSETS_ROOT, "state", "initiatives");

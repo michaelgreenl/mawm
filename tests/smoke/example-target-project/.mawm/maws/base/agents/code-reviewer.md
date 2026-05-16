@@ -4,7 +4,6 @@ mode: subagent
 hidden: true
 permission:
     bash: allow
-    openviking-find: allow
     skill: deny
 ---
 
