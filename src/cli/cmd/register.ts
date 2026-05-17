@@ -164,8 +164,8 @@ const readManifest = async (manifestPath: string): Promise<WorkflowManifestEntry
     return manifest;
 };
 
-const resolveWorkflowRoot = async (executablePath: string): Promise<string> => {
-    let currentPath = dirname(executablePath);
+const resolveWorkflowRoot = async (startPath: string): Promise<string> => {
+    let currentPath = startPath;
 
     while (true) {
         if (
@@ -179,7 +179,7 @@ const resolveWorkflowRoot = async (executablePath: string): Promise<string> => {
 
         if (parentPath === currentPath) {
             throw new Error(
-                `Unable to find a workflow root for ${executablePath}. Expected mawm.json and langgraph.json in the executable directory or one of its parents.`,
+                `Unable to find a workflow root for ${startPath}. Expected mawm.json and langgraph.json in the provided path or one of its parents.`,
             );
         }
 
@@ -189,19 +189,21 @@ const resolveWorkflowRoot = async (executablePath: string): Promise<string> => {
 
 const register = defineCommand({
     name: "register",
-    description: "Registers a LangGraph workflow executable",
-    usage: "register <path-to-langgraph-executable>",
-    args: [arg("executablePath", { required: true, type: "string" })] as const,
+    description: "Registers a LangGraph workflow",
+    usage: "register <path-to-langgraph-dist>",
+    args: [arg("workflowPath", { required: true, type: "string" })] as const,
     async run({ args, context }) {
         try {
-            const sourceExecutablePath = resolve(context.cwd, args.executablePath);
-            const sourceExecutableStat = await stat(sourceExecutablePath);
+            const sourceWorkflowPath = resolve(context.cwd, args.workflowPath);
+            const sourceWorkflowStat = await stat(sourceWorkflowPath);
 
-            if (!sourceExecutableStat.isFile()) {
-                throw new Error(`Path is not a file: ${args.executablePath}`);
+            if (!sourceWorkflowStat.isFile() && !sourceWorkflowStat.isDirectory()) {
+                throw new Error(`Path is not a file or directory: ${args.workflowPath}`);
             }
 
-            const workflowRoot = await resolveWorkflowRoot(sourceExecutablePath);
+            const workflowRoot = await resolveWorkflowRoot(
+                sourceWorkflowStat.isDirectory() ? sourceWorkflowPath : dirname(sourceWorkflowPath),
+            );
             const workflowMetadata = await readWorkflowMetadata(workflowRoot);
             await initializeUserConfig(context.env);
             const configRoot = resolveUserConfigRoot(context.env);

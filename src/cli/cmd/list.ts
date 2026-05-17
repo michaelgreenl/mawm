@@ -39,7 +39,7 @@ const list = defineCommand({
     async run({ context, options }) {
         try {
             const workflowsRoot = options.global
-                ? join(resolveHomeDirectory(context.env), ".config", "graphs")
+                ? join(resolveHomeDirectory(context.env), ".config", "mawm", "graphs")
                 : join(context.cwd, ".mawm", "graphs");
             const workflows = (await readdir(workflowsRoot, { withFileTypes: true }))
                 .filter((entry) => entry.isDirectory())

@@ -169,10 +169,11 @@ const install = defineCommand({
                 );
             }
 
-            const targetWorkflowRoot = join(context.cwd, ".mawm", "graphs", workflow);
+            const targetGraphsRoot = join(context.cwd, ".mawm", "graphs");
+            const targetWorkflowRoot = join(targetGraphsRoot, workflow);
 
             await copyMissing(sourceWorkflowRoot, targetWorkflowRoot);
-            await refreshManifest(join(configRoot, "manifest.json"), workflowMetadata);
+            await refreshManifest(join(targetGraphsRoot, "manifest.json"), workflowMetadata);
 
             process.stdout.write(
                 `Installed workflow \`${workflow}\` into .mawm/graphs/${workflow}.\n`,
