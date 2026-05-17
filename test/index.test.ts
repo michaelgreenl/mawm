@@ -124,6 +124,71 @@ test("init leaves an existing user config untouched", async () => {
     }
 });
 
+test("install copies a registered workflow from ~/.config/mawm into .mawm/graphs and refreshes the global manifest", async () => {
+    const sandboxRoot = await mkdtemp(join(tmpdir(), "mawm-install-"));
+    const projectRoot = join(sandboxRoot, "project");
+    const homeRoot = join(sandboxRoot, "home");
+    const configRoot = join(homeRoot, ".config", "mawm");
+    const workflowRoot = join(configRoot, "alpha");
+    const workflowMetadata = {
+        id: "alpha",
+        displayName: "Alpha Workflow",
+        workflowVersion: "1.2.3",
+    };
+    const langgraphConfig = {
+        graphs: {
+            agent: "./index.js:graph",
+        },
+    };
+    const workflowSource = 'export const graph = { id: "alpha" };\n';
+
+    try {
+        await mkdir(projectRoot, { recursive: true });
+        await mkdir(workflowRoot, { recursive: true });
+        await writeFile(join(configRoot, "manifest.json"), "[]\n");
+        await writeFile(
+            join(workflowRoot, "mawm.json"),
+            `${JSON.stringify(workflowMetadata, null, 2)}\n`,
+        );
+        await writeFile(
+            join(workflowRoot, "langgraph.json"),
+            `${JSON.stringify(langgraphConfig, null, 2)}\n`,
+        );
+        await writeFile(join(workflowRoot, "index.js"), workflowSource);
+
+        const { result, stdout, stderr } = await captureOutput(async () => {
+            return await parseCommand(["install", "alpha"], {
+                cwd: projectRoot,
+                env: { ...process.env, HOME: homeRoot },
+                rawArgs: ["install", "alpha"],
+            });
+        });
+
+        expect(result).toBe(0);
+        expect(stdout).toBe("Installed workflow `alpha` into .mawm/graphs/alpha.\n");
+        expect(stderr).toBe("");
+        await expect(
+            readFile(join(projectRoot, ".mawm", "graphs", "alpha", "mawm.json"), "utf8"),
+        ).resolves.toBe(`${JSON.stringify(workflowMetadata, null, 2)}\n`);
+        await expect(
+            readFile(join(projectRoot, ".mawm", "graphs", "alpha", "langgraph.json"), "utf8"),
+        ).resolves.toBe(`${JSON.stringify(langgraphConfig, null, 2)}\n`);
+        await expect(
+            readFile(join(projectRoot, ".mawm", "graphs", "alpha", "index.js"), "utf8"),
+        ).resolves.toBe(workflowSource);
+        await expect(pathExists(join(projectRoot, ".mawm", "maws", "alpha"))).resolves.toBe(false);
+
+        expect(JSON.parse(await readFile(join(configRoot, "manifest.json"), "utf8"))).toEqual([
+            {
+                ...workflowMetadata,
+                path: "./alpha",
+            },
+        ]);
+    } finally {
+        await rm(sandboxRoot, { recursive: true, force: true });
+    }
+});
+
 test("list -g lists globally registered workflows from ~/.config/mawm", async () => {
     const sandboxRoot = await mkdtemp(join(tmpdir(), "mawm-list-"));
     const projectRoot = join(sandboxRoot, "project");
