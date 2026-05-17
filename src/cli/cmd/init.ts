@@ -65,7 +65,7 @@ const resolveHomeDirectory = (env: NodeJS.ProcessEnv): string => {
 };
 
 const initializeUserConfig = async (env: NodeJS.ProcessEnv): Promise<void> => {
-    const configRoot = join(resolveHomeDirectory(env), ".config", ".mawm");
+    const configRoot = join(resolveHomeDirectory(env), ".config", "mawm");
 
     if (await exists(configRoot)) {
         return;
