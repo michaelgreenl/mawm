@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { access, open, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { tool } from "@opencode-ai/plugin";
 
 const WORKFLOW_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
@@ -20,6 +20,57 @@ const exists = async (path: string): Promise<boolean> => {
     } catch {
         return false;
     }
+};
+
+const resolveWorkflowLocation = async (
+    workflow: string,
+    context: { directory?: string; worktree?: string },
+): Promise<{ projectRoot: string; workflowRoot: string }> => {
+    const candidateRoots = [context.directory, context.worktree]
+        .filter(
+            (candidate): candidate is string =>
+                typeof candidate === "string" && candidate.length > 0,
+        )
+        .map((candidate) => resolve(candidate));
+
+    if (candidateRoots.length === 0) {
+        throw new Error(
+            `Unable to resolve a target project for workflow \`${workflow}\`: tool context did not provide a directory or worktree.`,
+        );
+    }
+
+    const searchedWorkflowRoots: string[] = [];
+    const visitedRoots = new Set<string>();
+
+    for (const candidateRoot of candidateRoots) {
+        let currentRoot = candidateRoot;
+
+        while (!visitedRoots.has(currentRoot)) {
+            visitedRoots.add(currentRoot);
+
+            const workflowRoot = join(currentRoot, ".mawm", "graphs", workflow);
+            searchedWorkflowRoots.push(workflowRoot);
+
+            if (await exists(workflowRoot)) {
+                return {
+                    projectRoot: currentRoot,
+                    workflowRoot,
+                };
+            }
+
+            const parentRoot = dirname(currentRoot);
+
+            if (parentRoot === currentRoot) {
+                break;
+            }
+
+            currentRoot = parentRoot;
+        }
+    }
+
+    throw new Error(
+        `Installed workflow not found for \`${workflow}\`. Searched:\n${searchedWorkflowRoots.join("\n")}`,
+    );
 };
 
 const waitForStartup = async (child: ReturnType<typeof spawn>): Promise<void> => {
@@ -84,16 +135,9 @@ export default tool({
             );
         }
 
-        const projectRoot = context.worktree ?? context.directory;
-        const workflowRoot = join(projectRoot, ".mawm", "graphs", workflow);
+        const { projectRoot, workflowRoot } = await resolveWorkflowLocation(workflow, context);
         const workflowMetadataPath = join(workflowRoot, "mawm.json");
         const langgraphConfigPath = join(workflowRoot, "langgraph.json");
-
-        if (!(await exists(workflowRoot))) {
-            throw new Error(
-                `Installed workflow not found: ${workflowRoot}. Expected it under .mawm/graphs/${workflow}.`,
-            );
-        }
 
         if (!(await exists(workflowMetadataPath))) {
             throw new Error(`Missing workflow metadata: ${workflowMetadataPath}`);
