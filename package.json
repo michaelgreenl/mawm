@@ -19,7 +19,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-assets.mjs",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write src",

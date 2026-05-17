@@ -1,10 +1,15 @@
 import { access, copyFile, mkdir, readdir, stat } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineCommand } from "../../types/commands.js";
 
-const CLI_ASSETS_ROOT = fileURLToPath(new URL("../assets", import.meta.url));
-const INITIATIVES_ASSETS_ROOT = join(CLI_ASSETS_ROOT, "state", "initiatives");
+const PROJECT_LOCAL_ASSETS_ROOT = fileURLToPath(
+    new URL("../../assets/.mawm.project-local", import.meta.url),
+);
+const USER_CONFIG_ASSETS_ROOT = fileURLToPath(
+    new URL("../../assets/.config/mawm", import.meta.url),
+);
 
 const exists = async (path: string): Promise<boolean> => {
     try {
@@ -36,6 +41,39 @@ const copyMissing = async (sourcePath: string, targetPath: string): Promise<void
     await copyFile(sourcePath, targetPath);
 };
 
+const resolveHomeDirectory = (env: NodeJS.ProcessEnv): string => {
+    const home = env["HOME"];
+
+    if (home) {
+        return home;
+    }
+
+    const userProfile = env["USERPROFILE"];
+
+    if (userProfile) {
+        return userProfile;
+    }
+
+    const homeDrive = env["HOMEDRIVE"];
+    const homePath = env["HOMEPATH"];
+
+    if (homeDrive && homePath) {
+        return `${homeDrive}${homePath}`;
+    }
+
+    return homedir();
+};
+
+const initializeUserConfig = async (env: NodeJS.ProcessEnv): Promise<void> => {
+    const configRoot = join(resolveHomeDirectory(env), ".config", ".mawm");
+
+    if (await exists(configRoot)) {
+        return;
+    }
+
+    await copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
+};
+
 const init = defineCommand({
     name: "init",
     description: "Initializing MAWM within a project",
@@ -43,10 +81,8 @@ const init = defineCommand({
     async run({ context }) {
         const mawmRoot = join(context.cwd, ".mawm");
 
-        await mkdir(mawmRoot, { recursive: true });
-        await mkdir(join(mawmRoot, "maws"), { recursive: true });
-
-        await copyMissing(INITIATIVES_ASSETS_ROOT, join(mawmRoot, "initiatives"));
+        await copyMissing(PROJECT_LOCAL_ASSETS_ROOT, mawmRoot);
+        await initializeUserConfig(context.env);
 
         console.log("Initialized .mawm scaffold.");
         return 0;

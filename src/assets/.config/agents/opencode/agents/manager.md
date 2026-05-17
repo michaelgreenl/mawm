@@ -4,14 +4,14 @@ mode: primary
 model: openai/gpt-5.4
 variant: xhigh
 tools:
-    execute-graph: true
+  execute-graph: true
 permission:
-    edit: allow
-    bash: allow
-    task:
-        '*': deny
-        'explore': allow
-        'general': allow
+  edit: allow
+  bash: allow
+  task:
+    "*": deny
+    "explore": allow
+    "general": allow
 ---
 
 Your job is to drive the execution of a single phase's `plan.md`, one step at a time.
@@ -30,7 +30,7 @@ You do not invent step scope yourself. For each step, you first obtain or refres
 6. Identify already-completed steps (all boxes checked) and any existing active step plans for the remaining steps.
 7. Confirm with the user which step to start from.
 8. Identify the repo the phase or step is to be executed in.
-    - If the repo the step/phase targets is not the cwd: Surface and confirm with the user where the target repo is located.
+   - If the repo the step/phase targets is not the cwd: Surface and confirm with the user where the target repo is located.
 9. Derive or confirm the target active step-plan path for the selected step under `steps/active/<step-slug>/plan.md`.
 
 ---
@@ -125,15 +125,15 @@ If any of these questions return "yes", surface and report to HITL
 2. Review `git log --oneline -10` in each modified repo to match the existing tone and subject style, but still prefer a valid Conventional Commits message.
 3. Review the step log and changed files so the commit message reflects the actual work, not a default label.
 4. Write the commit message as a Conventional Commit: `type(scope): short description` or `type: short description`
-    - Choose the most accurate type for the primary change. Do not default to `feat`.
-    - Use `feat` only when the step adds a real new capability, workflow, or user-visible behavior.
-    - Use `fix` for bug fixes or behavior corrections.
-    - Use `refactor` for internal code changes that preserve behavior.
-    - Use `docs` only when the commit changes documentation files only.
-    - Use `chore` for maintenance, tooling, config, or housekeeping work that is not better described as `feat`, `fix`, `refactor`, or docs-only work.
-    - Scope is optional. Use it only when it clarifies the area of change.
-    - Do not force `phase` or the phase slug as scope. Use the phase slug only when it is genuinely the clearest scope; otherwise use a more accurate area or omit the scope.
-    - Examples: `refactor(dev): require workflow arg in dev, remove start`, `fix(cli): handle missing workflow arg`, `docs: clarify manager commit rules`
+   - Choose the most accurate type for the primary change. Do not default to `feat`.
+   - Use `feat` only when the step adds a real new capability, workflow, or user-visible behavior.
+   - Use `fix` for bug fixes or behavior corrections.
+   - Use `refactor` for internal code changes that preserve behavior.
+   - Use `docs` only when the commit changes documentation files only.
+   - Use `chore` for maintenance, tooling, config, or housekeeping work that is not better described as `feat`, `fix`, `refactor`, or docs-only work.
+   - Scope is optional. Use it only when it clarifies the area of change.
+   - Do not force `phase` or the phase slug as scope. Use the phase slug only when it is genuinely the clearest scope; otherwise use a more accurate area or omit the scope.
+   - Examples: `refactor(dev): require workflow arg in dev, remove start`, `fix(cli): handle missing workflow arg`, `docs: clarify manager commit rules`
 5. Commit each modified repo separately using the **exact same message**.
 
 **If there are any issues:**
