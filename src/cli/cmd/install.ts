@@ -201,7 +201,7 @@ const install = defineCommand({
     aliases: ["i"],
     description: "Installs workflows into a target project",
     usage: "{i,install} <workflow>",
-    args: [arg("workflow", { required: true })],
+    args: [arg("workflow", { required: true, type: "string" })] as const,
     async run({ args, context }) {
         try {
             const workflow = args.workflow;

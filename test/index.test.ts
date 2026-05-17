@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import init from "../src/cli/cmd/init.js";
+import { parseCommand } from "../src/cli/parser.js";
 import { runCli } from "../src/index.js";
 
 const pathExists = async (path: string): Promise<boolean> => {
@@ -12,6 +13,39 @@ const pathExists = async (path: string): Promise<boolean> => {
         return true;
     } catch {
         return false;
+    }
+};
+
+const captureOutput = async <T>(
+    callback: () => Promise<T>,
+): Promise<{
+    result: T;
+    stdout: string;
+    stderr: string;
+}> => {
+    let stdout = "";
+    let stderr = "";
+    const originalStdoutWrite = process.stdout.write;
+    const originalStderrWrite = process.stderr.write;
+
+    process.stdout.write = ((chunk: string | Uint8Array) => {
+        stdout += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+        return true;
+    }) as typeof process.stdout.write;
+    process.stderr.write = ((chunk: string | Uint8Array) => {
+        stderr += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+        return true;
+    }) as typeof process.stderr.write;
+
+    try {
+        return {
+            result: await callback(),
+            stdout,
+            stderr,
+        };
+    } finally {
+        process.stdout.write = originalStdoutWrite;
+        process.stderr.write = originalStderrWrite;
     }
 };
 
@@ -51,7 +85,7 @@ test("init scaffolds project-local assets and user config without overwriting fi
             pathExists(join(projectRoot, ".mawm", "agents", "adhoc", "README.md")),
         ).resolves.toBe(true);
         await expect(readFile(existingProjectFile, "utf8")).resolves.toBe("keep project edits\n");
-        await expect(pathExists(join(homeRoot, ".config", ".mawm", "manifest.json"))).resolves.toBe(
+        await expect(pathExists(join(homeRoot, ".config", "mawm", "manifest.json"))).resolves.toBe(
             true,
         );
     } finally {
@@ -67,11 +101,11 @@ test("init leaves an existing user config untouched", async () => {
     const sandboxRoot = await mkdtemp(join(tmpdir(), "mawm-init-"));
     const projectRoot = join(sandboxRoot, "project");
     const homeRoot = join(sandboxRoot, "home");
-    const existingConfigFile = join(homeRoot, ".config", ".mawm", "manifest.json");
+    const existingConfigFile = join(homeRoot, ".config", "mawm", "manifest.json");
 
     try {
         await mkdir(projectRoot, { recursive: true });
-        await mkdir(join(homeRoot, ".config", ".mawm"), { recursive: true });
+        await mkdir(join(homeRoot, ".config", "mawm"), { recursive: true });
         await writeFile(existingConfigFile, '["keep config edits"]\n');
 
         await expect(
@@ -85,6 +119,58 @@ test("init leaves an existing user config untouched", async () => {
         ).resolves.toBe(0);
 
         await expect(readFile(existingConfigFile, "utf8")).resolves.toBe('["keep config edits"]\n');
+    } finally {
+        await rm(sandboxRoot, { recursive: true, force: true });
+    }
+});
+
+test("list -g lists globally registered workflows from ~/.config/mawm", async () => {
+    const sandboxRoot = await mkdtemp(join(tmpdir(), "mawm-list-"));
+    const projectRoot = join(sandboxRoot, "project");
+    const homeRoot = join(sandboxRoot, "home");
+
+    try {
+        await mkdir(join(projectRoot, ".mawm", "maws", "project-workflow"), { recursive: true });
+        await mkdir(join(homeRoot, ".config", "mawm", "beta-workflow"), { recursive: true });
+        await mkdir(join(homeRoot, ".config", "mawm", "alpha-workflow"), { recursive: true });
+
+        const { result, stdout, stderr } = await captureOutput(async () => {
+            return await parseCommand(["list", "-g"], {
+                cwd: projectRoot,
+                env: { ...process.env, HOME: homeRoot },
+                rawArgs: ["list", "-g"],
+            });
+        });
+
+        expect(result).toBe(0);
+        expect(stdout).toBe("alpha-workflow\nbeta-workflow\n");
+        expect(stderr).toBe("");
+    } finally {
+        await rm(sandboxRoot, { recursive: true, force: true });
+    }
+});
+
+test("list without flags lists project workflows from .mawm/maws", async () => {
+    const sandboxRoot = await mkdtemp(join(tmpdir(), "mawm-list-"));
+    const projectRoot = join(sandboxRoot, "project");
+    const homeRoot = join(sandboxRoot, "home");
+
+    try {
+        await mkdir(join(projectRoot, ".mawm", "maws", "beta-workflow"), { recursive: true });
+        await mkdir(join(projectRoot, ".mawm", "maws", "alpha-workflow"), { recursive: true });
+        await mkdir(join(homeRoot, ".config", "mawm", "global-workflow"), { recursive: true });
+
+        const { result, stdout, stderr } = await captureOutput(async () => {
+            return await parseCommand(["list"], {
+                cwd: projectRoot,
+                env: { ...process.env, HOME: homeRoot },
+                rawArgs: ["list"],
+            });
+        });
+
+        expect(result).toBe(0);
+        expect(stdout).toBe("alpha-workflow\nbeta-workflow\n");
+        expect(stderr).toBe("");
     } finally {
         await rm(sandboxRoot, { recursive: true, force: true });
     }

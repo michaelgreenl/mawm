@@ -156,7 +156,7 @@ const register = defineCommand({
     name: "register",
     description: "Registers a LangGraph workflow executable",
     usage: "register <path-to-langgraph-executable>",
-    args: [arg("executablePath", { required: true })],
+    args: [arg("executablePath", { required: true, type: "string" })] as const,
     async run({ args, context }) {
         try {
             const sourceExecutablePath = resolve(context.cwd, args.executablePath);

@@ -2,10 +2,12 @@ import commands from "./cmd/index.js";
 
 import type {
     AnyArgDef,
+    AnyOptionDef,
     ArgDef,
     Command,
     CommandContext,
     InferArgs,
+    InferOptions,
     SubCommand,
 } from "../types/commands.js";
 
@@ -131,20 +133,187 @@ function parsePositionalArgs<const TArgs extends readonly AnyArgDef[]>(
     return result as InferArgs<TArgs>;
 }
 
+function splitOptionToken(
+    token: string,
+    prefixLength: number,
+): { key: string; inlineValue: string | undefined } {
+    const separatorIndex = token.indexOf("=");
+
+    if (separatorIndex === -1) {
+        return {
+            key: token.slice(prefixLength),
+            inlineValue: undefined,
+        };
+    }
+
+    return {
+        key: token.slice(prefixLength, separatorIndex),
+        inlineValue: token.slice(separatorIndex + 1),
+    };
+}
+
+function assignOptionValue(
+    option: AnyOptionDef,
+    optionLabel: string,
+    inlineValue: string | undefined,
+    tokens: readonly string[],
+    index: number,
+    optionValues: Map<string, string | number | boolean>,
+): number {
+    const type = option.type ?? "boolean";
+
+    if (type === "boolean") {
+        optionValues.set(
+            option.name,
+            inlineValue === undefined ? true : coerceValue(type, inlineValue),
+        );
+        return index;
+    }
+
+    const valueToken = inlineValue ?? tokens[index + 1];
+
+    if (valueToken === undefined) {
+        throw new Error(`Missing value for option: ${optionLabel}`);
+    }
+
+    optionValues.set(option.name, coerceValue(type, valueToken));
+    return inlineValue === undefined ? index + 1 : index;
+}
+
+function parseOptions<const TOptions extends readonly AnyOptionDef[]>(
+    defs: TOptions | undefined,
+    tokens: readonly string[],
+): { positionalTokens: string[]; options: InferOptions<TOptions> } {
+    if (!defs || defs.length === 0) {
+        return {
+            positionalTokens: [...tokens],
+            options: {} as InferOptions<TOptions>,
+        };
+    }
+
+    const optionsByName = new Map<string, AnyOptionDef>();
+    const optionsByAlias = new Map<string, AnyOptionDef>();
+
+    for (const option of defs) {
+        optionsByName.set(option.name, option);
+
+        if (option.alias) {
+            optionsByAlias.set(option.alias, option);
+        }
+    }
+
+    const positionalTokens: string[] = [];
+    const optionValues = new Map<string, string | number | boolean>();
+    let parseOnlyPositionals = false;
+
+    for (let index = 0; index < tokens.length; index += 1) {
+        const token = tokens[index];
+
+        if (token === undefined) {
+            continue;
+        }
+
+        if (parseOnlyPositionals) {
+            positionalTokens.push(token);
+            continue;
+        }
+
+        if (token === "--") {
+            parseOnlyPositionals = true;
+            continue;
+        }
+
+        if (token.startsWith("--")) {
+            const { key, inlineValue } = splitOptionToken(token, 2);
+            const option = optionsByName.get(key);
+
+            if (!option) {
+                throw new Error(`Unknown option: --${key}`);
+            }
+
+            index = assignOptionValue(option, `--${key}`, inlineValue, tokens, index, optionValues);
+            continue;
+        }
+
+        if (token.startsWith("-") && token !== "-") {
+            const { key, inlineValue } = splitOptionToken(token, 1);
+            const option = optionsByAlias.get(key);
+
+            if (!option) {
+                throw new Error(`Unknown option: -${key}`);
+            }
+
+            index = assignOptionValue(option, `-${key}`, inlineValue, tokens, index, optionValues);
+            continue;
+        }
+
+        positionalTokens.push(token);
+    }
+
+    const options: Record<string, unknown> = {};
+
+    for (const option of defs) {
+        const type = option.type ?? "boolean";
+
+        if (optionValues.has(option.name)) {
+            options[option.name] = optionValues.get(option.name);
+            continue;
+        }
+
+        if (option.defaultValue !== undefined) {
+            options[option.name] = option.defaultValue;
+            continue;
+        }
+
+        if (option.required) {
+            throw new Error(`Missing required option: --${option.name}`);
+        }
+
+        options[option.name] = type === "boolean" ? false : undefined;
+    }
+
+    return {
+        positionalTokens,
+        options: options as InferOptions<TOptions>,
+    };
+}
+
+function parseCommandInputs<
+    const TArgs extends readonly AnyArgDef[],
+    const TOptions extends readonly AnyOptionDef[],
+>(
+    argDefs: TArgs | undefined,
+    optionDefs: TOptions | undefined,
+    tokens: readonly string[],
+): { args: InferArgs<TArgs>; options: InferOptions<TOptions> } {
+    const { positionalTokens, options } = parseOptions(optionDefs, tokens);
+
+    return {
+        args: parsePositionalArgs(argDefs, positionalTokens),
+        options,
+    };
+}
+
 function outputArgumentError(message: string, usage: string | undefined): number {
     process.stderr.write(`${message}\n${usage ? `\nUsage: mawm ${usage}\n` : ""}`);
     return 1;
 }
 
-async function runCommandTarget<const TArgs extends readonly AnyArgDef[]>(
-    target: Pick<Command<TArgs> | SubCommand<TArgs>, "args" | "run">,
+async function runCommandTarget<
+    const TArgs extends readonly AnyArgDef[],
+    const TOptions extends readonly AnyOptionDef[],
+>(
+    target: Pick<
+        Command<TArgs, TOptions> | SubCommand<TArgs, TOptions>,
+        "args" | "options" | "run"
+    >,
     tokens: readonly string[],
     context: CommandContext,
     usage: string | undefined,
 ): Promise<number> {
     try {
-        const args = parsePositionalArgs(target.args, tokens);
-        return target.run ? await target.run({ args, context }) : 0;
+        const { args, options } = parseCommandInputs(target.args, target.options, tokens);
+        return target.run ? await target.run({ args, options, context }) : 0;
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return outputArgumentError(message, usage);
@@ -215,7 +384,12 @@ export async function parseCommand(
     }
 
     return runCommandTarget(
-        command as Command<readonly AnyArgDef[], readonly SubCommand[], readonly string[]>,
+        command as Command<
+            readonly AnyArgDef[],
+            readonly AnyOptionDef[],
+            readonly SubCommand[],
+            readonly string[]
+        >,
         remaining,
         context,
         command.usage ?? command.name,
