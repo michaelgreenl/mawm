@@ -1,1 +1,2 @@
-# bun typecheck && bun lint
+# Commit-type-aware checks run in .husky/commit-msg once the message exists.
+:
