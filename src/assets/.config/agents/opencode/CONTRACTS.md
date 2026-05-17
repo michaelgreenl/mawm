@@ -1,4 +1,4 @@
-These assets get copied into user's `~/.config/opencode/` when installing `@mawm/cli` install globally
+These assets get copied into user's `~/.config/opencode/` when installing `mawm` globally
 
 Non-destructive by default
 
