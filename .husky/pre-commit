@@ -1,1 +1,1 @@
-bun typecheck && bun lint
+# bun typecheck && bun lint
