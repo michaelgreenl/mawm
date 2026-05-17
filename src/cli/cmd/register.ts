@@ -1,6 +1,7 @@
 import { access, copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { arg, defineCommand } from "../../types/commands.js";
 
 type WorkflowMetadata = {
@@ -14,6 +15,9 @@ type WorkflowManifestEntry = WorkflowMetadata & {
 };
 
 const WORKFLOW_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
+const USER_CONFIG_ASSETS_ROOT = fileURLToPath(
+    new URL("../../assets/.config/mawm", import.meta.url),
+);
 
 const exists = async (path: string): Promise<boolean> => {
     try {
@@ -31,6 +35,27 @@ const readJson = async <T>(path: string): Promise<T> => {
 const writeJson = async (path: string, value: unknown): Promise<void> => {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+};
+
+const copyMissing = async (sourcePath: string, targetPath: string): Promise<void> => {
+    const sourceEntry = await stat(sourcePath);
+
+    if (sourceEntry.isDirectory()) {
+        await mkdir(targetPath, { recursive: true });
+
+        for (const childName of await readdir(sourcePath)) {
+            await copyMissing(join(sourcePath, childName), join(targetPath, childName));
+        }
+
+        return;
+    }
+
+    if (await exists(targetPath)) {
+        return;
+    }
+
+    await mkdir(dirname(targetPath), { recursive: true });
+    await copyFile(sourcePath, targetPath);
 };
 
 const copyRecursive = async (sourcePath: string, targetPath: string): Promise<void> => {
@@ -75,6 +100,16 @@ const resolveHomeDirectory = (env: NodeJS.ProcessEnv): string => {
 
 const resolveUserConfigRoot = (env: NodeJS.ProcessEnv): string => {
     return join(resolveHomeDirectory(env), ".config", "mawm");
+};
+
+const initializeUserConfig = async (env: NodeJS.ProcessEnv): Promise<void> => {
+    const configRoot = resolveUserConfigRoot(env);
+
+    if (await exists(configRoot)) {
+        return;
+    }
+
+    await copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
 };
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
@@ -168,6 +203,7 @@ const register = defineCommand({
 
             const workflowRoot = await resolveWorkflowRoot(sourceExecutablePath);
             const workflowMetadata = await readWorkflowMetadata(workflowRoot);
+            await initializeUserConfig(context.env);
             const configRoot = resolveUserConfigRoot(context.env);
             const targetWorkflowRoot = join(configRoot, workflowMetadata.id);
 
