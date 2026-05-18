@@ -46,8 +46,9 @@ const removeInstalledWorkflow = async ({
 
 const remove = defineCommand({
     name: "remove",
+    aliases: ["rm"],
     description: "Removes workflows from a project or from user config",
-    usage: "remove [-g] <workflow>",
+    usage: "{rm,remove} [-g] <workflow>",
     args: [
         arg("workflow", {
             required: true,

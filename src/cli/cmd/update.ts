@@ -158,8 +158,9 @@ const outputWorkflowError = (workflowId: string, error: unknown): void => {
 
 const update = defineCommand({
     name: "update",
+    aliases: ["u"],
     description: "Reinstalls workflows into a project or into user config",
-    usage: "update [-g] [workflow]",
+    usage: "{u,update} [-g] [workflow]",
     args: [arg("workflow", { type: "string" })] as const,
     options: [
         option("global", {

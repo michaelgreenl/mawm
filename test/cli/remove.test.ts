@@ -62,6 +62,23 @@ describe("remove command", () => {
         );
     });
 
+    test("accepts the `rm` alias", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const rawArgs = ["rm", "--help"] as const;
+        const result = await captureOutput(() =>
+            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
+        );
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Usage: mawm {rm,remove} [-g] <workflow> - Removes workflows from a project or from user config\n",
+        });
+    });
+
     test("removes a workflow installed in the target project", async () => {
         const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
         const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
@@ -175,6 +192,6 @@ describe("remove command", () => {
         expect(result.exitCode).toBe(1);
         expect(result.stdout).toBe("");
         expect(result.stderr).toContain("Missing required argument: workflow");
-        expect(result.stderr).toContain("Usage: mawm remove [-g] <workflow>");
+        expect(result.stderr).toContain("Usage: mawm {rm,remove} [-g] <workflow>");
     });
 });

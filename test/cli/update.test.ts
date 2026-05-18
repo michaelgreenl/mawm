@@ -62,6 +62,23 @@ describe("update command", () => {
         );
     });
 
+    test("accepts the `u` alias", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const rawArgs = ["u", "--help"] as const;
+        const result = await captureOutput(() =>
+            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
+        );
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Usage: mawm {u,update} [-g] [workflow] - Reinstalls workflows into a project or into user config\n",
+        });
+    });
+
     test("updates a project workflow by fully replacing the installed files", async () => {
         const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
         const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
