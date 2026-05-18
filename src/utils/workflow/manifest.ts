@@ -27,11 +27,14 @@ export const readManifest = async (manifestPath: string): Promise<WorkflowManife
  * Upsert workflow metadata into a manifest file.
  *
  * @param manifestPath - Path to manifest.json
- * @param workflowMetadata - Workflow metadata to register
+ * @param workflowMetadata - Workflow metadata to upsert
  */
 export const refreshManifest = async (
     manifestPath: string,
     workflowMetadata: WorkflowMetadata,
+    options?: {
+        absolutePath?: string;
+    },
 ): Promise<void> => {
     const nextManifest = [
         ...(await readManifest(manifestPath)).filter(
@@ -40,6 +43,7 @@ export const refreshManifest = async (
         {
             ...workflowMetadata,
             path: `./${workflowMetadata.id}`,
+            ...(options?.absolutePath ? { absolutePath: options.absolutePath } : {}),
         },
     ].sort((left, right) => left.id.localeCompare(right.id));
 

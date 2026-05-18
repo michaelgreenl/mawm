@@ -8,4 +8,5 @@ export interface WorkflowMetadata {
 /** Manifest entry pointing to an installed workflow. */
 export interface WorkflowManifestEntry extends WorkflowMetadata {
     path: string;
+    absolutePath?: string;
 }

@@ -1,7 +1,45 @@
-import { join } from "node:path";
-import { readJson } from "../fs.js";
+import { basename, join } from "node:path";
+import { exists, readJson, writeJson } from "../fs.js";
 import type { WorkflowMetadata } from "../../types/interfaces/workflow.d.js";
-import { isWorkflowMetadata } from "./validator.js";
+import { assertValidWorkflowId, isValidWorkflowId, isWorkflowMetadata } from "./validator.js";
+
+type PackageMetadata = {
+    name?: unknown;
+    version?: unknown;
+};
+
+const isNonEmptyString = (value: unknown): value is string => {
+    return typeof value === "string" && value.length > 0;
+};
+
+const deriveWorkflowId = (workflowRoot: string, packageMetadata: PackageMetadata): string => {
+    const packageName = isNonEmptyString(packageMetadata.name) ? packageMetadata.name : undefined;
+    const packageNameId = packageName?.split("/").at(-1);
+
+    if (packageNameId && isValidWorkflowId(packageNameId)) {
+        return packageNameId;
+    }
+
+    const directoryName = basename(workflowRoot);
+
+    if (isValidWorkflowId(directoryName)) {
+        return directoryName;
+    }
+
+    throw new Error(
+        `Unable to derive workflow metadata for ${workflowRoot}. Add mawm.json or package.json with a valid workflow name.`,
+    );
+};
+
+const readPackageMetadata = async (workflowRoot: string): Promise<PackageMetadata> => {
+    const packageMetadataPath = join(workflowRoot, "package.json");
+
+    if (!(await exists(packageMetadataPath))) {
+        return {};
+    }
+
+    return await readJson<PackageMetadata>(packageMetadataPath);
+};
 
 /**
  * Read and validate workflow metadata from a workflow root.
@@ -19,4 +57,34 @@ export const readWorkflowMetadata = async (workflowRoot: string): Promise<Workfl
     }
 
     return workflowMetadata;
+};
+
+/** Read workflow metadata, deriving it from package.json when mawm.json is missing. */
+export const resolveWorkflowMetadata = async (workflowRoot: string): Promise<WorkflowMetadata> => {
+    const workflowMetadataPath = join(workflowRoot, "mawm.json");
+
+    if (await exists(workflowMetadataPath)) {
+        return await readWorkflowMetadata(workflowRoot);
+    }
+
+    const packageMetadata = await readPackageMetadata(workflowRoot);
+    const workflowId = deriveWorkflowId(workflowRoot, packageMetadata);
+
+    assertValidWorkflowId(workflowId);
+
+    return {
+        id: workflowId,
+        displayName: isNonEmptyString(packageMetadata.name) ? packageMetadata.name : workflowId,
+        workflowVersion: isNonEmptyString(packageMetadata.version)
+            ? packageMetadata.version
+            : "0.0.0",
+    };
+};
+
+/** Write workflow metadata to mawm.json in the target workflow root. */
+export const writeWorkflowMetadata = async (
+    workflowRoot: string,
+    workflowMetadata: WorkflowMetadata,
+): Promise<void> => {
+    await writeJson(join(workflowRoot, "mawm.json"), workflowMetadata);
 };
