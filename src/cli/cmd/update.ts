@@ -59,7 +59,7 @@ const resolveGlobalSource = async (
     const sourceWorkflowRoot = await resolveWorkflowRoot(sourceStartPath);
     const sourceDistRoot =
         resolve(sourceStartPath) === resolve(sourceWorkflowRoot)
-            ? join(sourceWorkflowRoot, "dist")
+            ? sourceWorkflowRoot
             : sourceStartPath;
 
     return {
