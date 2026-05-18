@@ -1,30 +1,7 @@
 import { readdir } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
-import { defineCommand, option } from "../../types/commands.js";
-
-const resolveHomeDirectory = (env: NodeJS.ProcessEnv): string => {
-    const home = env["HOME"];
-
-    if (home) {
-        return home;
-    }
-
-    const userProfile = env["USERPROFILE"];
-
-    if (userProfile) {
-        return userProfile;
-    }
-
-    const homeDrive = env["HOMEDRIVE"];
-    const homePath = env["HOMEPATH"];
-
-    if (homeDrive && homePath) {
-        return `${homeDrive}${homePath}`;
-    }
-
-    return homedir();
-};
+import { resolveUserConfigRoot } from "../../utils/user-config.js";
+import { defineCommand, option } from "../../types/builders/command-builder.js";
 
 const list = defineCommand({
     name: "list",
@@ -39,7 +16,7 @@ const list = defineCommand({
     async run({ context, options }) {
         try {
             const workflowsRoot = options.global
-                ? join(resolveHomeDirectory(context.env), ".config", "mawm", "graphs")
+                ? resolveUserConfigRoot(context.env)
                 : join(context.cwd, ".mawm", "graphs");
             const workflows = (await readdir(workflowsRoot, { withFileTypes: true }))
                 .filter((entry) => entry.isDirectory())
