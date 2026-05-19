@@ -1,6 +1,7 @@
 {
   "name": "mawm",
   "version": "0.0.0",
+  "license": "MIT-with-Commons-Clause",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
