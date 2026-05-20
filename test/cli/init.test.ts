@@ -84,9 +84,9 @@ describe("init command", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
-        expect(await readFile(join(projectRoot, ".mawm", "agents", "adhoc", "README.md"), "utf8")).toContain(
-            "adhoc",
-        );
+        expect(
+            await readFile(join(projectRoot, ".mawm", "agents", "adhoc", "README.md"), "utf8"),
+        ).toContain("adhoc");
         expect(
             await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
         ).toBe(true);

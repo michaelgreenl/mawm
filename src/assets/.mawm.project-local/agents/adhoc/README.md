@@ -1,1 +1,1 @@
-for adhoc initiative/phase plans
+For adhoc initiative/run plans
