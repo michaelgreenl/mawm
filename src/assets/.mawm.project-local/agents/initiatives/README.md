@@ -4,15 +4,15 @@ This directory is planning context for humans and agents. Keep the active set sm
 
 ## Source of Truth
 
-- `.mawm/initiatives/roadmap.md`, initiative specs under `active/`, and run specs under `active/<initiative-slug>/runs/active/` are the current planning source of truth.
+- `.mawm/initiatives/roadmap.md` and initiative specs under `active/` are the current planning source of truth.
+- Run specs under `active/<initiative-slug>/runs/active/` become active source-of-truth docs only after an executed workflow generates them.
 - Active docs must reflect the project's current direction, current codebase state, and current sequencing.
 - When plans shift, update every affected active doc in the same change. Do not leave stale text in one active file while another active file carries the correction.
 - Rewrite or delete superseded active guidance instead of appending contradictory follow-up notes.
-- Active specs should mention older initiative or run docs only when that reference is absolutely necessary to invalidate a stale assumption, explain a migration boundary, or point at historical implementation detail.
+- Initiative planning does not prewrite run specs. Executed workflows generate them from the template when a run begins.
 
 ## Historical Records
 
-- `archived/` initiatives are kept for history and logging only.
 - Completed or archived run docs are kept for history and logging only.
 - Historical docs can explain what used to be true or how something was previously implemented, but they are not the current source of truth for active planning or current code behavior.
 
@@ -21,7 +21,7 @@ This directory is planning context for humans and agents. Keep the active set sm
 - `queued/` docs capture possible future work or partially cleared direction.
 - They are planning input, not authoritative over the roadmap, active specs, or the current codebase.
 
-## Why This Matters
+## Why Aligned Documents Matter
 
 - Agents consume these docs as prompt context.
 - Conflicting active docs create conflicting tokens, which increases the risk of wrong assumptions and hallucinated execution.

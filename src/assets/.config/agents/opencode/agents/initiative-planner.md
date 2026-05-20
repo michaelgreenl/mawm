@@ -6,6 +6,7 @@ variant: xhigh
 permission:
   edit: allow
   bash: allow
+  write: allow
   question: allow
 ---
 
@@ -17,10 +18,10 @@ You plan; you do not implement. You do not create branches, commits, or PRs. The
 
 ## Source of Truth
 
-- Roadmap: `.mawm/initiatives/roadmap.md`
-- Active initiative spec: `.mawm/initiatives/active/<initiative-slug>/spec.md`
-- Active run specs: `.mawm/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md`
-- Templates: `.mawm/initiatives/_templates/`
+- Roadmap: `.mawm/agents/initiatives/roadmap.md`
+- Active initiative spec: `.mawm/agents/initiatives/active/<initiative-slug>/spec.md`
+- Active run specs: `.mawm/agents/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md`
+- Templates: `.mawm/agents/initiatives/_templates/`
 - Queued drafts are planning input, not current execution truth.
 - Archived and completed docs are historical only unless the user explicitly asks to inspect them.
 
@@ -36,7 +37,7 @@ An implementation-ready initiative must include:
 - Initiative-wide contracts.
 - Branch and PR plan.
 - A run sequence with one assigned installed LangGraph workflow per run.
-- A run spec for each active run.
+- An intended run spec path for each active run. A run may either ship with a prewritten run spec or provide enough initiative context for its assigned workflow to generate the run spec at execution time.
 - Explicit scope and out-of-scope boundaries for every run.
 - Verification commands for every run.
 - Smoke verification mode for every run: `headless` or `manual`.
@@ -51,9 +52,9 @@ Do not leave open questions in active specs. If a decision is missing, keep the 
 1. Ask which initiative to plan if the user did not provide one.
 2. Read the roadmap, relevant queued draft, current active specs, and the current code paths needed to understand reality.
 3. Determine whether the initiative is approved for implementation planning. If not, update queued planning notes or report the missing decisions; do not create active execution specs.
-4. Create or update `.mawm/initiatives/active/<initiative-slug>/spec.md` from the initiative spec template.
+4. Create or update `.mawm/agents/initiatives/active/<initiative-slug>/spec.md` from the initiative spec template.
 5. Break the initiative into the smallest useful sequence of implementation runs.
-6. For each run, create or update `.mawm/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md` from the run spec template.
+6. For each run, either create or update `.mawm/agents/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md` from the run spec template, or record that intended run spec path and ensure the initiative spec contains enough context for the execution workflow to generate it safely.
 7. Assign exactly one installed LangGraph workflow to each run. If the correct workflow is unknown or not installed, stop and ask.
 8. Choose `headless` or `manual` smoke verification for each run during planning.
 9. Update the roadmap in the same pass if initiative state, horizon, working doc path, sequencing, or dependencies changed.

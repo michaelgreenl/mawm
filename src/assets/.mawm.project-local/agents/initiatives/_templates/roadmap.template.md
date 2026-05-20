@@ -1,5 +1,5 @@
 > This template is for a project's `roadmap.md` file:
-> `.mawm/initiatives/roadmap.md`
+> `.mawm/agents/initiatives/roadmap.md`
 
 > Planner notes
 >
@@ -46,8 +46,8 @@
 
 | Initiative          | State    | Horizon | Why it matters                                 | Depends on             | Working doc                                                         |
 | ------------------- | -------- | ------- | ---------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
-| `<initiative name>` | `active` | `Now`   | <why this matters now>                         | `<dependency or none>` | `.mawm/initiatives/active/<initiative-slug>/spec.md`                |
-| `<initiative name>` | `queued` | `Next`  | <why this matters next>                        | `<dependency or none>` | `.mawm/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md` |
+| `<initiative name>` | `active` | `Now`   | <why this matters now>                         | `<dependency or none>` | `.mawm/agents/initiatives/active/<initiative-slug>/spec.md`                |
+| `<initiative name>` | `queued` | `Next`  | <why this matters next>                        | `<dependency or none>` | `.mawm/agents/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md` |
 | `<initiative name>` | `queued` | `Later` | <future opportunity or reason to keep visible> | `<dependency or none>` | `<optional draft path or note>`                                     |
 
 ## Now
@@ -57,7 +57,7 @@
 - State: `active`
 - Goal: <directional goal for the current window>
 - Exit signal: <observable condition that lets this leave the current horizon>
-- Working doc: `.mawm/initiatives/active/<initiative-slug>/spec.md`
+- Working doc: `.mawm/agents/initiatives/active/<initiative-slug>/spec.md`
 - Notes: <key dependency, risk, or scope boundary>
 
 ## Next
@@ -66,13 +66,13 @@
 
 - State: `queued`
 - Goal: <what this initiative should unlock once started>
-- Working doc: `.mawm/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md`
+- Working doc: `.mawm/agents/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md`
 
 ### <initiative or theme>
 
 - State: `queued`
 - Goal: <what this initiative should unlock once started>
-- Working doc: `.mawm/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md`
+- Working doc: `.mawm/agents/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md`
 
 ## Later
 

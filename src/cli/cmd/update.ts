@@ -1,6 +1,6 @@
 import { rm, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { copyRecursive, exists } from "../../utils/fs.js";
+import { copyDirectoryContents, copyRecursive, exists } from "../../utils/fs.js";
 import { resolveUserConfigRoot } from "../../utils/user-config.js";
 import { readManifest, refreshManifest } from "../../utils/workflow/manifest.js";
 import {
@@ -133,13 +133,22 @@ const updateGlobalWorkflow = async (
         );
     }
 
-    const targetDistRoot = join(targetWorkflowRoot, "dist");
+    const installArtifactsAtWorkflowRoot = resolve(sourceDistRoot) === resolve(sourceWorkflowRoot);
+    const targetArtifactRoot = installArtifactsAtWorkflowRoot
+        ? targetWorkflowRoot
+        : join(targetWorkflowRoot, "dist");
     const sourceLanggraphConfigPath = join(sourceWorkflowRoot, "langgraph.json");
     const targetLanggraphConfigPath = join(targetWorkflowRoot, "langgraph.json");
 
-    if (resolve(sourceDistRoot) !== resolve(targetDistRoot)) {
+    if (resolve(sourceDistRoot) !== resolve(targetArtifactRoot)) {
         await rm(targetWorkflowRoot, { force: true, recursive: true });
-        await copyRecursive(sourceDistRoot, targetDistRoot);
+
+        if (installArtifactsAtWorkflowRoot) {
+            await copyDirectoryContents(sourceDistRoot, targetWorkflowRoot);
+        } else {
+            await copyRecursive(sourceDistRoot, targetArtifactRoot);
+        }
+
         await copyRecursive(sourceLanggraphConfigPath, targetLanggraphConfigPath);
     }
 

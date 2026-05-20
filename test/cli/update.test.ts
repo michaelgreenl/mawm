@@ -292,6 +292,76 @@ describe("update command", () => {
         ]);
     });
 
+    test("updates a global workflow when absolutePath points at a dist directory with parent metadata", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const sourceWorkflowRoot = await mkdtemp(join(tmpdir(), "mawm-source-"));
+        tempRoots.push(home, sourceWorkflowRoot);
+
+        const sourceDistRoot = join(sourceWorkflowRoot, "dist");
+        await mkdir(sourceDistRoot, { recursive: true });
+        await writeJson(join(sourceWorkflowRoot, "package.json"), {
+            name: "coding",
+            version: "4.2.0",
+        });
+        await writeJson(join(sourceDistRoot, "langgraph.json"), {
+            graphs: { coding: "./index.js:graph" },
+        });
+        await writeFile(join(sourceDistRoot, "index.js"), "export const graph = 'global-new';\n");
+
+        const globalWorkflowRoot = join(home, ".config", "mawm", "coding");
+        await mkdir(join(globalWorkflowRoot, "dist"), { recursive: true });
+        await writeJson(join(globalWorkflowRoot, "mawm.json"), {
+            displayName: "coding",
+            id: "coding",
+            workflowVersion: "1.0.0",
+        });
+        await writeJson(join(globalWorkflowRoot, "langgraph.json"), {
+            graphs: { coding: "./dist/old.js:graph" },
+        });
+        await writeFile(
+            join(globalWorkflowRoot, "dist", "index.js"),
+            "export const graph = 'global-old';\n",
+        );
+        await writeJson(join(home, ".config", "mawm", "manifest.json"), [
+            {
+                absolutePath: sourceDistRoot,
+                displayName: "coding",
+                id: "coding",
+                path: "./coding",
+                workflowVersion: "1.0.0",
+            },
+        ]);
+
+        const rawArgs = ["update", "-g", "coding"] as const;
+        const result = await captureOutput(() =>
+            parseCommand(rawArgs, createContext(home, home, rawArgs)),
+        );
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: `Updated workflow \`coding\` in ${globalWorkflowRoot}.\n`,
+        });
+        expect(await readFile(join(globalWorkflowRoot, "index.js"), "utf8")).toBe(
+            "export const graph = 'global-new';\n",
+        );
+        expect(await pathExists(join(globalWorkflowRoot, "dist", "index.js"))).toBe(false);
+        expect(await readJson(join(globalWorkflowRoot, "mawm.json"))).toEqual({
+            displayName: "coding",
+            id: "coding",
+            workflowVersion: "4.2.0",
+        });
+        expect(await readJson(join(home, ".config", "mawm", "manifest.json"))).toEqual([
+            {
+                absolutePath: sourceDistRoot,
+                displayName: "coding",
+                id: "coding",
+                path: "./coding",
+                workflowVersion: "4.2.0",
+            },
+        ]);
+    });
+
     test("updates all global workflows from manifest entries and reports missing absolute paths", async () => {
         const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
         const sourceWorkflowRoot = await mkdtemp(join(tmpdir(), "mawm-source-"));

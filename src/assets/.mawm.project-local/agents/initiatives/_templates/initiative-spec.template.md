@@ -1,11 +1,12 @@
 > This template is for an initiative's `spec.md` file:
-> `.mawm/initiatives/active/<initiative-slug>/spec.md`
+> `.mawm/agents/initiatives/active/<initiative-slug>/spec.md`
 
 > Planner notes
 >
-> - This file is the current source of truth for the initiative while it lives under `active/`. Keep it aligned with `roadmap.md`, active run specs, and the current codebase.
+> - This file is the current source of truth for the initiative while it lives under `active/`. Keep it aligned with `roadmap.md`, any run specs already created under `runs/active/`, and the current codebase.
 > - When direction or code reality changes, update this file and every impacted active doc in the same pass. Delete stale text instead of layering corrections.
 > - Break delivery into focused, implementable, verifiable runs. Each run must name the installed LangGraph workflow that will execute it.
+> - Initiative planning does not prewrite run specs. The assigned execution workflow generates the run spec from the template when the run begins.
 
 <!-- Delete sections that do not apply. Replace open questions with cleared decisions before finalizing the plan. Remove or rewrite superseded active text instead of stacking contradictory notes. -->
 
@@ -14,7 +15,7 @@
 ## Source of Truth Rules
 
 - When initiative direction changes, update every affected active doc in the same pass.
-- Active run specs under `runs/active/` must match the run summaries in this spec.
+- Any run specs created under `runs/active/` must match the run summaries in this spec.
 - Remove or rewrite superseded text instead of appending contradictory follow-up notes.
 
 ## Target State
@@ -39,7 +40,7 @@
 ### Run 1: <run title> (`<assigned-implementation-workflow>`)
 
 - [ ] complete
-- Run spec: `.mawm/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md`
+- Run spec path: `.mawm/agents/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md` (created by the assigned workflow when this run starts)
 - Task: <run-task>
 - Current state: <code-base-current-state>
 - Outcome: <run-outcome>
@@ -50,7 +51,7 @@
 ### Run 2: <run title> (`<assigned-implementation-workflow>`)
 
 - [ ] complete
-- Run spec: `.mawm/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md`
+- Run spec path: `.mawm/agents/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md` (created by the assigned workflow when this run starts)
 - Task: <run-task>
 - Current state: <code-base-current-state>
 - Outcome: <run-outcome>
@@ -61,7 +62,7 @@
 ### Run 3: <run title> (`<assigned-implementation-workflow>`)
 
 - [ ] complete
-- Run spec: `.mawm/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md`
+- Run spec path: `.mawm/agents/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md` (created by the assigned workflow when this run starts)
 - Task: <run-task>
 - Current state: <code-base-current-state>
 - Outcome: <run-outcome>
@@ -72,7 +73,7 @@
 ### Run <n>: <run title> (`<assigned-implementation-workflow>`)
 
 - [ ] complete
-- Run spec: `.mawm/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md`
+- Run spec path: `.mawm/agents/initiatives/active/<initiative-slug>/runs/active/<run-slug>/spec.md` (created by the assigned workflow when this run starts)
 - Task: <run-task>
 - Current state: <code-base-current-state>
 - Outcome: <run-outcome>

@@ -1,4 +1,4 @@
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { exists, readJson, writeJson } from "../fs.js";
 import type { WorkflowMetadata } from "../../types/interfaces/workflow.d.js";
 import { assertValidWorkflowId, isValidWorkflowId, isWorkflowMetadata } from "./validator.js";
@@ -12,11 +12,30 @@ const isNonEmptyString = (value: unknown): value is string => {
     return typeof value === "string" && value.length > 0;
 };
 
-const deriveWorkflowId = (workflowRoot: string, packageMetadata: PackageMetadata): string => {
+const getPackageWorkflowId = (packageMetadata: PackageMetadata): string | undefined => {
     const packageName = isNonEmptyString(packageMetadata.name) ? packageMetadata.name : undefined;
     const packageNameId = packageName?.split("/").at(-1);
 
-    if (packageNameId && isValidWorkflowId(packageNameId)) {
+    return packageNameId && isValidWorkflowId(packageNameId) ? packageNameId : undefined;
+};
+
+const toWorkflowMetadata = (
+    workflowId: string,
+    packageMetadata: PackageMetadata,
+): WorkflowMetadata => {
+    return {
+        id: workflowId,
+        displayName: isNonEmptyString(packageMetadata.name) ? packageMetadata.name : workflowId,
+        workflowVersion: isNonEmptyString(packageMetadata.version)
+            ? packageMetadata.version
+            : "0.0.0",
+    };
+};
+
+const deriveWorkflowId = (workflowRoot: string, packageMetadata: PackageMetadata): string => {
+    const packageNameId = getPackageWorkflowId(packageMetadata);
+
+    if (packageNameId) {
         return packageNameId;
     }
 
@@ -68,17 +87,34 @@ export const resolveWorkflowMetadata = async (workflowRoot: string): Promise<Wor
     }
 
     const packageMetadata = await readPackageMetadata(workflowRoot);
+
+    if (getPackageWorkflowId(packageMetadata)) {
+        return toWorkflowMetadata(deriveWorkflowId(workflowRoot, packageMetadata), packageMetadata);
+    }
+
+    if (basename(workflowRoot) === "dist") {
+        const parentWorkflowRoot = dirname(workflowRoot);
+        const parentWorkflowMetadataPath = join(parentWorkflowRoot, "mawm.json");
+
+        if (await exists(parentWorkflowMetadataPath)) {
+            return await readWorkflowMetadata(parentWorkflowRoot);
+        }
+
+        const parentPackageMetadata = await readPackageMetadata(parentWorkflowRoot);
+
+        if (getPackageWorkflowId(parentPackageMetadata)) {
+            return toWorkflowMetadata(
+                deriveWorkflowId(parentWorkflowRoot, parentPackageMetadata),
+                parentPackageMetadata,
+            );
+        }
+    }
+
     const workflowId = deriveWorkflowId(workflowRoot, packageMetadata);
 
     assertValidWorkflowId(workflowId);
 
-    return {
-        id: workflowId,
-        displayName: isNonEmptyString(packageMetadata.name) ? packageMetadata.name : workflowId,
-        workflowVersion: isNonEmptyString(packageMetadata.version)
-            ? packageMetadata.version
-            : "0.0.0",
-    };
+    return toWorkflowMetadata(workflowId, packageMetadata);
 };
 
 /** Write workflow metadata to mawm.json in the target workflow root. */

@@ -76,3 +76,15 @@ export const copyRecursive = async (sourcePath: string, targetPath: string): Pro
     await mkdir(dirname(targetPath), { recursive: true });
     await copyFile(sourcePath, targetPath);
 };
+
+/** Copy the contents of a directory into a target directory. */
+export const copyDirectoryContents = async (
+    sourceDirectory: string,
+    targetDirectory: string,
+): Promise<void> => {
+    await mkdir(targetDirectory, { recursive: true });
+
+    for (const childName of await readdir(sourceDirectory)) {
+        await copyRecursive(join(sourceDirectory, childName), join(targetDirectory, childName));
+    }
+};
