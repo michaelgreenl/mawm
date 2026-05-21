@@ -1,6 +1,6 @@
-import { buildOptions } from "../../types/builders/option-builder.js";
-import type { ParsedOptions } from "../../types/interfaces/parse-result.d.js";
-import type { AnyOptionDef } from "../../types/interfaces/value.d.js";
+import { buildOptions } from "../../../types/builders/option-builder.js";
+import type { ParsedOptions } from "../../../types/interfaces/parse-result.d.js";
+import type { AnyOptionDef } from "../../../types/interfaces/value.d.js";
 import { splitOptionToken } from "./option-token.js";
 import { assignOptionValue, type OptionValueMap } from "./option-value.js";
 

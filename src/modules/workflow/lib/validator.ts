@@ -1,4 +1,7 @@
-import type { WorkflowManifestEntry, WorkflowMetadata } from "../../types/interfaces/workflow.d.js";
+import type {
+    WorkflowManifestEntry,
+    WorkflowMetadata,
+} from "../../../types/interfaces/workflow.d.js";
 
 const WORKFLOW_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 

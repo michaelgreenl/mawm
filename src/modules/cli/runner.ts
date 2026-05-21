@@ -1,6 +1,6 @@
 import { parseCommandInputs } from "./parsers/arguments.js";
-import type { Command, CommandContext, SubCommand } from "../types/interfaces/command.d.js";
-import type { AnyArgDef, AnyOptionDef } from "../types/interfaces/value.d.js";
+import type { Command, CommandContext, SubCommand } from "../../types/interfaces/command.d.js";
+import type { AnyArgDef, AnyOptionDef } from "../../types/interfaces/value.d.js";
 
 /**
  * Write an argument parsing error and usage details to stderr.

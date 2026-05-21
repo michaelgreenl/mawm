@@ -1,11 +1,11 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { copyMissing } from "../../utils/fs.js";
-import { initializeUserConfig } from "../../utils/user-config.js";
-import { defineCommand, option } from "../../types/builders/command-builder.js";
+import { copyMissing } from "../../cores/lib/fs.js";
+import { initializeUserConfig } from "../../cores/lib/user-config.js";
+import { defineCommand, option } from "../../../types/builders/command-builder.js";
 
 const PROJECT_LOCAL_ASSETS_ROOT = fileURLToPath(
-    new URL("../../assets/.mawm.project-local", import.meta.url),
+    new URL("../../../assets/.mawm.project-local", import.meta.url),
 );
 const PROJECT_LOCAL_GRAPHS_ROOT = join(PROJECT_LOCAL_ASSETS_ROOT, "graphs");
 const PROJECT_LOCAL_AGENTS_ROOT = join(PROJECT_LOCAL_ASSETS_ROOT, "agents");

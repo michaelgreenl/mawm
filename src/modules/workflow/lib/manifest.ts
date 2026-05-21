@@ -1,5 +1,8 @@
-import { exists, readJson, writeJson } from "../fs.js";
-import type { WorkflowManifestEntry, WorkflowMetadata } from "../../types/interfaces/workflow.d.js";
+import { exists, readJson, writeJson } from "../../cores/lib/fs.js";
+import type {
+    WorkflowManifestEntry,
+    WorkflowMetadata,
+} from "../../../types/interfaces/workflow.d.js";
 import { isWorkflowManifestEntry } from "./validator.js";
 
 /**

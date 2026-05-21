@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { exists } from "../fs.js";
+import { exists } from "../../cores/lib/fs.js";
 
 /**
  * Find the nearest workflow root above a starting path.

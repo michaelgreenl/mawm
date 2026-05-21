@@ -1,10 +1,10 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { arg, defineCommand, option } from "../../types/builders/command-builder.js";
-import { exists, writeJson } from "../../utils/fs.js";
-import { resolveUserConfigRoot } from "../../utils/user-config.js";
-import { readManifest } from "../../utils/workflow/manifest.js";
-import { assertValidWorkflowId } from "../../utils/workflow/validator.js";
+import { arg, defineCommand, option } from "../../../types/builders/command-builder.js";
+import { exists, writeJson } from "../../cores/lib/fs.js";
+import { resolveUserConfigRoot } from "../../cores/lib/user-config.js";
+import { readManifest } from "../../workflow/lib/manifest.js";
+import { assertValidWorkflowId } from "../../workflow/lib/validator.js";
 
 const removeManifestEntry = async (manifestPath: string, workflowId: string): Promise<boolean> => {
     const manifest = await readManifest(manifestPath);

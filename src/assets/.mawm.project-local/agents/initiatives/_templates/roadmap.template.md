@@ -44,11 +44,11 @@
 
 ## Initiative Ledger
 
-| Initiative          | State    | Horizon | Why it matters                                 | Depends on             | Working doc                                                         |
-| ------------------- | -------- | ------- | ---------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| Initiative          | State    | Horizon | Why it matters                                 | Depends on             | Working doc                                                                |
+| ------------------- | -------- | ------- | ---------------------------------------------- | ---------------------- | -------------------------------------------------------------------------- |
 | `<initiative name>` | `active` | `Now`   | <why this matters now>                         | `<dependency or none>` | `.mawm/agents/initiatives/active/<initiative-slug>/spec.md`                |
 | `<initiative name>` | `queued` | `Next`  | <why this matters next>                        | `<dependency or none>` | `.mawm/agents/initiatives/queued/<initiative-slug>/plan-drafts/<draft>.md` |
-| `<initiative name>` | `queued` | `Later` | <future opportunity or reason to keep visible> | `<dependency or none>` | `<optional draft path or note>`                                     |
+| `<initiative name>` | `queued` | `Later` | <future opportunity or reason to keep visible> | `<dependency or none>` | `<optional draft path or note>`                                            |
 
 ## Now
 

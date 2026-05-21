@@ -64,10 +64,7 @@ const isProcessAlive = (pid: number): boolean => {
     }
 };
 
-const waitForExit = async (
-    child: ReturnType<typeof spawn>,
-    task: string,
-): Promise<void> => {
+const waitForExit = async (child: ReturnType<typeof spawn>, task: string): Promise<void> => {
     await new Promise<void>((resolve, reject) => {
         child.once("error", reject);
         child.once("exit", (code, signal) => {

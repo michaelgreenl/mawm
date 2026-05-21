@@ -1,6 +1,6 @@
 import { basename, dirname, join } from "node:path";
-import { exists, readJson, writeJson } from "../fs.js";
-import type { WorkflowMetadata } from "../../types/interfaces/workflow.d.js";
+import { exists, readJson, writeJson } from "../../cores/lib/fs.js";
+import type { WorkflowMetadata } from "../../../types/interfaces/workflow.d.js";
 import { assertValidWorkflowId, isValidWorkflowId, isWorkflowMetadata } from "./validator.js";
 
 type PackageMetadata = {

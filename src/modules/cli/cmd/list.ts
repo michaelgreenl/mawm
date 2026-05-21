@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { resolveUserConfigRoot } from "../../utils/user-config.js";
-import { defineCommand, option } from "../../types/builders/command-builder.js";
+import { resolveUserConfigRoot } from "../../cores/lib/user-config.js";
+import { defineCommand, option } from "../../../types/builders/command-builder.js";
 
 const list = defineCommand({
     name: "list",
