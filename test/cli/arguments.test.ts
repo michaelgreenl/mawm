@@ -27,4 +27,16 @@ describe("parseCommandInputs", () => {
             options: { global: false },
         });
     });
+
+    test("parses grouped short options when the last option expects a value", () => {
+        const optionDefs = [
+            option("includeAgents", { alias: "i", type: "boolean" }),
+            option("agent", { alias: "a", type: "string" }),
+        ] as const;
+
+        expect(parseCommandInputs(undefined, optionDefs, ["-ia", "opencode"])).toEqual({
+            args: {},
+            options: { agent: "opencode", includeAgents: true },
+        });
+    });
 });

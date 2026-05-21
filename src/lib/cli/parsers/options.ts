@@ -19,6 +19,59 @@ const buildOptionMaps = (defs: readonly AnyOptionDef[]) => {
     return { optionsByName, optionsByAlias };
 };
 
+const assignShortOptionCluster = (
+    token: string,
+    tokens: readonly string[],
+    index: number,
+    optionsByAlias: Map<string, AnyOptionDef>,
+    optionValues: OptionValueMap,
+): number => {
+    const { key, inlineValue } = splitOptionToken(token, 1);
+
+    if (key.length === 1) {
+        const option = optionsByAlias.get(key);
+
+        if (!option) {
+            throw new Error(`Unknown option: -${key}`);
+        }
+
+        return assignOptionValue(option, `-${key}`, inlineValue, tokens, index, optionValues);
+    }
+
+    for (let optionIndex = 0; optionIndex < key.length; optionIndex += 1) {
+        const alias = key[optionIndex];
+
+        if (alias === undefined) {
+            continue;
+        }
+
+        const option = optionsByAlias.get(alias);
+
+        if (!option) {
+            throw new Error(`Unknown option: -${alias}`);
+        }
+
+        const type = option.type ?? "boolean";
+        const remaining = key.slice(optionIndex + 1);
+
+        if (type === "boolean") {
+            optionValues.set(option.name, true);
+            continue;
+        }
+
+        return assignOptionValue(
+            option,
+            `-${alias}`,
+            remaining.length > 0 ? remaining : inlineValue,
+            tokens,
+            index,
+            optionValues,
+        );
+    }
+
+    return index;
+};
+
 /**
  * Parse named CLI options and return the remaining positional tokens.
  *
@@ -72,14 +125,7 @@ export function parseOptions<const TOptions extends readonly AnyOptionDef[]>(
         }
 
         if (token.startsWith("-") && token !== "-") {
-            const { key, inlineValue } = splitOptionToken(token, 1);
-            const option = optionsByAlias.get(key);
-
-            if (!option) {
-                throw new Error(`Unknown option: -${key}`);
-            }
-
-            index = assignOptionValue(option, `-${key}`, inlineValue, tokens, index, optionValues);
+            index = assignShortOptionCluster(token, tokens, index, optionsByAlias, optionValues);
             continue;
         }
 

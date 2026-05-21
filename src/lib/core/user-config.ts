@@ -51,3 +51,14 @@ export const initializeUserConfig = async (env: NodeJS.ProcessEnv): Promise<void
 
     await copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
 };
+
+/** Initialize the MAWM user configuration scaffold, failing if it already exists. */
+export const scaffoldUserConfig = async (env: NodeJS.ProcessEnv): Promise<void> => {
+    const configRoot = resolveUserConfigRoot(env);
+
+    if (await exists(configRoot)) {
+        throw new Error(`Refusing to overwrite existing global config: ${configRoot}`);
+    }
+
+    await copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
+};
