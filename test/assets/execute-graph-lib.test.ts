@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import * as lib from "../../src/assets/.config/agents/opencode/tools/execute-graph-lib.ts";
 import {
     DEFAULT_AGENT_SERVER_URL,
     buildRunPayload,
@@ -41,6 +42,25 @@ describe("execute-graph helper library", () => {
         expect(buildRunPayload({ resume: { decision: "confirmed" } })).toEqual({
             command: { resume: { decision: "confirmed" } },
             input: null,
+        });
+    });
+
+    test("merges tool session context into the workflow runtime context", () => {
+        expect(
+            lib.resolveRunContext?.(
+                {
+                    initiativeBranch: "feature/run-1",
+                },
+                {
+                    directory: "/repo/from-directory",
+                    sessionID: "session-123",
+                    worktree: "/repo/from-worktree",
+                },
+            ),
+        ).toEqual({
+            initiativeBranch: "feature/run-1",
+            parentSessionID: "session-123",
+            targetRepoPath: "/repo/from-worktree",
         });
     });
 

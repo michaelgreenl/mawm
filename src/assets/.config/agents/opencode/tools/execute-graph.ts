@@ -7,6 +7,7 @@ import {
     buildRunPayload,
     extractAgentServerUrl,
     readAssistantIDs,
+    resolveRunContext,
     resolveAssistantID,
     summarizeRunResult,
 } from "./execute-graph-lib.ts";
@@ -33,6 +34,7 @@ const WORKFLOW_RUNTIME_INSTALL_COMMAND = [
 
 type ToolContext = {
     readonly directory?: string;
+    readonly sessionID?: string;
     readonly worktree?: string;
 };
 
@@ -400,6 +402,7 @@ export default tool({
 
         let resolvedAssistantID = assistantID;
         let resolvedThreadID = threadID;
+        const resolvedContext = resolveRunContext(runContext, context);
 
         try {
             const langgraphConfig = await readFile(langgraphConfigPath, "utf8");
@@ -417,7 +420,7 @@ export default tool({
                     body: JSON.stringify({
                         assistant_id: resolvedAssistantID,
                         ...buildRunPayload({
-                            context: runContext,
+                            context: resolvedContext,
                             input,
                             resume,
                         }),

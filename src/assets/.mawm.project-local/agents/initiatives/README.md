@@ -10,6 +10,7 @@ This directory is planning context for humans and agents. Keep the active set sm
 - When plans shift, update every affected active doc in the same change. Do not leave stale text in one active file while another active file carries the correction.
 - Rewrite or delete superseded active guidance instead of appending contradictory follow-up notes.
 - Initiative planning does not prewrite run specs. Executed workflows generate them from the template when a run begins.
+- Execution-only values such as target repo path, initiative branch, parent OpenCode session, and shared server URL come from the workflow launcher at runtime, not from the initiative docs.
 
 ## Historical Records
 

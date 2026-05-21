@@ -71,7 +71,9 @@ Stop for HITL if any pre-run gate is unclear.
 
 ### 2. Start the Workflow
 
-Use `execute-graph` with the assigned workflow name.
+Use `execute-graph` with the assigned workflow name and pass the run's execution context in the tool `context` payload.
+
+The tool automatically forwards the current OpenCode `sessionID` as `parentSessionID`. Pass `opencodeBaseUrl` when you know the shared server URL. If you do not know it, rely on the workflow node's default local shared-server attach behavior and stop if the workflow still reports isolated inner sessions.
 
 After startup, make the selected run context explicit to the workflow or to the user operating the workflow:
 
@@ -80,6 +82,7 @@ After startup, make the selected run context explicit to the workflow or to the 
 - Intended run spec path
 - Target repo path
 - Initiative branch
+- Shared OpenCode server URL when known
 - Smoke mode
 - Verification commands and run contract from the initiative spec
 

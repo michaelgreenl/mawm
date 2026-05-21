@@ -8,6 +8,12 @@ export interface RunPayloadInput {
     readonly resume?: unknown;
 }
 
+export interface RunToolContext {
+    readonly directory?: string;
+    readonly sessionID?: string;
+    readonly worktree?: string;
+}
+
 export interface RunSummary {
     readonly interrupt?: unknown;
     readonly runSpecPath?: string;
@@ -93,6 +99,27 @@ export const buildRunPayload = ({ context, input, resume }: RunPayloadInput) => 
         ...(typeof context === "undefined" ? {} : { context }),
         ...(typeof input === "undefined" ? {} : { input }),
     };
+};
+
+export const resolveRunContext = (
+    context: RecordValue | undefined,
+    toolContext: RunToolContext,
+): RecordValue | undefined => {
+    const merged = {
+        ...(context ?? {}),
+    };
+    const targetRepoPath = text(toolContext.worktree) ?? text(toolContext.directory);
+    const parentSessionID = text(toolContext.sessionID);
+
+    if (targetRepoPath && !text(merged.targetRepoPath)) {
+        merged.targetRepoPath = targetRepoPath;
+    }
+
+    if (parentSessionID && !text(merged.parentSessionID)) {
+        merged.parentSessionID = parentSessionID;
+    }
+
+    return Object.keys(merged).length > 0 ? merged : undefined;
 };
 
 export const summarizeRunResult = (values: unknown): RunSummary => {
