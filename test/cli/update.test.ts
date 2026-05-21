@@ -2,8 +2,8 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { parseCommand } from "../../src/cli/parsers/cmd.js";
-import type { CommandContext } from "../../src/types/interfaces/command.d.js";
+import { parseCommand } from "../../src/lib/cli/parsers/cmd.js";
+import type { CommandContext } from "../../src/types/command.d.js";
 
 const tempRoots: string[] = [];
 

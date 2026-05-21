@@ -1,5 +1,5 @@
-import type { CoercedValue, ParsedOptions } from "../interfaces/parse-result.d.js";
-import type { AnyOptionDef } from "../interfaces/value.d.js";
+import type { CoercedValue, ParsedOptions } from "../parse-result.d.js";
+import type { AnyOptionDef } from "../value.d.js";
 
 /**
  * Apply defaults and required checks to parsed option values.

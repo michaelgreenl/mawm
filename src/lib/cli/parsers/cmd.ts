@@ -1,9 +1,9 @@
-import { isHelpFlag } from "../lib/constants.js";
-import { outputCommandHelp, outputHelp, outputSubCommandHelp } from "../lib/help.js";
-import { runCommandTarget } from "../runner.js";
-import { resolveCommand } from "../registry.js";
-import type { Command, CommandContext } from "../../../types/interfaces/command.d.js";
-import type { AnyArgDef, AnyOptionDef } from "../../../types/interfaces/value.d.js";
+import { isHelpFlag } from "../constants.js";
+import { outputCommandHelp, outputHelp, outputSubCommandHelp } from "../help.js";
+import { runCommandTarget } from "../../../cli/runner.js";
+import { resolveCommand } from "../../../cli/registry.js";
+import type { Command, CommandContext } from "../../../types/command.d.js";
+import type { AnyArgDef, AnyOptionDef } from "../../../types/value.d.js";
 
 const parseSubCommand = async (
     command: Command,

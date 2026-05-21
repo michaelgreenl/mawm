@@ -1,6 +1,6 @@
-import { coerceValue } from "../lib/coerce-value.js";
-import type { CoercedValue } from "../../../types/interfaces/parse-result.d.js";
-import type { AnyOptionDef } from "../../../types/interfaces/value.d.js";
+import { coerceValue } from "../coerce-value.js";
+import type { CoercedValue } from "../../../types/parse-result.d.js";
+import type { AnyOptionDef } from "../../../types/value.d.js";
 
 /** Parsed option values keyed by option name. */
 export type OptionValueMap = Map<string, CoercedValue>;

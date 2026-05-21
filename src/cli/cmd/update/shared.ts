@@ -1,4 +1,4 @@
-import type { WorkflowManifestEntry } from "../../../../types/interfaces/workflow.d.js";
+import type { WorkflowManifestEntry } from "../../../types/workflow.d.js";
 
 /**
  * Resolve the workflows targeted by an update command.

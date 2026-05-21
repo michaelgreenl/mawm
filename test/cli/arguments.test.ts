@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseCommandInputs } from "../../src/cli/parsers/arguments.js";
+import { parseCommandInputs } from "../../src/lib/cli/parsers/arguments.js";
 import { arg, option } from "../../src/types/builders/command-builder.js";
 
 describe("parseCommandInputs", () => {

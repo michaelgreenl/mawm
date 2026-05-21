@@ -1,5 +1,5 @@
-import type { CoercedValue } from "../../../types/interfaces/parse-result.d.js";
-import type { ValueTypeName } from "../../../types/interfaces/value.d.js";
+import type { CoercedValue } from "../../types/parse-result.d.js";
+import type { ValueTypeName } from "../../types/value.d.js";
 
 /**
  * Coerce a CLI token into the requested primitive type.

@@ -1,5 +1,5 @@
-import { availableCommands } from "../registry.js";
-import type { Command, SubCommand } from "../../../types/interfaces/command.d.js";
+import { availableCommands } from "../../cli/registry.js";
+import type { Command, SubCommand } from "../../types/command.d.js";
 
 /**
  * Render top-level CLI help.

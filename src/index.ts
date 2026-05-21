@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from "node:url";
-import { parseCommand } from "./modules/cli/parsers/cmd.js";
-import type { CommandContext } from "./types/interfaces/command.d.js";
+import { parseCommand } from "./lib/cli/parsers/cmd.js";
+import type { CommandContext } from "./types/command.d.js";
 
 export const runCli = async (args: readonly string[] = process.argv.slice(2)): Promise<number> => {
     const context: CommandContext = {

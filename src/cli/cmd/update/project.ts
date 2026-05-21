@@ -1,9 +1,9 @@
 import { rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { copyRecursive, exists } from "../../../cores/lib/fs.js";
-import { resolveUserConfigRoot } from "../../../cores/lib/user-config.js";
-import { refreshManifest } from "../../../workflow/lib/manifest.js";
-import { readWorkflowMetadata } from "../../../workflow/lib/metadata.js";
+import { copyRecursive, exists } from "../../../lib/core/fs.js";
+import { resolveUserConfigRoot } from "../../../lib/core/user-config.js";
+import { refreshManifest } from "../../../lib/core/workflow/manifest.js";
+import { readWorkflowMetadata } from "../../../lib/core/workflow/metadata.js";
 
 const replacePath = async (sourcePath: string, targetPath: string): Promise<void> => {
     if (resolve(sourcePath) === resolve(targetPath)) {

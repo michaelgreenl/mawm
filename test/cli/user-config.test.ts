@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveHomeDirectory, resolveUserConfigRoot } from "../../src/utils/user-config.js";
+import { resolveHomeDirectory, resolveUserConfigRoot } from "../../src/lib/core/user-config.js";
 
 describe("user config helpers", () => {
     test("prefers HOME when resolving the user config root", () => {

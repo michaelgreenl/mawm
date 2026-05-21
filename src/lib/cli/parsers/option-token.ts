@@ -1,4 +1,4 @@
-import type { OptionTokenParts } from "../../../types/interfaces/option-token.d.js";
+import type { OptionTokenParts } from "../../../types/option-token.d.js";
 
 /**
  * Split an option token into its key and inline value.

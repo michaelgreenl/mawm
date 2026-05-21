@@ -1,11 +1,14 @@
 import { rm, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { copyDirectoryContents, copyRecursive, exists } from "../../../cores/lib/fs.js";
-import { resolveUserConfigRoot } from "../../../cores/lib/user-config.js";
-import { refreshManifest } from "../../../workflow/lib/manifest.js";
-import { resolveWorkflowMetadata, writeWorkflowMetadata } from "../../../workflow/lib/metadata.js";
-import { resolveWorkflowRoot } from "../../../workflow/lib/root.js";
-import type { WorkflowManifestEntry } from "../../../../types/interfaces/workflow.d.js";
+import { copyDirectoryContents, copyRecursive, exists } from "../../../lib/core/fs.js";
+import { resolveUserConfigRoot } from "../../../lib/core/user-config.js";
+import { refreshManifest } from "../../../lib/core/workflow/manifest.js";
+import {
+    resolveWorkflowMetadata,
+    writeWorkflowMetadata,
+} from "../../../lib/core/workflow/metadata.js";
+import { resolveWorkflowRoot } from "../../../lib/core/workflow/root.js";
+import type { WorkflowManifestEntry } from "../../../types/workflow.d.js";
 import { getGlobalRepairInstruction } from "./shared.js";
 
 const resolveGlobalSource = async (

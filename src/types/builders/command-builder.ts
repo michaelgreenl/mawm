@@ -1,5 +1,5 @@
-import type { Command, CommandHandler, SubCommand } from "../interfaces/command.d.js";
-import type { InferArgs, InferOptions } from "../interfaces/inference.d.js";
+import type { Command, CommandHandler, SubCommand } from "../command.d.js";
+import type { InferArgs, InferOptions } from "../inference.d.js";
 import type {
     AnyArgDef,
     AnyOptionDef,
@@ -7,7 +7,7 @@ import type {
     OptionDef,
     ValueTypeMap,
     ValueTypeName,
-} from "../interfaces/value.d.js";
+} from "../value.d.js";
 
 /** Create a typed positional argument definition. */
 export function arg<

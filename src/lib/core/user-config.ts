@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { copyMissing, exists } from "./fs.js";
 
 const USER_CONFIG_ASSETS_ROOT = fileURLToPath(
-    new URL("../../../assets/.config/mawm", import.meta.url),
+    new URL("../../assets/.config/mawm", import.meta.url),
 );
 
 /**

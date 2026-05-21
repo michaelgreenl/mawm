@@ -1,16 +1,16 @@
 import { stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { copyDirectoryContents, copyMissing, copyRecursive, exists } from "../../cores/lib/fs.js";
-import { initializeUserConfig, resolveUserConfigRoot } from "../../cores/lib/user-config.js";
-import { refreshManifest } from "../../workflow/lib/manifest.js";
+import { copyDirectoryContents, copyMissing, copyRecursive, exists } from "../../lib/core/fs.js";
+import { initializeUserConfig, resolveUserConfigRoot } from "../../lib/core/user-config.js";
+import { refreshManifest } from "../../lib/core/workflow/manifest.js";
 import {
     readWorkflowMetadata,
     resolveWorkflowMetadata,
     writeWorkflowMetadata,
-} from "../../workflow/lib/metadata.js";
-import { resolveWorkflowRoot } from "../../workflow/lib/root.js";
-import { assertValidWorkflowId } from "../../workflow/lib/validator.js";
-import { arg, defineCommand, option } from "../../../types/builders/command-builder.js";
+} from "../../lib/core/workflow/metadata.js";
+import { resolveWorkflowRoot } from "../../lib/core/workflow/root.js";
+import { assertValidWorkflowId } from "../../lib/core/workflow/validator.js";
+import { arg, defineCommand, option } from "../../types/builders/command-builder.js";
 
 const install = defineCommand({
     name: "install",

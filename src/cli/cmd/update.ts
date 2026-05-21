@@ -1,7 +1,7 @@
 import { join } from "node:path";
-import { arg, defineCommand, option } from "../../../types/builders/command-builder.js";
-import { resolveUserConfigRoot } from "../../cores/lib/user-config.js";
-import { readManifest } from "../../workflow/lib/manifest.js";
+import { arg, defineCommand, option } from "../../types/builders/command-builder.js";
+import { resolveUserConfigRoot } from "../../lib/core/user-config.js";
+import { readManifest } from "../../lib/core/workflow/manifest.js";
 import { updateGlobalWorkflow } from "./update/global.js";
 import { updateProjectWorkflow } from "./update/project.js";
 import { getManifestTargets, outputWorkflowError } from "./update/shared.js";

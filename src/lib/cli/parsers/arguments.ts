@@ -1,7 +1,7 @@
-import { coerceValue } from "../lib/coerce-value.js";
-import type { ParsedCommandInputs } from "../../../types/interfaces/parse-result.d.js";
-import type { InferArgs } from "../../../types/interfaces/inference.d.js";
-import type { AnyArgDef, AnyOptionDef } from "../../../types/interfaces/value.d.js";
+import { coerceValue } from "../coerce-value.js";
+import type { ParsedCommandInputs } from "../../../types/parse-result.d.js";
+import type { InferArgs } from "../../../types/inference.d.js";
+import type { AnyArgDef, AnyOptionDef } from "../../../types/value.d.js";
 import { parseOptions } from "./options.js";
 
 const parsePositionalArgs = <const TArgs extends readonly AnyArgDef[]>(
