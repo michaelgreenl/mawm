@@ -22,6 +22,7 @@
   "scripts": {
     "build": "tsc && node scripts/copy-assets.mjs",
     "clean": "rm -rf dist",
+    "relink": "bun clean && bun run build && bun link",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write src test",
