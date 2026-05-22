@@ -1,8 +1,6 @@
 ---
 description: Executes initiative runs by launching assigned LangGraph workflows, enforcing run gates, committing clean runs, and opening completion PRs
 mode: primary
-model: openai/gpt-5.4
-variant: xhigh
 permission:
   edit: allow
   bash: allow

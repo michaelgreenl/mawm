@@ -1,8 +1,6 @@
 ---
 description: Plans initiative roadmaps by maintaining .mawm/agents/initiatives/roadmap.md without drafting implementation runs
 mode: primary
-model: openai/gpt-5.4
-variant: xhigh
 permission:
   edit: allow
   bash: allow

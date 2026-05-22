@@ -1,8 +1,6 @@
 ---
 description: Plans implementation-ready initiatives by writing initiative specs and run specs for assigned LangGraph workflows
 mode: primary
-model: openai/gpt-5.4
-variant: xhigh
 permission:
   edit: allow
   bash: allow
