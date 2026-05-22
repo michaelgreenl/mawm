@@ -1,12 +1,24 @@
 import { basename, dirname, join } from "node:path";
 import { exists, readJson, writeJson } from "../../utils/fs.js";
-import { assertValidWorkflowId, isValidWorkflowId, isWorkflowMetadata } from "./validator.js";
+import { assertValidWorkflowId, isValidWorkflowId } from "./validator.js";
+
+export type WorkflowKind = "initiative-run" | "standalone";
+
+export interface WorkflowExecutionContract {
+    requiredInput: string[];
+    optionalInput: string[];
+    requiredContext: string[];
+    optionalContext: string[];
+    supportsResume: boolean;
+}
 
 /** Metadata stored in a workflow's mawm.json file. */
 export interface WorkflowMetadata {
     id: string;
     displayName: string;
     workflowVersion: string;
+    kind: WorkflowKind;
+    executionContract: WorkflowExecutionContract;
 }
 
 type PackageMetadata = {
@@ -14,8 +26,121 @@ type PackageMetadata = {
     version?: unknown;
 };
 
+type RecordValue = Record<string, unknown>;
+
+const DEFAULT_WORKFLOW_KIND: WorkflowKind = "standalone";
+
+const createDefaultExecutionContract = (): WorkflowExecutionContract => {
+    return {
+        optionalContext: [],
+        optionalInput: [],
+        requiredContext: [],
+        requiredInput: [],
+        supportsResume: false,
+    };
+};
+
 const isNonEmptyString = (value: unknown): value is string => {
     return typeof value === "string" && value.length > 0;
+};
+
+const isRecord = (value: unknown): value is RecordValue => {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const isStringArray = (value: unknown): value is string[] => {
+    return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+};
+
+const isWorkflowKind = (value: unknown): value is WorkflowKind => {
+    return value === "initiative-run" || value === "standalone";
+};
+
+const toStringArray = (value: unknown): string[] | undefined => {
+    if (typeof value === "undefined") {
+        return [];
+    }
+
+    return isStringArray(value) ? [...value] : undefined;
+};
+
+const toBoolean = (value: unknown, fallback: boolean): boolean | undefined => {
+    if (typeof value === "undefined") {
+        return fallback;
+    }
+
+    return typeof value === "boolean" ? value : undefined;
+};
+
+const normalizeExecutionContract = (value: unknown): WorkflowExecutionContract | undefined => {
+    if (typeof value === "undefined") {
+        return createDefaultExecutionContract();
+    }
+
+    if (!isRecord(value)) {
+        return undefined;
+    }
+
+    const requiredInput = toStringArray(value["requiredInput"]);
+    const optionalInput = toStringArray(value["optionalInput"]);
+    const requiredContext = toStringArray(value["requiredContext"]);
+    const optionalContext = toStringArray(value["optionalContext"]);
+    const supportsResume = toBoolean(value["supportsResume"], false);
+
+    if (
+        !requiredInput ||
+        !optionalInput ||
+        !requiredContext ||
+        !optionalContext ||
+        typeof supportsResume !== "boolean"
+    ) {
+        return undefined;
+    }
+
+    return {
+        optionalContext,
+        optionalInput,
+        requiredContext,
+        requiredInput,
+        supportsResume,
+    };
+};
+
+/**
+ * Normalizes workflow metadata, filling in default contract values for legacy files.
+ *
+ * @param value - Parsed mawm.json payload.
+ * @returns Normalized workflow metadata, or `undefined` when invalid.
+ */
+export const normalizeWorkflowMetadata = (value: unknown): WorkflowMetadata | undefined => {
+    if (
+        !isRecord(value) ||
+        typeof value["id"] !== "string" ||
+        typeof value["displayName"] !== "string" ||
+        typeof value["workflowVersion"] !== "string"
+    ) {
+        return undefined;
+    }
+
+    const kind =
+        typeof value["kind"] === "undefined"
+            ? DEFAULT_WORKFLOW_KIND
+            : isWorkflowKind(value["kind"])
+              ? value["kind"]
+              : undefined;
+    const executionContract = normalizeExecutionContract(value["executionContract"]);
+
+    if (!kind || !executionContract) {
+        return undefined;
+    }
+
+    return {
+        displayName: value["displayName"],
+        executionContract,
+        id: value["id"],
+        kind,
+        workflowVersion: value["workflowVersion"],
+    };
 };
 
 const getPackageWorkflowId = (packageMetadata: PackageMetadata): string | undefined => {
@@ -35,6 +160,8 @@ const toWorkflowMetadata = (
         workflowVersion: isNonEmptyString(packageMetadata.version)
             ? packageMetadata.version
             : "0.0.0",
+        kind: DEFAULT_WORKFLOW_KIND,
+        executionContract: createDefaultExecutionContract(),
     };
 };
 
@@ -75,9 +202,11 @@ const readPackageMetadata = async (workflowRoot: string): Promise<PackageMetadat
  */
 export const readWorkflowMetadata = async (workflowRoot: string): Promise<WorkflowMetadata> => {
     const workflowMetadataPath = join(workflowRoot, "mawm.json");
-    const workflowMetadata = await readJson<unknown>(workflowMetadataPath);
+    const workflowMetadata = normalizeWorkflowMetadata(
+        await readJson<unknown>(workflowMetadataPath),
+    );
 
-    if (!isWorkflowMetadata(workflowMetadata)) {
+    if (!workflowMetadata) {
         throw new Error(`Invalid workflow metadata: ${workflowMetadataPath}`);
     }
 

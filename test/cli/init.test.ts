@@ -142,7 +142,11 @@ describe("init command", () => {
 
         expect(result).toEqual({
             exitCode: 1,
-            stderr: `Refusing to overwrite existing global config: ${join(home, ".config", "mawm")}\n\nUsage: mawm init [-g] [-i] [-a <agent>]\n`,
+            stderr: `Refusing to overwrite existing global config: ${join(
+                home,
+                ".config",
+                "mawm",
+            )}\n\nUsage: mawm init [-g] [-i] [-a <agent>]\n`,
             stdout: "",
         });
     });
@@ -176,12 +180,15 @@ describe("init command", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
-        expect(await pathExists(join(projectRoot, ".opencode", "agents", "manager.md"))).toBe(
+        expect(
+            await pathExists(join(projectRoot, ".opencode", "agents", "initiative-manager.md")),
+        ).toBe(true);
+        expect(
+            await pathExists(join(projectRoot, ".opencode", "agents", "workflow-runner.md")),
+        ).toBe(true);
+        expect(await pathExists(join(projectRoot, ".opencode", "tools", "execute-graph.ts"))).toBe(
             true,
         );
-        expect(
-            await pathExists(join(projectRoot, ".opencode", "tools", "execute-graph.ts")),
-        ).toBe(true);
         expect(await readFile(join(home, ".config", "mawm", "manifest.json"), "utf8")).toBe("[]\n");
         expect(await pathExists(join(projectRoot, ".mawm", "agents"))).toBe(false);
     });
@@ -201,9 +208,9 @@ describe("init command", () => {
         expect(
             await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
         ).toBe(true);
-        expect(await pathExists(join(projectRoot, ".opencode", "agents", "manager.md"))).toBe(
-            true,
-        );
+        expect(
+            await pathExists(join(projectRoot, ".opencode", "agents", "initiative-manager.md")),
+        ).toBe(true);
     });
 
     test("initializes global agent assets with -g -a <agent>", async () => {
@@ -218,10 +225,37 @@ describe("init command", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
-        expect(await pathExists(join(home, ".config", "opencode", "agents", "manager.md"))).toBe(
-            true,
-        );
+        expect(
+            await pathExists(join(home, ".config", "opencode", "agents", "initiative-manager.md")),
+        ).toBe(true);
         expect(await pathExists(join(projectRoot, ".opencode"))).toBe(false);
+    });
+
+    test("replaces the legacy manager asset name during project init", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        await mkdir(join(projectRoot, ".opencode", "agents"), { recursive: true });
+        await writeFile(join(projectRoot, ".opencode", "agents", "manager.md"), "legacy\n");
+        await writeFile(join(projectRoot, ".opencode", "settings.json"), "{}\n");
+
+        const rawArgs = ["init", "-a", "opencode"] as const;
+        const result = await captureOutput(() =>
+            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
+        );
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(
+            await pathExists(join(projectRoot, ".opencode", "agents", "initiative-manager.md")),
+        ).toBe(true);
+        expect(await pathExists(join(projectRoot, ".opencode", "agents", "manager.md"))).toBe(
+            false,
+        );
+        expect(await readFile(join(projectRoot, ".opencode", "settings.json"), "utf8")).toBe(
+            "{}\n",
+        );
     });
 
     test("overwrites existing agent assets when overwrite is confirmed", async () => {
@@ -230,7 +264,10 @@ describe("init command", () => {
         tempRoots.push(home, projectRoot);
 
         await mkdir(join(projectRoot, ".opencode", "agents"), { recursive: true });
-        await writeFile(join(projectRoot, ".opencode", "agents", "manager.md"), "stale\n");
+        await writeFile(
+            join(projectRoot, ".opencode", "agents", "initiative-manager.md"),
+            "stale\n",
+        );
 
         const init = createInitCommand(async () => true);
         const result = await captureOutput(() =>
@@ -244,9 +281,12 @@ describe("init command", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
-        expect(await readFile(join(projectRoot, ".opencode", "agents", "manager.md"), "utf8")).toContain(
-            "execute-graph",
-        );
+        expect(
+            await readFile(
+                join(projectRoot, ".opencode", "agents", "initiative-manager.md"),
+                "utf8",
+            ),
+        ).toContain("execute-graph");
         expect(await pathExists(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toBe(true);
     });
 
@@ -276,9 +316,9 @@ describe("init command", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
         expect(promptCount).toBe(0);
-        expect(await pathExists(join(home, ".config", "opencode", "agents", "manager.md"))).toBe(
-            true,
-        );
+        expect(
+            await pathExists(join(home, ".config", "opencode", "agents", "initiative-manager.md")),
+        ).toBe(true);
         expect(await readFile(join(home, ".config", "opencode", "settings.json"), "utf8")).toBe(
             "{}\n",
         );
@@ -291,7 +331,10 @@ describe("init command", () => {
 
         await mkdir(join(home, ".config", "mawm"), { recursive: true });
         await mkdir(join(home, ".config", "opencode", "agents"), { recursive: true });
-        await writeFile(join(home, ".config", "opencode", "agents", "manager.md"), "stale\n");
+        await writeFile(
+            join(home, ".config", "opencode", "agents", "initiative-manager.md"),
+            "stale\n",
+        );
 
         let promptPath = "";
         const init = createInitCommand(async (targetPath) => {
@@ -310,9 +353,12 @@ describe("init command", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
         expect(promptPath).toBe(join(home, ".config", "opencode"));
-        expect(await readFile(join(home, ".config", "opencode", "agents", "manager.md"), "utf8")).toContain(
-            "execute-graph",
-        );
+        expect(
+            await readFile(
+                join(home, ".config", "opencode", "agents", "initiative-manager.md"),
+                "utf8",
+            ),
+        ).toContain("execute-graph");
     });
 
     test("exits immediately when overwrite is declined for existing agent assets", async () => {
@@ -321,7 +367,10 @@ describe("init command", () => {
         tempRoots.push(home, projectRoot);
 
         await mkdir(join(projectRoot, ".opencode", "agents"), { recursive: true });
-        await writeFile(join(projectRoot, ".opencode", "agents", "manager.md"), "keep\n");
+        await writeFile(
+            join(projectRoot, ".opencode", "agents", "initiative-manager.md"),
+            "keep\n",
+        );
 
         const init = createInitCommand(async () => false);
         const result = await captureOutput(() =>
@@ -336,9 +385,12 @@ describe("init command", () => {
             stderr: "",
             stdout: "",
         });
-        expect(await readFile(join(projectRoot, ".opencode", "agents", "manager.md"), "utf8")).toBe(
-            "keep\n",
-        );
+        expect(
+            await readFile(
+                join(projectRoot, ".opencode", "agents", "initiative-manager.md"),
+                "utf8",
+            ),
+        ).toBe("keep\n");
         expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });
 });

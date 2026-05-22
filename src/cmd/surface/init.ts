@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
@@ -53,7 +53,18 @@ const resolveAgentTargetRoot = (
     }
 };
 
-const hasExistingTargetAssets = async (sourcePath: string, targetPath: string): Promise<boolean> => {
+const removeLegacyAgentAssets = async (agent: string, targetRoot: string): Promise<void> => {
+    if (agent !== "opencode") {
+        return;
+    }
+
+    await rm(join(targetRoot, "agents", "manager.md"), { force: true });
+};
+
+const hasExistingTargetAssets = async (
+    sourcePath: string,
+    targetPath: string,
+): Promise<boolean> => {
     const sourceEntry = await stat(sourcePath);
 
     if (sourceEntry.isDirectory()) {
@@ -119,9 +130,10 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
             const agentTargetRoot = options.agent
                 ? resolveAgentTargetRoot(options.agent, context.cwd, context.env, options.global)
                 : undefined;
-            const hasExistingAgentAssets = agentSourceRoot && agentTargetRoot
-                ? await hasExistingTargetAssets(agentSourceRoot, agentTargetRoot)
-                : false;
+            const hasExistingAgentAssets =
+                agentSourceRoot && agentTargetRoot
+                    ? await hasExistingTargetAssets(agentSourceRoot, agentTargetRoot)
+                    : false;
 
             if (options.global && !agentSourceRoot && (await exists(globalConfigRoot))) {
                 throw new Error(
@@ -156,6 +168,8 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
             }
 
             if (agentSourceRoot && agentTargetRoot) {
+                await removeLegacyAgentAssets(options.agent!, agentTargetRoot);
+
                 if (await exists(agentTargetRoot)) {
                     await copyRecursive(agentSourceRoot, agentTargetRoot);
                 } else {
@@ -164,7 +178,9 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
             }
 
             process.stdout.write(
-                `${options.global ? `Initialized ${globalConfigRoot}` : "Initialized .mawm"} scaffold.\n`,
+                `${
+                    options.global ? `Initialized ${globalConfigRoot}` : "Initialized .mawm"
+                } scaffold.\n`,
             );
             return 0;
         },

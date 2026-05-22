@@ -1,12 +1,40 @@
 import { exists, readJson, writeJson } from "../../utils/fs.js";
 import type { WorkflowMetadata } from "./metadata.js";
-import { isWorkflowManifestEntry } from "./validator.js";
+import { normalizeWorkflowMetadata } from "./metadata.js";
 
 /** Manifest entry pointing to an installed workflow. */
 export interface WorkflowManifestEntry extends WorkflowMetadata {
     path: string;
     absolutePath?: string;
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const normalizeWorkflowManifestEntry = (value: unknown): WorkflowManifestEntry | undefined => {
+    if (
+        !isRecord(value) ||
+        typeof value["path"] !== "string" ||
+        (typeof value["absolutePath"] !== "undefined" && typeof value["absolutePath"] !== "string")
+    ) {
+        return undefined;
+    }
+
+    const workflowMetadata = normalizeWorkflowMetadata(value);
+
+    if (!workflowMetadata) {
+        return undefined;
+    }
+
+    return {
+        ...workflowMetadata,
+        ...(typeof value["absolutePath"] === "string"
+            ? { absolutePath: value["absolutePath"] }
+            : {}),
+        path: value["path"],
+    };
+};
 
 /**
  * Read and validate a workflow manifest file.
@@ -22,11 +50,21 @@ export const readManifest = async (manifestPath: string): Promise<WorkflowManife
 
     const manifest = await readJson<unknown>(manifestPath);
 
-    if (!Array.isArray(manifest) || !manifest.every(isWorkflowManifestEntry)) {
+    if (!Array.isArray(manifest)) {
         throw new Error(`Invalid workflow manifest: ${manifestPath}`);
     }
 
-    return manifest;
+    const normalizedManifest = manifest.map(normalizeWorkflowManifestEntry);
+
+    if (
+        !normalizedManifest.every(
+            (entry): entry is WorkflowManifestEntry => typeof entry !== "undefined",
+        )
+    ) {
+        throw new Error(`Invalid workflow manifest: ${manifestPath}`);
+    }
+
+    return normalizedManifest;
 };
 
 /**

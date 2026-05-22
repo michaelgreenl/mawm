@@ -101,6 +101,7 @@ const install = defineCommand({
             const targetWorkflowRoot = join(targetGraphsRoot, workflow);
 
             await copyMissing(sourceWorkflowRoot, targetWorkflowRoot);
+            await writeWorkflowMetadata(targetWorkflowRoot, workflowMetadata);
             await refreshManifest(join(targetGraphsRoot, "manifest.json"), workflowMetadata);
 
             process.stdout.write(

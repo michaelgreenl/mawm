@@ -42,6 +42,19 @@ const createContext = (cwd: string, home: string, rawArgs: readonly string[]): C
     rawArgs: [...rawArgs],
 });
 
+const defaultExecutionContract = {
+    optionalContext: [],
+    optionalInput: [],
+    requiredContext: [],
+    requiredInput: [],
+    supportsResume: false,
+};
+
+const defaultWorkflowMetadata = {
+    executionContract: defaultExecutionContract,
+    kind: "standalone",
+};
+
 describe("install command", () => {
     afterEach(async () => {
         await Promise.all(
@@ -80,6 +93,7 @@ describe("install command", () => {
         });
         expect(await readJson(join(installedWorkflowRoot, "mawm.json"))).toEqual({
             displayName: "demo-workflow",
+            ...defaultWorkflowMetadata,
             id: "demo-workflow",
             workflowVersion: "1.2.3",
         });
@@ -93,6 +107,7 @@ describe("install command", () => {
             {
                 absolutePath: distRoot,
                 displayName: "demo-workflow",
+                ...defaultWorkflowMetadata,
                 id: "demo-workflow",
                 path: "./demo-workflow",
                 workflowVersion: "1.2.3",
@@ -131,6 +146,7 @@ describe("install command", () => {
         });
         expect(await readJson(join(installedWorkflowRoot, "mawm.json"))).toEqual({
             displayName: "coding",
+            ...defaultWorkflowMetadata,
             id: "coding",
             workflowVersion: "1.2.3",
         });
@@ -144,6 +160,7 @@ describe("install command", () => {
             {
                 absolutePath: distRoot,
                 displayName: "coding",
+                ...defaultWorkflowMetadata,
                 id: "coding",
                 path: "./coding",
                 workflowVersion: "1.2.3",
@@ -188,12 +205,19 @@ describe("install command", () => {
             stderr: "",
             stdout: "Installed workflow `demo-workflow` into .mawm/graphs/demo-workflow.\n",
         });
+        expect(await readJson(join(installedWorkflowRoot, "mawm.json"))).toEqual({
+            displayName: "Demo Workflow",
+            ...defaultWorkflowMetadata,
+            id: "demo-workflow",
+            workflowVersion: "2.0.0",
+        });
         expect(await readFile(join(installedWorkflowRoot, "dist", "index.js"), "utf8")).toBe(
             "export const graph = {};\n",
         );
         expect(await readJson(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toEqual([
             {
                 displayName: "Demo Workflow",
+                ...defaultWorkflowMetadata,
                 id: "demo-workflow",
                 path: "./demo-workflow",
                 workflowVersion: "2.0.0",
@@ -247,6 +271,7 @@ describe("install command", () => {
         expect(await readJson(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toEqual([
             {
                 displayName: "Coding Workflow",
+                ...defaultWorkflowMetadata,
                 id: "coding",
                 path: "./coding",
                 workflowVersion: "3.0.0",

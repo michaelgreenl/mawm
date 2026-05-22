@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { copyRecursive, exists } from "../fs.js";
 import { resolveUserConfigRoot } from "../../config/user-config.js";
 import { refreshManifest } from "../../config/workflow/manifest.js";
-import { readWorkflowMetadata } from "../../config/workflow/metadata.js";
+import { readWorkflowMetadata, writeWorkflowMetadata } from "../../config/workflow/metadata.js";
 
 const replacePath = async (sourcePath: string, targetPath: string): Promise<void> => {
     if (resolve(sourcePath) === resolve(targetPath)) {
@@ -48,6 +48,7 @@ export const updateProjectWorkflow = async (
     }
 
     await replacePath(sourceWorkflowRoot, targetWorkflowRoot);
+    await writeWorkflowMetadata(targetWorkflowRoot, workflowMetadata);
     await refreshManifest(join(targetGraphsRoot, "manifest.json"), workflowMetadata);
 
     process.stdout.write(`Updated workflow \`${workflowId}\` in .mawm/graphs/${workflowId}.\n`);

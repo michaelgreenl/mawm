@@ -55,6 +55,19 @@ const createContext = (cwd: string, home: string, rawArgs: readonly string[]): C
     rawArgs: [...rawArgs],
 });
 
+const defaultExecutionContract = {
+    optionalContext: [],
+    optionalInput: [],
+    requiredContext: [],
+    requiredInput: [],
+    supportsResume: false,
+};
+
+const defaultWorkflowMetadata = {
+    executionContract: defaultExecutionContract,
+    kind: "standalone",
+};
+
 describe("remove command", () => {
     afterEach(async () => {
         await Promise.all(
@@ -121,6 +134,7 @@ describe("remove command", () => {
         expect(await readJson(join(projectGraphsRoot, "manifest.json"))).toEqual([
             {
                 displayName: "Keep Workflow",
+                ...defaultWorkflowMetadata,
                 id: "keep-workflow",
                 path: "./keep-workflow",
                 workflowVersion: "1.0.0",
@@ -172,6 +186,7 @@ describe("remove command", () => {
             {
                 absolutePath: "/tmp/keep-workflow/dist",
                 displayName: "Keep Workflow",
+                ...defaultWorkflowMetadata,
                 id: "keep-workflow",
                 path: "./keep-workflow",
                 workflowVersion: "1.0.0",

@@ -55,6 +55,19 @@ const createContext = (cwd: string, home: string, rawArgs: readonly string[]): C
     rawArgs: [...rawArgs],
 });
 
+const defaultExecutionContract = {
+    optionalContext: [],
+    optionalInput: [],
+    requiredContext: [],
+    requiredInput: [],
+    supportsResume: false,
+};
+
+const defaultWorkflowMetadata = {
+    executionContract: defaultExecutionContract,
+    kind: "standalone",
+};
+
 describe("update command", () => {
     afterEach(async () => {
         await Promise.all(
@@ -129,6 +142,12 @@ describe("update command", () => {
             stderr: "",
             stdout: "Updated workflow `demo-workflow` in .mawm/graphs/demo-workflow.\n",
         });
+        expect(await readJson(join(projectWorkflowRoot, "mawm.json"))).toEqual({
+            displayName: "Demo Workflow",
+            ...defaultWorkflowMetadata,
+            id: "demo-workflow",
+            workflowVersion: "2.0.0",
+        });
         expect(await readFile(join(projectWorkflowRoot, "dist", "index.js"), "utf8")).toBe(
             "export const graph = 'new';\n",
         );
@@ -136,6 +155,7 @@ describe("update command", () => {
         expect(await readJson(join(projectGraphsRoot, "manifest.json"))).toEqual([
             {
                 displayName: "Demo Workflow",
+                ...defaultWorkflowMetadata,
                 id: "demo-workflow",
                 path: "./demo-workflow",
                 workflowVersion: "2.0.0",
@@ -278,6 +298,7 @@ describe("update command", () => {
         expect(await pathExists(join(globalWorkflowRoot, "dist", "stale.js"))).toBe(false);
         expect(await readJson(join(globalWorkflowRoot, "mawm.json"))).toEqual({
             displayName: "demo-workflow",
+            ...defaultWorkflowMetadata,
             id: "demo-workflow",
             workflowVersion: "4.0.0",
         });
@@ -285,6 +306,7 @@ describe("update command", () => {
             {
                 absolutePath: sourceDistRoot,
                 displayName: "demo-workflow",
+                ...defaultWorkflowMetadata,
                 id: "demo-workflow",
                 path: "./demo-workflow",
                 workflowVersion: "4.0.0",
@@ -348,6 +370,7 @@ describe("update command", () => {
         expect(await pathExists(join(globalWorkflowRoot, "dist", "index.js"))).toBe(false);
         expect(await readJson(join(globalWorkflowRoot, "mawm.json"))).toEqual({
             displayName: "coding",
+            ...defaultWorkflowMetadata,
             id: "coding",
             workflowVersion: "4.2.0",
         });
@@ -355,6 +378,7 @@ describe("update command", () => {
             {
                 absolutePath: sourceDistRoot,
                 displayName: "coding",
+                ...defaultWorkflowMetadata,
                 id: "coding",
                 path: "./coding",
                 workflowVersion: "4.2.0",
