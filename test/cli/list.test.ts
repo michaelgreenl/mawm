@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import list from "../../src/cli/cmd/list.js";
+import list from "../../src/cmd/surface/list.js";
 
 const tempRoots: string[] = [];
 

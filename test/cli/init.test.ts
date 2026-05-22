@@ -2,10 +2,10 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { runCommandTarget } from "../../src/cli/runner.js";
-import { parseCommand } from "../../src/lib/cli/parsers/cmd.js";
-import { createInitCommand } from "../../src/cli/cmd/init.js";
-import type { CommandContext } from "../../src/types/command.d.js";
+import { runCommandTarget } from "../../src/cmd/runner.js";
+import { parseCommand } from "../../src/utils/parsers/cmd.js";
+import { createInitCommand } from "../../src/cmd/surface/init.js";
+import type { CommandContext } from "../../src/utils/types/command.d.js";
 
 const tempRoots: string[] = [];
 
@@ -176,9 +176,12 @@ describe("init command", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
-        expect(await readFile(join(projectRoot, ".opencode", "opencode.json"), "utf8")).toContain(
-            "https://opencode.ai/config.json",
+        expect(await pathExists(join(projectRoot, ".opencode", "agents", "manager.md"))).toBe(
+            true,
         );
+        expect(
+            await pathExists(join(projectRoot, ".opencode", "tools", "execute-graph.ts")),
+        ).toBe(true);
         expect(await readFile(join(home, ".config", "mawm", "manifest.json"), "utf8")).toBe("[]\n");
         expect(await pathExists(join(projectRoot, ".mawm", "agents"))).toBe(false);
     });
@@ -198,7 +201,9 @@ describe("init command", () => {
         expect(
             await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
         ).toBe(true);
-        expect(await pathExists(join(projectRoot, ".opencode", "opencode.json"))).toBe(true);
+        expect(await pathExists(join(projectRoot, ".opencode", "agents", "manager.md"))).toBe(
+            true,
+        );
     });
 
     test("initializes global agent assets with -g -a <agent>", async () => {
@@ -213,7 +218,9 @@ describe("init command", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
-        expect(await pathExists(join(home, ".config", "opencode", "opencode.json"))).toBe(true);
+        expect(await pathExists(join(home, ".config", "opencode", "agents", "manager.md"))).toBe(
+            true,
+        );
         expect(await pathExists(join(projectRoot, ".opencode"))).toBe(false);
     });
 
@@ -222,8 +229,8 @@ describe("init command", () => {
         const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
         tempRoots.push(home, projectRoot);
 
-        await mkdir(join(projectRoot, ".opencode"), { recursive: true });
-        await writeFile(join(projectRoot, ".opencode", "opencode.json"), '{"stale":true}\n');
+        await mkdir(join(projectRoot, ".opencode", "agents"), { recursive: true });
+        await writeFile(join(projectRoot, ".opencode", "agents", "manager.md"), "stale\n");
 
         const init = createInitCommand(async () => true);
         const result = await captureOutput(() =>
@@ -237,8 +244,8 @@ describe("init command", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stderr).toBe("");
-        expect(await readFile(join(projectRoot, ".opencode", "opencode.json"), "utf8")).toContain(
-            "https://opencode.ai/config.json",
+        expect(await readFile(join(projectRoot, ".opencode", "agents", "manager.md"), "utf8")).toContain(
+            "execute-graph",
         );
         expect(await pathExists(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toBe(true);
     });
@@ -275,8 +282,8 @@ describe("init command", () => {
         const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
         tempRoots.push(home, projectRoot);
 
-        await mkdir(join(projectRoot, ".opencode"), { recursive: true });
-        await writeFile(join(projectRoot, ".opencode", "opencode.json"), '{"keep":true}\n');
+        await mkdir(join(projectRoot, ".opencode", "agents"), { recursive: true });
+        await writeFile(join(projectRoot, ".opencode", "agents", "manager.md"), "keep\n");
 
         const init = createInitCommand(async () => false);
         const result = await captureOutput(() =>
@@ -291,8 +298,8 @@ describe("init command", () => {
             stderr: "",
             stdout: "",
         });
-        expect(await readFile(join(projectRoot, ".opencode", "opencode.json"), "utf8")).toBe(
-            '{"keep":true}\n',
+        expect(await readFile(join(projectRoot, ".opencode", "agents", "manager.md"), "utf8")).toBe(
+            "keep\n",
         );
         expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { parseCommandInputs } from "../../src/lib/cli/parsers/arguments.js";
-import { arg, option } from "../../src/types/builders/command-builder.js";
+import { parseCommandInputs } from "../../src/utils/parsers/arguments.js";
+import { arg, option } from "../../src/utils/builders/command-builder.js";
 
 describe("parseCommandInputs", () => {
     test("parses positional arguments and option aliases", () => {
