@@ -250,16 +250,19 @@ describe("init command", () => {
         expect(await pathExists(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toBe(true);
     });
 
-    test("fails before prompting when an existing global config blocks -g -a", async () => {
+    test("initializes global agent assets when global mawm config already exists and no bundled opencode assets overlap", async () => {
         const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
         const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
         tempRoots.push(home, projectRoot);
 
         await mkdir(join(home, ".config", "mawm"), { recursive: true });
         await mkdir(join(home, ".config", "opencode"), { recursive: true });
+        await writeFile(join(home, ".config", "opencode", "settings.json"), "{}\n");
 
+        let promptCount = 0;
         const init = createInitCommand(async () => {
-            throw new Error("prompt should not run");
+            promptCount += 1;
+            return true;
         });
         const result = await captureOutput(() =>
             runCommandTarget(
@@ -270,11 +273,46 @@ describe("init command", () => {
             ),
         );
 
-        expect(result).toEqual({
-            exitCode: 1,
-            stderr: `Refusing to overwrite existing global config: ${join(home, ".config", "mawm")}\n\nUsage: mawm init [-g] [-i] [-a <agent>]\n`,
-            stdout: "",
+        expect(result.exitCode).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(promptCount).toBe(0);
+        expect(await pathExists(join(home, ".config", "opencode", "agents", "manager.md"))).toBe(
+            true,
+        );
+        expect(await readFile(join(home, ".config", "opencode", "settings.json"), "utf8")).toBe(
+            "{}\n",
+        );
+    });
+
+    test("prompts to overwrite existing global opencode assets when bundled assets already exist", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        await mkdir(join(home, ".config", "mawm"), { recursive: true });
+        await mkdir(join(home, ".config", "opencode", "agents"), { recursive: true });
+        await writeFile(join(home, ".config", "opencode", "agents", "manager.md"), "stale\n");
+
+        let promptPath = "";
+        const init = createInitCommand(async (targetPath) => {
+            promptPath = targetPath;
+            return true;
         });
+        const result = await captureOutput(() =>
+            runCommandTarget(
+                init,
+                ["-g", "-a", "opencode"],
+                createContext(projectRoot, home, ["init", "-g", "-a", "opencode"]),
+                init.usage,
+            ),
+        );
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(promptPath).toBe(join(home, ".config", "opencode"));
+        expect(await readFile(join(home, ".config", "opencode", "agents", "manager.md"), "utf8")).toContain(
+            "execute-graph",
+        );
     });
 
     test("exits immediately when overwrite is declined for existing agent assets", async () => {

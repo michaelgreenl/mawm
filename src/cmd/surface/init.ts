@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
@@ -53,6 +53,27 @@ const resolveAgentTargetRoot = (
     }
 };
 
+const hasExistingTargetAssets = async (sourcePath: string, targetPath: string): Promise<boolean> => {
+    const sourceEntry = await stat(sourcePath);
+
+    if (sourceEntry.isDirectory()) {
+        for (const childName of await readdir(sourcePath)) {
+            if (
+                await hasExistingTargetAssets(
+                    join(sourcePath, childName),
+                    join(targetPath, childName),
+                )
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    return exists(targetPath);
+};
+
 const confirmOverwritePrompt: ConfirmOverwrite = async (targetPath) => {
     const prompt = createInterface({ input: process.stdin, output: process.stdout });
 
@@ -98,14 +119,17 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
             const agentTargetRoot = options.agent
                 ? resolveAgentTargetRoot(options.agent, context.cwd, context.env, options.global)
                 : undefined;
+            const hasExistingAgentAssets = agentSourceRoot && agentTargetRoot
+                ? await hasExistingTargetAssets(agentSourceRoot, agentTargetRoot)
+                : false;
 
-            if (options.global && (await exists(globalConfigRoot))) {
+            if (options.global && !agentSourceRoot && (await exists(globalConfigRoot))) {
                 throw new Error(
                     `Refusing to overwrite existing global config: ${globalConfigRoot}`,
                 );
             }
 
-            if (agentTargetRoot && (await exists(agentTargetRoot))) {
+            if (agentTargetRoot && hasExistingAgentAssets) {
                 const shouldOverwrite = await confirmOverwrite(agentTargetRoot);
 
                 if (!shouldOverwrite) {
@@ -114,7 +138,11 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
             }
 
             if (options.global) {
-                await scaffoldUserConfig(context.env);
+                if (agentSourceRoot) {
+                    await initializeUserConfig(context.env);
+                } else {
+                    await scaffoldUserConfig(context.env);
+                }
             } else {
                 const mawmRoot = join(context.cwd, ".mawm");
 
