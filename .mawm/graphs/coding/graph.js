@@ -60994,7 +60994,7 @@ import { existsSync as existsSync3, readFileSync as readFileSync3 } from "node:f
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 var dir = dirname(fileURLToPath(import.meta.url));
-var promptDir = join(dir, "..", "assets");
+var promptDir = join(dir, ".", "assets");
 if (!existsSync3(promptDir)) {
   throw new Error(`Unable to locate prompt assets relative to ${dir}`);
 }
