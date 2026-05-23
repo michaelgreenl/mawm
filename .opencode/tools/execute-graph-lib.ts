@@ -131,6 +131,7 @@ export const summarizeRunResult = (values: unknown): RunSummary => {
     }
 
     const runSpecPath = text(values.runSpecPath);
+    const summary = text(values.summary);
     const implementationSummary = text(values.implementationSummary);
     const planningSummary = text(values.planningSummary);
     const finalStatus = text(values.finalStatus);
@@ -145,6 +146,7 @@ export const summarizeRunResult = (values: unknown): RunSummary => {
             status: "interrupted",
             summary:
                 interruptSummary ??
+                summary ??
                 implementationSummary ??
                 planningSummary ??
                 "Workflow interrupted.",
@@ -165,6 +167,6 @@ export const summarizeRunResult = (values: unknown): RunSummary => {
     return {
         runSpecPath,
         status: finalStatus === "completed" ? "completed" : "completed",
-        summary: implementationSummary ?? planningSummary ?? "Workflow completed.",
+        summary: summary ?? implementationSummary ?? planningSummary ?? "Workflow completed.",
     };
 };

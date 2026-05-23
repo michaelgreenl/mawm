@@ -78,7 +78,10 @@ describe("workflow template skeleton assets", () => {
         ) as { variant: string; variantOwnedPaths: string[] };
 
         expect(baseOverlay.variant).toBe("base");
+        expect(baseOverlay.variantOwnedPaths).toContain("overlay.json");
         expect(baseOverlay.variantOwnedPaths).toContain("mawm.json");
+        expect(baseOverlay.variantOwnedPaths).toContain(join("src", "graph", "index.ts"));
+        expect(baseOverlay.variantOwnedPaths).toContain(join("test", "workflow.test.ts"));
 
         expect(initiativeOverlay.variant).toBe("initiative");
         expect(initiativeOverlay.variantOwnedPaths).toContain("overlay.json");

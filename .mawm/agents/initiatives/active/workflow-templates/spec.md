@@ -96,12 +96,12 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ### Run 3: Base template asset and summary compatibility (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/base-template/spec.md`
 - Task: Build the minimal base template asset and make `execute-graph` summary handling generic enough to surface standalone results cleanly.
 - Current state:
-  - `src/assets/workflow-templates/base` currently exists only as a thin overlay root from Run 1; it does not yet contain the reusable base template asset this run must add.
-  - `execute-graph-lib.ts:summarizeRunResult()` currently prefers initiative-shaped summary fields instead of a generic standalone-first result contract.
+  - `src/assets/workflow-templates/base` now contains the reusable standalone base template asset with standalone metadata, a minimal LangGraph flow, and template-local tests.
+  - `execute-graph-lib.ts:summarizeRunResult()` now prefers generic top-level `summary` output before legacy initiative-run summary fields in both helper copies.
 - Outcome:
   - A canonical base template asset exists under `src/assets/workflow-templates/base` as a pure LangGraph base template.
   - `execute-graph` result summarization prefers `summary`, then falls back to legacy initiative-run fields so standalone workflows are first-class.
@@ -129,7 +129,7 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/template-smoke-coverage/spec.md`
 - Task: Ship the template assets with the CLI and add automated install/launch smoke coverage for the new template bundles.
 - Current state:
-  - The template assets may exist in canonical source form under `src/assets/workflow-templates/*`, but the CLI does not yet ship scaffold-ready copies of them under `dist/assets/workflow-templates/{base,initiative}`.
+  - Canonical source template assets now exist under `src/assets/workflow-templates/{base,initiative,shared}`, but the CLI does not yet ship scaffold-ready copies of them under `dist/assets/workflow-templates/{base,initiative}`.
   - The repo does not yet prove global install, project install, and `execute-graph` launch behavior for the new template bundles.
 - Outcome:
   - CLI assets include scaffold-ready distributed copies of the canonical base and initiative templates under `dist/assets/workflow-templates/{base,initiative}`.

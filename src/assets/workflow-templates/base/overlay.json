@@ -1,4 +1,9 @@
 {
   "variant": "base",
-  "variantOwnedPaths": ["mawm.json"]
+  "variantOwnedPaths": [
+    "overlay.json",
+    "mawm.json",
+    "src/graph/index.ts",
+    "test/workflow.test.ts"
+  ]
 }

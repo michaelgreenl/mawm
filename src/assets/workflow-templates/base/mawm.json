@@ -1,0 +1,13 @@
+{
+  "id": "base-template",
+  "displayName": "Base Template",
+  "workflowVersion": "0.0.0",
+  "kind": "standalone",
+  "executionContract": {
+    "requiredInput": [],
+    "optionalInput": [],
+    "requiredContext": [],
+    "optionalContext": [],
+    "supportsResume": false
+  }
+}
