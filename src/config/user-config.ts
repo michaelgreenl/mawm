@@ -3,9 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { copyMissing, exists } from "../utils/fs.js";
 
-const USER_CONFIG_ASSETS_ROOT = fileURLToPath(
-    new URL("../assets/.config/mawm", import.meta.url),
-);
+const USER_CONFIG_ASSETS_ROOT = fileURLToPath(new URL("../assets/.config/mawm", import.meta.url));
 
 /**
  * Resolve the current user's home directory from an environment object.
