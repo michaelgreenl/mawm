@@ -8,4 +8,4 @@ case "$commit_header" in
         ;;
 esac
 
-bun typecheck && bun lint
+bun typecheck && bun lint:all && bun run test
