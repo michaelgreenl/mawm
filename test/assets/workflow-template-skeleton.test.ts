@@ -81,7 +81,18 @@ describe("workflow template skeleton assets", () => {
         expect(baseOverlay.variantOwnedPaths).toContain("mawm.json");
 
         expect(initiativeOverlay.variant).toBe("initiative");
+        expect(initiativeOverlay.variantOwnedPaths).toContain("overlay.json");
         expect(initiativeOverlay.variantOwnedPaths).toContain("mawm.json");
+        expect(initiativeOverlay.variantOwnedPaths).toContain(join("src", "graph", "index.ts"));
+        expect(initiativeOverlay.variantOwnedPaths).toContain(join("src", "graph", "state.ts"));
+        expect(initiativeOverlay.variantOwnedPaths).toContain(join("src", "graph", "gates.ts"));
+        expect(initiativeOverlay.variantOwnedPaths).toContain(join("src", "graph", "planning.ts"));
+        expect(initiativeOverlay.variantOwnedPaths).toContain(
+            join("src", "graph", "implementing.ts"),
+        );
+        expect(initiativeOverlay.variantOwnedPaths).toContain(join("test", "graph.test.ts"));
+        expect(initiativeOverlay.variantOwnedPaths).toContain(join("test", "gates.test.ts"));
+        expect(initiativeOverlay.variantOwnedPaths).toContain(join("test", "workflow.test.ts"));
     });
 
     test("keeps the shared layer neutral", () => {

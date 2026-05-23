@@ -66,12 +66,13 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ### Run 2: Initiative template asset (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/initiative-run-template/spec.md`
 - Task: Build the generic initiative template asset as a thin variant on the shared skeleton.
 - Current state:
   - The installed `coding` workflow proves the initiative-run contract shape but is coding-specific.
-  - `src/assets/workflow-templates/initiative` currently exists only as a thin overlay root from Run 1; it does not yet contain the reusable initiative template asset and runtime mechanics this run must add.
+  - `src/assets/workflow-templates/initiative` now contains the generic initiative template asset over the shared skeleton, including initiative-run metadata, graph modules, and template-local tests.
+  - Source-side smoke coverage now materializes the initiative template into a temp workspace and verifies install, typecheck, build, and test behavior without depending on coding-specific prompts or OpenCode integrations.
 - Outcome:
   - A canonical initiative template asset exists under `src/assets/workflow-templates/initiative` with the shared bundle surface and generic initiative-run mechanics.
   - The template includes planning/run-spec materialization flow, implementation placeholder flow, reviewer/gate plumbing, and an interrupt path without shipping coding-specific prompts.
