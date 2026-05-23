@@ -26,11 +26,11 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 ## Branch and PR Plan
 
 - Target repo: `mawm`
-- Base branch: `oc-runtime`
+- Base branch: `main`
 - Initiative branch: `initiative/workflow-templates`
 - Branch creation rule: create the initiative branch only when implementation is ready to begin.
 - Run commit rule: each clean completed run becomes one commit.
-- PR rule: open a PR from `initiative/workflow-templates` to `oc-runtime` after all runs and initiative gates are complete.
+- PR rule: open a PR from `initiative/workflow-templates` to `main` after all runs and initiative gates are complete.
 
 ## Execution Plan
 
