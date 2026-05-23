@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { access, open, readFile, writeFile } from "node:fs/promises";
+import { access, open, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tool } from "@opencode-ai/plugin";
 import {
@@ -13,6 +13,10 @@ import {
 } from "./execute-graph-lib.ts";
 
 const DEV_STATE_FILE = ".langgraph-dev.json";
+const HEALTHCHECK_PATH = "/ok";
+const HEALTHCHECK_TIMEOUT_MS = 1000;
+const PROCESS_SHUTDOWN_POLL_INTERVAL_MS = 100;
+const PROCESS_SHUTDOWN_TIMEOUT_MS = 2000;
 const STARTUP_POLL_INTERVAL_MS = 250;
 const STARTUP_TIMEOUT_MS = 15000;
 const WORKFLOW_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
@@ -64,6 +68,106 @@ const isProcessAlive = (pid: number): boolean => {
     } catch {
         return false;
     }
+};
+
+const isMissingProcessError = (error: unknown): boolean => {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "ESRCH"
+    );
+};
+
+const logDevServerEvent = async (logPath: string, message: string): Promise<void> => {
+    await writeFile(logPath, `\n[${new Date().toISOString()}] ${message}\n`, {
+        flag: "a",
+    }).catch(() => undefined);
+};
+
+const isAgentServerReachable = async (apiUrl: string): Promise<boolean> => {
+    try {
+        const response = await fetch(`${apiUrl}${HEALTHCHECK_PATH}`, {
+            signal: AbortSignal.timeout(HEALTHCHECK_TIMEOUT_MS),
+        });
+
+        return response.ok;
+    } catch {
+        return false;
+    }
+};
+
+const waitForProcessExit = async (pid: number, timeoutMs: number): Promise<boolean> => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+        if (!isProcessAlive(pid)) {
+            return true;
+        }
+
+        await sleep(PROCESS_SHUTDOWN_POLL_INTERVAL_MS);
+    }
+
+    return !isProcessAlive(pid);
+};
+
+const signalProcess = (pid: number, signal: NodeJS.Signals): void => {
+    const targets = process.platform === "win32" ? [pid] : [-pid, pid];
+    let lastError: unknown;
+
+    for (const target of targets) {
+        try {
+            process.kill(target, signal);
+        } catch (error) {
+            if (!isMissingProcessError(error)) {
+                lastError = error;
+            }
+        }
+    }
+
+    if (lastError && isProcessAlive(pid)) {
+        throw lastError;
+    }
+};
+
+const stopDevServerProcess = async (pid: number): Promise<void> => {
+    if (!isProcessAlive(pid)) {
+        return;
+    }
+
+    try {
+        signalProcess(pid, "SIGTERM");
+    } catch {
+        // Best-effort shutdown can continue to the exit wait and fallback kill.
+    }
+
+    if (await waitForProcessExit(pid, PROCESS_SHUTDOWN_TIMEOUT_MS)) {
+        return;
+    }
+
+    try {
+        signalProcess(pid, "SIGKILL");
+    } catch {
+        // Best-effort fallback; exit probing below decides whether cleanup succeeded.
+    }
+
+    await waitForProcessExit(pid, PROCESS_SHUTDOWN_TIMEOUT_MS);
+};
+
+const clearDevServerState = async (statePath: string): Promise<void> => {
+    await rm(statePath, {
+        force: true,
+    }).catch(() => undefined);
+};
+
+const discardDevServer = async (
+    statePath: string,
+    server: Pick<DevServerState, "pid" | "logPath">,
+    reason: string,
+): Promise<void> => {
+    await logDevServerEvent(server.logPath, reason);
+    await stopDevServerProcess(server.pid);
+    await clearDevServerState(statePath);
 };
 
 const waitForExit = async (child: ReturnType<typeof spawn>, task: string): Promise<void> => {
@@ -156,6 +260,7 @@ const waitForStartup = async (
 
     try {
         const startedAt = Date.now();
+        let detectedUrl = "";
 
         while (Date.now() - startedAt < STARTUP_TIMEOUT_MS) {
             if (startupError) {
@@ -163,9 +268,12 @@ const waitForStartup = async (
             }
 
             const logOutput = await readFile(logPath, "utf8").catch(() => "");
-            const detectedUrl = extractAgentServerUrl(logOutput, "");
+            detectedUrl = extractAgentServerUrl(logOutput, "");
 
-            if (detectedUrl.length > 0) {
+            if (
+                detectedUrl.length > 0 &&
+                (await isAgentServerReachable(detectedUrl))
+            ) {
                 return detectedUrl;
             }
 
@@ -176,7 +284,15 @@ const waitForStartup = async (
             throw startupError;
         }
 
-        return DEFAULT_AGENT_SERVER_URL;
+        const fallbackUrl = detectedUrl || DEFAULT_AGENT_SERVER_URL;
+
+        if (await isAgentServerReachable(fallbackUrl)) {
+            return fallbackUrl;
+        }
+
+        throw new Error(
+            `LangGraph did not become reachable at ${fallbackUrl}${HEALTHCHECK_PATH} during startup.`,
+        );
     } finally {
         child.off("error", handleError);
         child.off("exit", handleExit);
@@ -264,8 +380,20 @@ const ensureLangGraphServer = async (
     const statePath = join(workflowRoot, DEV_STATE_FILE);
     const existing = await readDevServerState(statePath);
 
-    if (existing && isProcessAlive(existing.pid)) {
-        return existing;
+    if (existing) {
+        if (isProcessAlive(existing.pid)) {
+            if (await isAgentServerReachable(existing.apiUrl)) {
+                return existing;
+            }
+
+            await discardDevServer(
+                statePath,
+                existing,
+                `Discarding stale LangGraph dev server at ${existing.apiUrl}: ${HEALTHCHECK_PATH} is unreachable.`,
+            );
+        } else {
+            await clearDevServerState(statePath);
+        }
     }
 
     try {
@@ -296,6 +424,14 @@ const ensureLangGraphServer = async (
         try {
             apiUrl = await waitForStartup(child, logPath);
         } catch (error) {
+            await discardDevServer(
+                statePath,
+                {
+                    logPath,
+                    pid: child.pid,
+                },
+                `Stopping LangGraph dev server after startup failure for ${workflow}.`,
+            );
             throw await formatStartupError(workflow, logPath, error);
         }
 
