@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const dir = dirname(fileURLToPath(import.meta.url));
-const promptDir = join(dir, "..", "assets");
+const promptDir = join(dir, ".", "assets");
 
 if (!existsSync(promptDir)) {
     throw new Error(`Unable to locate prompt assets relative to ${dir}`);

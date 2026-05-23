@@ -23,7 +23,7 @@ if (build.status !== 0) {
     process.exit(build.status ?? 1);
 }
 
-cpSync(join(src, "assets"), join(dist, "assets"), {
+cpSync(join(src, "agents", "assets"), join(dist, "assets"), {
     recursive: true,
 });
 cpSync(join(root, "langgraph.dist.json"), join(dist, "langgraph.json"));
