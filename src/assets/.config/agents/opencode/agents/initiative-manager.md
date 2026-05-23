@@ -50,7 +50,7 @@ If active docs conflict with each other or with current code, stop and surface t
 
 - Planning does not create a branch.
 - Create or switch to the initiative branch only when implementation is ready to begin.
-- The initiative branch must be based on `main` unless the initiative spec names a different base.
+- The initiative branch can be assumed to be the current active branch unless the initiative spec names a different base.
 - If the worktree has unrelated or ambiguous changes before branch creation, stop and ask the user how to proceed.
 - Never run destructive git commands such as `git reset --hard` or `git checkout --` unless the user explicitly requests them.
 
