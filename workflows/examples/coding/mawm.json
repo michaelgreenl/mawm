@@ -1,0 +1,24 @@
+{
+  "id": "coding",
+  "displayName": "Coding",
+  "workflowVersion": "0.0.0",
+  "kind": "initiative-run",
+  "executionContract": {
+    "requiredInput": [
+      "initiativeSpecPath",
+      "runSpecPath"
+    ],
+    "optionalInput": [
+      "selectedRunLabel"
+    ],
+    "requiredContext": [
+      "targetRepoPath",
+      "initiativeBranch"
+    ],
+    "optionalContext": [
+      "opencodeBaseUrl",
+      "parentSessionID"
+    ],
+    "supportsResume": true
+  }
+}
