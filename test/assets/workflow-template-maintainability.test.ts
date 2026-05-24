@@ -5,15 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const workflowTemplateRoot = join(root, "src", "assets", "workflow-templates");
-const executeGraphToolsRoot = join(
-    root,
-    "src",
-    "assets",
-    ".config",
-    "agents",
-    "opencode",
-    "tools",
-);
+const executeGraphToolsRoot = join(root, "src", "assets", ".config", "agents", "opencode", "tools");
 const assetTestsRoot = join(root, "test", "assets");
 const trackedAssetTestPattern =
     /^(base-template|execute-graph-lib|initiative-template|workflow-template).+\.ts$/;

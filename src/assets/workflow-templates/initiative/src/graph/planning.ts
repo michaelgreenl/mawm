@@ -33,12 +33,7 @@ export const materializeRunSpec = async (
         task: "Select a run entry from the initiative spec.",
         title: input.selectedRunLabel ?? "Unresolved run",
     };
-    const doc = await renderRunSpec(
-        initiative,
-        run ?? fallbackRun,
-        context,
-        input.runSpecPath,
-    );
+    const doc = await renderRunSpec(initiative, run ?? fallbackRun, context, input.runSpecPath);
 
     await mkdir(dirname(input.runSpecPath), { recursive: true });
     await writeFile(input.runSpecPath, doc);
