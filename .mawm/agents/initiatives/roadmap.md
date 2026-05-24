@@ -34,17 +34,17 @@ MAWM should ship reusable workflow templates and a truthful CLI surface so teams
 
 | Initiative            | State    | Horizon | Why it matters                                                                 | Depends on             | Working doc                                                            |
 | --------------------- | -------- | ------- | ------------------------------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------- |
-| `CLI init cleanup`    | `active` | `Now`  | Exposes the template scaffolds through `mawm init` and fixes user-facing copy. | `none`   | `.mawm/agents/initiatives/active/cli-init-cleanup/spec.md`             |
+| `CLI init cleanup`    | `active` | `Now`  | Exposes the template scaffolds through `mawm init` and fixes truthful init output. | `none`   | `.mawm/agents/initiatives/active/cli-init-cleanup/spec.md`             |
 
 ## Now
 
 ### CLI init cleanup
 
 - State: `active`
-- Goal: expose `mawm init -t [type]` template initialization, clean up `mawm init` messaging, and deliver the last planned README-focused finalization pass before v0.1.0 versioning begins.
-- Exit signal: `mawm init` can scaffold the new templates with accurate messaging and the README no longer advertises stale commands or packages while also including a clearly labeled post-v0.1.0 direction section.
+- Goal: expose `mawm init -t [type]` template initialization and clean up `mawm init` messaging.
+- Exit signal: `mawm init` can scaffold the new templates with accurate messaging and representative verification coverage.
 - Working doc: `.mawm/agents/initiatives/active/cli-init-cleanup/spec.md`
-- Notes: do not start execution until the workflow-templates initiative has produced the CLI-consumable template assets under `dist/assets/workflow-templates/{base,initiative}`. The README run in this initiative is the last planned README-focused update before v0.1.0 versioning work begins, so treat it as a finalization pass rather than a quick touch-up.
+- Notes: do not start execution until the workflow-templates initiative has produced the CLI-consumable template assets under `dist/assets/workflow-templates/{base,initiative}`. The README work has been split out of this initiative into the queued ad-hoc run at `.mawm/agents/adhoc/queued/readme-refresh/spec.md`; leave that run queued until the user promotes it after the next approved initiative lands.
 
 ## Next
 
