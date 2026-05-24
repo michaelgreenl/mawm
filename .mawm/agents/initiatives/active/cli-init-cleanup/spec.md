@@ -75,7 +75,7 @@
 
 ### Run 2: Init output messaging (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/cli-init-cleanup/runs/active/init-output-messaging/spec.md`
 - Task: Make `mawm init` output reflect what actually changed across local, global, template, and agent-asset flows.
 - Current state:

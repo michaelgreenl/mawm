@@ -58,12 +58,19 @@ const resolveAgentTargetRoot = (
     }
 };
 
-const removeLegacyAgentAssets = async (agent: string, targetRoot: string): Promise<void> => {
+const removeLegacyAgentAssets = async (agent: string, targetRoot: string): Promise<boolean> => {
     if (agent !== "opencode") {
-        return;
+        return false;
     }
 
-    await rm(join(targetRoot, "agents", "manager.md"), { force: true });
+    const path = join(targetRoot, "agents", "manager.md");
+
+    if (!(await exists(path))) {
+        return false;
+    }
+
+    await rm(path, { force: true });
+    return true;
 };
 
 const hasExistingTargetAssets = async (
@@ -141,7 +148,13 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
                     );
                 }
 
-                await copyMissing(join(TEMPLATE_ASSETS_ROOT, options.template), context.cwd);
+                if (
+                    !(await copyMissing(join(TEMPLATE_ASSETS_ROOT, options.template), context.cwd))
+                ) {
+                    process.stdout.write("No changes required.\n");
+                    return 0;
+                }
+
                 process.stdout.write(`Initialized ${options.template} template scaffold.\n`);
                 return 0;
             }
@@ -173,42 +186,63 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
                 const shouldOverwrite = await confirmOverwrite(agentTargetRoot);
 
                 if (!shouldOverwrite) {
+                    process.stdout.write(
+                        "No changes made; existing agent assets were left in place.\n",
+                    );
                     return 0;
                 }
             }
 
+            let graphs = false;
+            let workspace = false;
+            let config = false;
+            let projectAssets = false;
+            let globalAssets = false;
+
             if (options.global) {
                 if (agentSourceRoot) {
-                    await initializeUserConfig(context.env);
+                    config = await initializeUserConfig(context.env);
                 } else {
-                    await scaffoldUserConfig(context.env);
+                    config = await scaffoldUserConfig(context.env);
                 }
             } else {
                 const mawmRoot = join(context.cwd, ".mawm");
 
-                await copyMissing(PROJECT_LOCAL_GRAPHS_ROOT, join(mawmRoot, "graphs"));
+                graphs = await copyMissing(PROJECT_LOCAL_GRAPHS_ROOT, join(mawmRoot, "graphs"));
 
                 if (options.includeAgents) {
-                    await copyMissing(PROJECT_LOCAL_AGENTS_ROOT, join(mawmRoot, "agents"));
+                    workspace = await copyMissing(
+                        PROJECT_LOCAL_AGENTS_ROOT,
+                        join(mawmRoot, "agents"),
+                    );
                 }
 
-                await initializeUserConfig(context.env);
+                config = await initializeUserConfig(context.env);
             }
 
             if (agentSourceRoot && agentTargetRoot) {
-                await removeLegacyAgentAssets(options.agent!, agentTargetRoot);
+                const removed = await removeLegacyAgentAssets(options.agent!, agentTargetRoot);
+                const changed = (await exists(agentTargetRoot))
+                    ? await copyRecursive(agentSourceRoot, agentTargetRoot)
+                    : await copyMissing(agentSourceRoot, agentTargetRoot);
 
-                if (await exists(agentTargetRoot)) {
-                    await copyRecursive(agentSourceRoot, agentTargetRoot);
+                if (options.global) {
+                    globalAssets = removed || changed;
                 } else {
-                    await copyMissing(agentSourceRoot, agentTargetRoot);
+                    projectAssets = removed || changed;
                 }
             }
 
+            const lines = [
+                graphs ? "Initialized local MAWM graphs scaffold." : undefined,
+                workspace ? "Initialized project initiative workspace." : undefined,
+                config ? "Initialized global MAWM config." : undefined,
+                projectAssets ? "Initialized project agent assets." : undefined,
+                globalAssets ? "Initialized global agent assets." : undefined,
+            ].filter((line): line is string => line !== undefined);
+
             process.stdout.write(
-                `${
-                    options.global ? `Initialized ${globalConfigRoot}` : "Initialized .mawm"
-                } scaffold.\n`,
+                lines.length === 0 ? "No changes required.\n" : `${lines.join("\n")}\n`,
             );
             return 0;
         },

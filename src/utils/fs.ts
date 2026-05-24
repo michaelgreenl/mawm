@@ -32,26 +32,32 @@ export const writeJson = async (path: string, value: unknown): Promise<void> => 
  *
  * @param sourcePath - Source file or directory
  * @param targetPath - Target file or directory
+ * @returns True when the copy created a missing file or directory
  */
-export const copyMissing = async (sourcePath: string, targetPath: string): Promise<void> => {
+export const copyMissing = async (sourcePath: string, targetPath: string): Promise<boolean> => {
     const sourceEntry = await stat(sourcePath);
 
     if (sourceEntry.isDirectory()) {
+        const missing = !(await exists(targetPath));
         await mkdir(targetPath, { recursive: true });
+        let changed = missing;
 
         for (const childName of await readdir(sourcePath)) {
-            await copyMissing(join(sourcePath, childName), join(targetPath, childName));
+            changed =
+                (await copyMissing(join(sourcePath, childName), join(targetPath, childName))) ||
+                changed;
         }
 
-        return;
+        return changed;
     }
 
     if (await exists(targetPath)) {
-        return;
+        return false;
     }
 
     await mkdir(dirname(targetPath), { recursive: true });
     await copyFile(sourcePath, targetPath);
+    return true;
 };
 
 /**
@@ -59,22 +65,40 @@ export const copyMissing = async (sourcePath: string, targetPath: string): Promi
  *
  * @param sourcePath - Source file or directory
  * @param targetPath - Target file or directory
+ * @returns True when the copy created or updated a file or directory
  */
-export const copyRecursive = async (sourcePath: string, targetPath: string): Promise<void> => {
+export const copyRecursive = async (sourcePath: string, targetPath: string): Promise<boolean> => {
     const sourceEntry = await stat(sourcePath);
 
     if (sourceEntry.isDirectory()) {
+        const missing = !(await exists(targetPath));
         await mkdir(targetPath, { recursive: true });
+        let changed = missing;
 
         for (const childName of await readdir(sourcePath)) {
-            await copyRecursive(join(sourcePath, childName), join(targetPath, childName));
+            changed =
+                (await copyRecursive(join(sourcePath, childName), join(targetPath, childName))) ||
+                changed;
         }
 
-        return;
+        return changed;
+    }
+
+    if (!(await exists(targetPath))) {
+        await mkdir(dirname(targetPath), { recursive: true });
+        await copyFile(sourcePath, targetPath);
+        return true;
+    }
+
+    const [source, target] = await Promise.all([readFile(sourcePath), readFile(targetPath)]);
+
+    if (source.equals(target)) {
+        return false;
     }
 
     await mkdir(dirname(targetPath), { recursive: true });
     await copyFile(sourcePath, targetPath);
+    return true;
 };
 
 /** Copy the contents of a directory into a target directory. */

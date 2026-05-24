@@ -40,23 +40,23 @@ export const resolveUserConfigRoot = (env: NodeJS.ProcessEnv): string => {
 };
 
 /** Initialize the MAWM user configuration scaffold when it is missing. */
-export const initializeUserConfig = async (env: NodeJS.ProcessEnv): Promise<void> => {
+export const initializeUserConfig = async (env: NodeJS.ProcessEnv): Promise<boolean> => {
     const configRoot = resolveUserConfigRoot(env);
 
     if (await exists(configRoot)) {
-        return;
+        return false;
     }
 
-    await copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
+    return copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
 };
 
 /** Initialize the MAWM user configuration scaffold, failing if it already exists. */
-export const scaffoldUserConfig = async (env: NodeJS.ProcessEnv): Promise<void> => {
+export const scaffoldUserConfig = async (env: NodeJS.ProcessEnv): Promise<boolean> => {
     const configRoot = resolveUserConfigRoot(env);
 
     if (await exists(configRoot)) {
         throw new Error(`Refusing to overwrite existing global config: ${configRoot}`);
     }
 
-    await copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
+    return copyMissing(USER_CONFIG_ASSETS_ROOT, configRoot);
 };

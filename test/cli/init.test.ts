@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname } from "node:path";
 import { join } from "node:path";
@@ -100,7 +100,11 @@ describe("init command", () => {
         );
 
         expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized local MAWM graphs scaffold.\nInitialized global MAWM config.\n",
+        });
         expect(await readFile(join(projectRoot, ".mawm", "graphs", "manifest.json"), "utf8")).toBe(
             "[]\n",
         );
@@ -119,7 +123,11 @@ describe("init command", () => {
         );
 
         expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized local MAWM graphs scaffold.\nInitialized project initiative workspace.\nInitialized global MAWM config.\n",
+        });
         expect(
             await readFile(join(projectRoot, ".mawm", "agents", "adhoc", "README.md"), "utf8"),
         ).toContain("adhoc");
@@ -138,8 +146,11 @@ describe("init command", () => {
             parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
         );
 
-        expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized global MAWM config.\n",
+        });
         expect(await readFile(join(home, ".config", "mawm", "manifest.json"), "utf8")).toBe("[]\n");
         expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });
@@ -319,8 +330,11 @@ describe("init command", () => {
             parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
         );
 
-        expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized local MAWM graphs scaffold.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
+        });
         expect(
             await pathExists(join(projectRoot, ".opencode", "agents", "initiative-manager.md")),
         ).toBe(true);
@@ -344,8 +358,11 @@ describe("init command", () => {
             parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
         );
 
-        expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized local MAWM graphs scaffold.\nInitialized project initiative workspace.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
+        });
         expect(
             await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
         ).toBe(true);
@@ -364,8 +381,11 @@ describe("init command", () => {
             parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
         );
 
-        expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized global MAWM config.\nInitialized global agent assets.\n",
+        });
         expect(
             await pathExists(join(home, ".config", "opencode", "agents", "initiative-manager.md")),
         ).toBe(true);
@@ -420,8 +440,11 @@ describe("init command", () => {
             ),
         );
 
-        expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized local MAWM graphs scaffold.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
+        });
         expect(
             await readFile(
                 join(projectRoot, ".opencode", "agents", "initiative-manager.md"),
@@ -454,8 +477,11 @@ describe("init command", () => {
             ),
         );
 
-        expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized global agent assets.\n",
+        });
         expect(promptCount).toBe(0);
         expect(
             await pathExists(join(home, ".config", "opencode", "agents", "initiative-manager.md")),
@@ -491,8 +517,11 @@ describe("init command", () => {
             ),
         );
 
-        expect(result.exitCode).toBe(0);
-        expect(result.stderr).toBe("");
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized global agent assets.\n",
+        });
         expect(promptPath).toBe(join(home, ".config", "opencode"));
         expect(
             await readFile(
@@ -502,7 +531,7 @@ describe("init command", () => {
         ).toContain("execute-graph");
     });
 
-    test("exits immediately when overwrite is declined for existing agent assets", async () => {
+    test("reports a no-op when overwrite is declined for existing agent assets", async () => {
         const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
         const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
         tempRoots.push(home, projectRoot);
@@ -524,7 +553,7 @@ describe("init command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "",
+            stdout: "No changes made; existing agent assets were left in place.\n",
         });
         expect(
             await readFile(
@@ -533,5 +562,115 @@ describe("init command", () => {
             ),
         ).toBe("keep\n");
         expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+    });
+
+    test("reports no changes for a successful rerun of init", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const rawArgs = ["init"] as const;
+        await captureOutput(() => parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)));
+        const result = await captureOutput(() =>
+            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
+        );
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "No changes required.\n",
+        });
+    });
+
+    test("reports no changes for a successful rerun of init -i", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const rawArgs = ["init", "-i"] as const;
+        await captureOutput(() => parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)));
+        const result = await captureOutput(() =>
+            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
+        );
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "No changes required.\n",
+        });
+    });
+
+    test("reports no changes for a successful rerun of init -a <agent>", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const init = createInitCommand(async () => true);
+        const path = join(projectRoot, ".opencode", "agents", "initiative-manager.md");
+        const when = new Date("2000-01-01T00:00:00.000Z");
+        await captureOutput(() =>
+            runCommandTarget(
+                init,
+                ["-a", "opencode"],
+                createContext(projectRoot, home, ["init", "-a", "opencode"]),
+                init.usage,
+            ),
+        );
+        const before = await readFile(path, "utf8");
+        await utimes(path, when, when);
+        const stamp = (await stat(path)).mtimeMs;
+        const result = await captureOutput(() =>
+            runCommandTarget(
+                init,
+                ["-a", "opencode"],
+                createContext(projectRoot, home, ["init", "-a", "opencode"]),
+                init.usage,
+            ),
+        );
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "No changes required.\n",
+        });
+        expect(await readFile(path, "utf8")).toBe(before);
+        expect((await stat(path)).mtimeMs).toBe(stamp);
+    });
+
+    test("reports no changes for a successful rerun of init -g -a <agent>", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const init = createInitCommand(async () => true);
+        const path = join(home, ".config", "opencode", "agents", "initiative-manager.md");
+        const when = new Date("2000-01-01T00:00:00.000Z");
+        await captureOutput(() =>
+            runCommandTarget(
+                init,
+                ["-g", "-a", "opencode"],
+                createContext(projectRoot, home, ["init", "-g", "-a", "opencode"]),
+                init.usage,
+            ),
+        );
+        const before = await readFile(path, "utf8");
+        await utimes(path, when, when);
+        const stamp = (await stat(path)).mtimeMs;
+        const result = await captureOutput(() =>
+            runCommandTarget(
+                init,
+                ["-g", "-a", "opencode"],
+                createContext(projectRoot, home, ["init", "-g", "-a", "opencode"]),
+                init.usage,
+            ),
+        );
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "No changes required.\n",
+        });
+        expect(await readFile(path, "utf8")).toBe(before);
+        expect((await stat(path)).mtimeMs).toBe(stamp);
     });
 });
