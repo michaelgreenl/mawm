@@ -3,7 +3,7 @@ bunx commitlint --edit "$1" || exit 1
 # Git only exposes the commit message at commit-msg time.
 IFS= read -r commit_header < "$1" || commit_header=""
 case "$commit_header" in
-    wip:*|wip\(*\):*|wip!:*|wip\(*\)!:*)
+    wip:*|wip\(*\):*|wip!:*|wip\(*\)!:*|docs:*|docs\(*\):*|docs!:*|docs\(*\)!:*)
         exit 0
         ;;
 esac
