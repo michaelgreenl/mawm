@@ -17,7 +17,7 @@ MAWM should ship reusable workflow templates and a truthful CLI surface so teams
 
 - Canonical workflow template source assets exist under `src/assets/workflow-templates/{base,initiative,shared}` and ship distributed template assets under `dist/assets/workflow-templates/{base,initiative}`.
 - `mawm init` can clearly scaffold local MAWM state, workflow templates, and agent assets with accurate mode handling and output.
-- The README matches the real package name, command surface, and current versus future-facing agent support story.
+- The README matches the real package name, command surface, and shipped workflow model, while also carrying a clearly labeled post-v0.1.0 direction section covering global workflow execution with project-local customization, expansion of the root config directory into a broader asset hub, and broader agentic-dev tool integrations.
 
 ## State Model
 
@@ -41,10 +41,10 @@ MAWM should ship reusable workflow templates and a truthful CLI surface so teams
 ### CLI init cleanup
 
 - State: `active`
-- Goal: expose `mawm init -t [type]` template initialization, clean up `mawm init` messaging, and refresh the README once the workflow template assets exist.
-- Exit signal: `mawm init` can scaffold the new templates with accurate messaging and the README no longer advertises stale commands or packages.
+- Goal: expose `mawm init -t [type]` template initialization, clean up `mawm init` messaging, and deliver the last planned README-focused finalization pass before v0.1.0 versioning begins.
+- Exit signal: `mawm init` can scaffold the new templates with accurate messaging and the README no longer advertises stale commands or packages while also including a clearly labeled post-v0.1.0 direction section.
 - Working doc: `.mawm/agents/initiatives/active/cli-init-cleanup/spec.md`
-- Notes: do not start execution until the workflow-templates initiative has produced the CLI-consumable template assets under `dist/assets/workflow-templates/{base,initiative}`.
+- Notes: do not start execution until the workflow-templates initiative has produced the CLI-consumable template assets under `dist/assets/workflow-templates/{base,initiative}`. The README run in this initiative is the last planned README-focused update before v0.1.0 versioning work begins, so treat it as a finalization pass rather than a quick touch-up.
 
 ## Next
 

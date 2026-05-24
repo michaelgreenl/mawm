@@ -8,7 +8,7 @@
 
 ## Target State
 
-`mawm init` can clearly scaffold the current local MAWM workspace, scaffold the new workflow templates through `-t [type]`, and install agent assets without claiming the wrong side effects. The README reflects the real package name, current CLI surface, current E2E usage, and clearly distinguishes shipped versus future-facing agent-support claims.
+`mawm init` can clearly scaffold the current local MAWM workspace, scaffold the new workflow templates through `-t [type]`, and install agent assets without claiming the wrong side effects. The README becomes the last planned README-focused update before v0.1.0 versioning begins: it reflects the real package name, current CLI surface, and current E2E usage while clearly separating shipped behavior from a labeled post-v0.1.0 direction covering global workflow execution with project-local customization, expansion of the root config directory into a broader asset hub, and broader agentic-dev integrations beyond the current OpenCode path.
 
 ## Initiative-wide Contracts
 
@@ -22,7 +22,10 @@
 - Template-generation mode must consume the CLI-shipped workflow template assets from `dist/assets/workflow-templates/{base,initiative}`, not copy directly from `workflows/examples/coding`.
 - Success output should describe what changed by action/category and avoid unnecessary absolute paths. Prompts and errors may still include concrete paths when they are required for safety or diagnosis.
 - README claims must match `package.json`, `src/cmd/surface/index.ts`, and the actual shipped assets after this initiative lands.
+- The README may include a clearly labeled post-v0.1.0 direction section, but roadmap items in that section must be explicitly future-facing and must not be phrased as shipped behavior.
+- The post-v0.1.0 direction section must cover globally installed workflows executed in target projects with project-local customization, the root config directory evolving into a broader hub for prompts, workflow templates, and other shared assets, and broader agentic-dev integrations that include Codex and Claude Code.
 - Codex and Claude Code mentions in the README must be explicitly future-facing or plausible-support language, not presented as already-shipped integrations.
+- The README run is the last planned README-focused update before v0.1.0 versioning work begins and should finalize structure and messaging instead of acting like a narrow touch-up.
 
 ## Branch and PR Plan
 
@@ -104,30 +107,37 @@
 
 - [ ] complete
 - Run spec path: `.mawm/agents/initiatives/active/cli-init-cleanup/runs/active/readme-refresh/spec.md`
-- Task: Refresh the README so it matches the actual CLI surface, current E2E usage, and current versus future-facing agent support story.
+- Task: Refresh the README so it matches the actual CLI surface, current E2E usage, and the project story it needs to publish before v0.1.0 versioning begins, including clearly labeled post-v0.1.0 direction.
 - Current state:
   - The README still refers to `@mawm/cli`, `@mawm/utils`, `run base`, and a bundled base workflow that the current repo does not ship.
   - The documented command surface is stale relative to `src/cmd/surface/index.ts` and the tested init/install behavior.
-  - The current badges and narrative do not reflect the newer agent-assets/tooling direction.
+  - The current badges and narrative do not reflect the newer agent-assets/tooling direction or the post-v0.1.0 story the project wants to communicate.
 - Outcome:
   - The README uses the correct package name (`mawm`) and current command surface.
   - Quick start and usage reflect the current E2E path for local init, `-t` template init, agent assets, and workflow install/list flows.
   - OpenCode, Codex, and Claude Code badges/support notes are present with wording that does not overstate shipped integrations.
+  - The README includes a clearly labeled post-v0.1.0 direction section that covers global workflow execution with project-local customization, the root config directory expanding beyond workflows into prompt/template/shared assets, and broader agentic-dev integrations.
+  - The README reads like the final pre-v0.1.0 documentation pass rather than a quick cleanup.
 - Scope:
   - Rewrite the README quick start, usage guidance, and high-level project description to match the shipped CLI.
   - Remove stale package/command references.
   - Add Codex and Claude Code badges/support notes using explicitly future-facing or plausible-support phrasing.
+  - Add a clearly labeled post-v0.1.0 direction section and note that this is the last planned README-focused update before v0.1.0 versioning begins.
 - Out of scope:
   - No code changes to `src/` or `test/`.
   - No new CLI behavior.
+  - No versioning, release-automation, or changelog work.
 - Contracts:
   - README claims must align with `package.json` and `src/cmd/surface/index.ts`.
   - Quick start must not mention commands that do not exist.
+  - Post-v0.1.0 direction must be clearly labeled as roadmap language, not shipped behavior.
+  - The post-v0.1.0 direction section must mention global workflow execution with project-local customization, root config hub expansion, and broader agentic-dev integrations including Codex and Claude Code.
   - Codex and Claude Code support language must remain aspirational/plausible, not shipped-fact language.
+  - The README update should feel finalizing enough for pre-v0.1.0 versioning work and should not leave obvious stale structure or disconnected copy behind.
 - Verification commands:
   - `bun run typecheck`
   - `bun run lint:all`
-- Smoke verification: `manual` - review the rendered README diff in a Markdown preview and confirm the quick start, command list, and OpenCode/Codex/Claude Code support wording all match current reality after runs 1-2.
+- Smoke verification: `manual` - review the rendered README diff in a Markdown preview and confirm the quick start, command list, post-v0.1.0 direction section, and OpenCode/Codex/Claude Code support wording all match current reality plus approved future-facing framing after runs 1-2.
 
 ## Initiative Verification Gates
 
@@ -135,5 +145,7 @@
 - `mawm init` test coverage includes the `-t`, `-t base`, and `-t initiative` flows plus invalid-type coverage and representative message assertions for template, MAWM, and agent-asset modes.
 - `mawm init` no longer reports misleading success output for agent-only or global-agent flows.
 - The README no longer advertises `@mawm/cli`, `@mawm/utils`, `run base`, or other stale command/package claims.
+- The README includes a clearly labeled post-v0.1.0 direction section covering global workflow execution with project-local customization, root config hub expansion, and broader agentic-dev integrations without overstating shipped support.
+- The README records this run as the last planned README-focused update before v0.1.0 versioning work begins.
 - Manual README smoke verification has been completed and recorded.
 - PR from `initiative/cli-init-cleanup` to `main` is opened with the initiative summary and verification evidence.
