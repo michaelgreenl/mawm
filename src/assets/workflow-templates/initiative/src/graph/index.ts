@@ -20,6 +20,7 @@ const implementing = async (state: WorkflowState) => {
     return runImplementation(state);
 };
 
+/** Create the initiative workflow graph. */
 export const createGraph = () => {
     const graph = new StateGraph(WorkflowStateAnnotation, {
         context: WorkflowContextAnnotation,
@@ -43,4 +44,5 @@ export const createGraph = () => {
     });
 };
 
+/** Compiled initiative workflow graph. */
 export const graph = createGraph();

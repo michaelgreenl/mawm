@@ -7,6 +7,7 @@ const State = Annotation.Root({
     }),
 });
 
+/** Create the standalone base workflow graph. */
 export const createGraph = () => {
     const graph = new StateGraph(State)
         .addNode("task", async () => ({
@@ -20,4 +21,5 @@ export const createGraph = () => {
     });
 };
 
+/** Compiled standalone base workflow graph. */
 export const graph = createGraph();

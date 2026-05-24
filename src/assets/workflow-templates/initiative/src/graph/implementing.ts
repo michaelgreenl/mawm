@@ -51,6 +51,7 @@ const verification = (text: string) => {
         : `Planned verification commands:\n${values.map((value) => `- ${value}`).join("\n")}`;
 };
 
+/** Produce the implementation-stage update derived from the generated run spec. */
 export const runImplementation = async (
     state: Pick<
         WorkflowState,

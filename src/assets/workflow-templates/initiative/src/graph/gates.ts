@@ -22,6 +22,7 @@ const interrupt = (runtime: Runtime<WorkflowContext>) => {
     return runtime.interrupt;
 };
 
+/** Route planning outcomes to implementation or emit a planning interrupt. */
 export const planningGate = (state: WorkflowState, runtime: Runtime<WorkflowContext>) => {
     if (state.planningDecision === "accept") {
         return new Command({
@@ -42,6 +43,7 @@ export const planningGate = (state: WorkflowState, runtime: Runtime<WorkflowCont
     });
 };
 
+/** Route implementation outcomes, including manual smoke resume handling. */
 export const implementationGate = (state: WorkflowState, runtime: Runtime<WorkflowContext>) => {
     if (state.implementationDecision === "accept") {
         return new Command({

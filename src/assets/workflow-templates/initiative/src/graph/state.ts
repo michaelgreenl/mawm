@@ -6,7 +6,10 @@ const slot = <T>(value: T) =>
         reducer: (_left, right) => right,
     });
 
+/** Planning gate decision stored in workflow state. */
 export type PlanningDecision = "accept" | "blocked";
+
+/** Implementation gate decision stored in workflow state. */
 export type ImplementationDecision = "accept" | "blocked" | "manual_smoke" | "revise";
 
 const initiativeSpecPath = slot("");
@@ -28,6 +31,7 @@ const opencodeBaseUrl = slot<string | undefined>(undefined);
 const parentSessionID = slot<string | undefined>(undefined);
 const targetRepoPath = slot("");
 
+/** Runtime context annotation exposed by the initiative workflow graph. */
 export const WorkflowContextAnnotation = Annotation.Root({
     initiativeBranch,
     opencodeBaseUrl,
@@ -35,12 +39,14 @@ export const WorkflowContextAnnotation = Annotation.Root({
     targetRepoPath,
 });
 
+/** Input annotation accepted by the initiative workflow graph. */
 export const WorkflowInputAnnotation = Annotation.Root({
     initiativeSpecPath,
     runSpecPath,
     selectedRunLabel,
 });
 
+/** Output annotation returned by the initiative workflow graph. */
 export const WorkflowOutputAnnotation = Annotation.Root({
     finalStatus,
     implementationSummary,
@@ -49,6 +55,7 @@ export const WorkflowOutputAnnotation = Annotation.Root({
     verificationSummary,
 });
 
+/** Full state annotation used by the initiative workflow graph. */
 export const WorkflowStateAnnotation = Annotation.Root({
     finalStatus,
     implementationDecision,
@@ -66,8 +73,17 @@ export const WorkflowStateAnnotation = Annotation.Root({
     verificationSummary,
 });
 
+/** Runtime context shape inferred from the workflow annotations. */
 export type WorkflowContext = typeof WorkflowContextAnnotation.State;
+
+/** Input shape inferred from the workflow annotations. */
 export type WorkflowInput = typeof WorkflowInputAnnotation.State;
+
+/** Output shape inferred from the workflow annotations. */
 export type WorkflowOutput = typeof WorkflowOutputAnnotation.State;
+
+/** Full state shape inferred from the workflow annotations. */
 export type WorkflowState = typeof WorkflowStateAnnotation.State;
+
+/** Partial state update shape accepted by the workflow graph. */
 export type WorkflowUpdate = typeof WorkflowStateAnnotation.Update;

@@ -1,19 +1,23 @@
+/** Default local LangGraph dev server URL. */
 export const DEFAULT_AGENT_SERVER_URL = "http://localhost:2024";
 
 type RecordValue = Record<string, unknown>;
 
+/** Input payload used when creating or resuming a workflow run. */
 export interface RunPayloadInput {
     readonly context?: RecordValue;
     readonly input?: RecordValue;
     readonly resume?: unknown;
 }
 
+/** Tool runtime context passed in by OpenCode. */
 export interface RunToolContext {
     readonly directory?: string;
     readonly sessionID?: string;
     readonly worktree?: string;
 }
 
+/** Normalized workflow run result returned to the caller. */
 export interface RunSummary {
     readonly interrupt?: unknown;
     readonly runSpecPath?: string;
@@ -35,6 +39,7 @@ const text = (value: unknown): string | undefined => {
     return trimmed.length > 0 ? trimmed : undefined;
 };
 
+/** Read the assistant ids declared in a LangGraph config file. */
 export const readAssistantIDs = (langgraphConfigText: string): string[] => {
     const parsed = JSON.parse(langgraphConfigText) as unknown;
 
@@ -51,6 +56,7 @@ export const readAssistantIDs = (langgraphConfigText: string): string[] => {
     return assistantIDs;
 };
 
+/** Resolve the assistant id to use for the workflow run. */
 export const resolveAssistantID = (
     assistantIDs: readonly string[],
     providedAssistantID?: string,
@@ -74,6 +80,7 @@ export const resolveAssistantID = (
     );
 };
 
+/** Extract the LangGraph API URL from dev-server log output. */
 export const extractAgentServerUrl = (
     logOutput: string,
     fallback = DEFAULT_AGENT_SERVER_URL,
@@ -84,6 +91,7 @@ export const extractAgentServerUrl = (
     return lastMatch ?? fallback;
 };
 
+/** Build the LangGraph run payload for a new run or resume command. */
 export const buildRunPayload = ({ context, input, resume }: RunPayloadInput) => {
     if (typeof resume !== "undefined") {
         return {
@@ -101,6 +109,7 @@ export const buildRunPayload = ({ context, input, resume }: RunPayloadInput) => 
     };
 };
 
+/** Merge OpenCode tool context into the workflow runtime context payload. */
 export const resolveRunContext = (
     context: RecordValue | undefined,
     toolContext: RunToolContext,
@@ -122,6 +131,7 @@ export const resolveRunContext = (
     return Object.keys(merged).length > 0 ? merged : undefined;
 };
 
+/** Normalize a LangGraph run response into a concise status summary. */
 export const summarizeRunResult = (values: unknown): RunSummary => {
     if (!isRecord(values)) {
         return {

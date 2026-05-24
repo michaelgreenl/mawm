@@ -7,6 +7,8 @@
     "src/graph/state.ts",
     "src/graph/gates.ts",
     "src/graph/planning.ts",
+    "src/graph/planning-parser.ts",
+    "src/graph/planning-render.ts",
     "src/graph/implementing.ts",
     "test/graph.test.ts",
     "test/gates.test.ts",

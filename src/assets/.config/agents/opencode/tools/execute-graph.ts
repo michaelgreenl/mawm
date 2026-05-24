@@ -479,6 +479,7 @@ const createThread = async (apiUrl: string): Promise<string> => {
     return thread.thread_id;
 };
 
+/** Execute or resume an installed workflow through the local LangGraph server. */
 export default tool({
     description:
         "Executes or resumes an installed workflow from <target-project>/.mawm/graphs/<workflow> through the local LangGraph Agent Server.",

@@ -94,6 +94,12 @@ describe("workflow template skeleton assets", () => {
         expect(initiativeOverlay.variantOwnedPaths).toContain(join("src", "graph", "gates.ts"));
         expect(initiativeOverlay.variantOwnedPaths).toContain(join("src", "graph", "planning.ts"));
         expect(initiativeOverlay.variantOwnedPaths).toContain(
+            join("src", "graph", "planning-parser.ts"),
+        );
+        expect(initiativeOverlay.variantOwnedPaths).toContain(
+            join("src", "graph", "planning-render.ts"),
+        );
+        expect(initiativeOverlay.variantOwnedPaths).toContain(
             join("src", "graph", "implementing.ts"),
         );
         expect(initiativeOverlay.variantOwnedPaths).toContain(join("test", "graph.test.ts"));
