@@ -40,7 +40,7 @@
 
 ### Run 1: Template init modes (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/cli-init-cleanup/runs/active/init-template-modes/spec.md`
 - Task: Add `-t [type]` support to `mawm init` so it can scaffold the new workflow templates without regressing current local/global/agent flows.
 - Current state:

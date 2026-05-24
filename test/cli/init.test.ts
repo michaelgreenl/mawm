@@ -1,12 +1,18 @@
+import { spawnSync } from "node:child_process";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { dirname } from "node:path";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test } from "bun:test";
 import { runCommandTarget } from "../../src/cmd/runner.js";
 import { parseCommand } from "../../src/utils/parsers/cmd.js";
 import { createInitCommand } from "../../src/cmd/surface/init.js";
 import type { CommandContext } from "../../src/utils/types/command.d.js";
 
+const repoRoot = dirname(fileURLToPath(new URL("../../package.json", import.meta.url)));
+const binPath = join(repoRoot, "bin", "mawm.js");
+const templateRoot = join(repoRoot, "dist", "assets", "workflow-templates");
 const tempRoots: string[] = [];
 
 const pathExists = async (path: string): Promise<boolean> => {
@@ -48,6 +54,33 @@ const createContext = (cwd: string, home: string, rawArgs: readonly string[]): C
     env: { HOME: home },
     rawArgs: [...rawArgs],
 });
+
+const requireBuiltTemplates = async () => {
+    if (await pathExists(join(templateRoot, "base", "package.json"))) {
+        return;
+    }
+
+    throw new Error("Template init tests require `bun run build` to materialize dist assets.");
+};
+
+const runBuiltCli = async (cwd: string, home: string, args: readonly string[]) => {
+    await requireBuiltTemplates();
+
+    const result = spawnSync("node", [binPath, ...args], {
+        cwd,
+        env: {
+            ...process.env,
+            HOME: home,
+        },
+        encoding: "utf8",
+    });
+
+    return {
+        exitCode: result.status,
+        stderr: result.stderr,
+        stdout: result.stdout,
+    };
+};
 
 describe("init command", () => {
     afterEach(async () => {
@@ -123,7 +156,7 @@ describe("init command", () => {
 
         expect(result).toEqual({
             exitCode: 1,
-            stderr: "The -i option only initializes target-project initiative documents/workspace and cannot be used with -g.\n\nUsage: mawm init [-g] [-i] [-a <agent>]\n",
+            stderr: "The -i option only initializes target-project initiative documents/workspace and cannot be used with -g.\n\nUsage: mawm init [-g] [-i] [-a <agent>] [-t [type]]\n",
             stdout: "",
         });
     });
@@ -146,7 +179,7 @@ describe("init command", () => {
                 home,
                 ".config",
                 "mawm",
-            )}\n\nUsage: mawm init [-g] [-i] [-a <agent>]\n`,
+            )}\n\nUsage: mawm init [-g] [-i] [-a <agent>] [-t [type]]\n`,
             stdout: "",
         });
     });
@@ -163,9 +196,117 @@ describe("init command", () => {
 
         expect(result).toEqual({
             exitCode: 1,
-            stderr: "Missing value for option: -a\n\nUsage: mawm init [-g] [-i] [-a <agent>]\n",
+            stderr: "Missing value for option: -a\n\nUsage: mawm init [-g] [-i] [-a <agent>] [-t [type]]\n",
             stdout: "",
         });
+    });
+
+    test("scaffolds the base template into the current directory with -t", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const result = await runBuiltCli(projectRoot, home, ["init", "-t"]);
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized base template scaffold.\n",
+        });
+        expect(await readFile(join(projectRoot, "package.json"), "utf8")).toBe(
+            await readFile(join(templateRoot, "base", "package.json"), "utf8"),
+        );
+        expect(await readFile(join(projectRoot, "mawm.json"), "utf8")).toBe(
+            await readFile(join(templateRoot, "base", "mawm.json"), "utf8"),
+        );
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+        expect(await pathExists(join(projectRoot, ".opencode"))).toBe(false);
+        expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
+    });
+
+    test("scaffolds the base template when -t base is passed explicitly", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const result = await runBuiltCli(projectRoot, home, ["init", "-t", "base"]);
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized base template scaffold.\n",
+        });
+        expect(await readFile(join(projectRoot, "mawm.json"), "utf8")).toContain(
+            '"id": "base-template"',
+        );
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+    });
+
+    test("scaffolds the initiative template into the current directory with -t initiative", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const result = await runBuiltCli(projectRoot, home, ["init", "-t", "initiative"]);
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized initiative template scaffold.\n",
+        });
+        expect(await readFile(join(projectRoot, "package.json"), "utf8")).toBe(
+            await readFile(join(templateRoot, "initiative", "package.json"), "utf8"),
+        );
+        expect(await readFile(join(projectRoot, "mawm.json"), "utf8")).toBe(
+            await readFile(join(templateRoot, "initiative", "mawm.json"), "utf8"),
+        );
+        expect(await pathExists(join(projectRoot, "src", "graph", "planning.ts"))).toBe(true);
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+        expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
+    });
+
+    test("fails for unsupported template types", async () => {
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        tempRoots.push(home, projectRoot);
+
+        const result = await runBuiltCli(projectRoot, home, ["init", "-t", "unknown"]);
+
+        expect(result).toEqual({
+            exitCode: 1,
+            stderr: "Unknown template type: unknown. Expected one of: base, initiative.\n\nUsage: mawm init [-g] [-i] [-a <agent>] [-t [type]]\n",
+            stdout: "",
+        });
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+        expect(await pathExists(join(projectRoot, "package.json"))).toBe(false);
+        expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
+    });
+
+    test("rejects template mode when combined with other init flows", async () => {
+        const cases = [
+            ["init", "-g", "-t"],
+            ["init", "-it"],
+            ["init", "-t", "-a", "opencode"],
+            ["init", "-gt"],
+        ] as const;
+
+        for (const args of cases) {
+            const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+            const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
+            tempRoots.push(home, projectRoot);
+
+            const result = await runBuiltCli(projectRoot, home, args);
+
+            expect(result).toEqual({
+                exitCode: 1,
+                stderr: "The -t option cannot be combined with -g, -i, or -a.\n\nUsage: mawm init [-g] [-i] [-a <agent>] [-t [type]]\n",
+                stdout: "",
+            });
+            expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+            expect(await pathExists(join(projectRoot, ".opencode"))).toBe(false);
+            expect(await pathExists(join(projectRoot, "package.json"))).toBe(false);
+            expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
+        }
     });
 
     test("initializes project agent assets with -a <agent>", async () => {

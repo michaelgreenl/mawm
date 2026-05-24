@@ -38,6 +38,7 @@ export type OptionDef<
     name: Name;
     alias?: string;
     description?: string;
+    omittedValue?: ValueTypeMap[T];
     usage?: string;
     type?: T;
     required?: Required;

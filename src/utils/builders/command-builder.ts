@@ -41,6 +41,7 @@ export function option<
     config?: {
         alias?: string;
         description?: string;
+        omittedValue?: ValueTypeMap[T];
         usage?: string;
         type?: T;
         required?: Required;

@@ -34,7 +34,18 @@ export const assignOptionValue = (
         return index;
     }
 
-    const valueToken = inlineValue ?? tokens[index + 1];
+    const next = tokens[index + 1];
+
+    if (
+        inlineValue === undefined &&
+        option.omittedValue !== undefined &&
+        (next === undefined || (next !== "-" && next.startsWith("-")))
+    ) {
+        optionValues.set(option.name, option.omittedValue);
+        return index;
+    }
+
+    const valueToken = inlineValue ?? next;
 
     if (valueToken === undefined) {
         throw new Error(`Missing value for option: ${optionLabel}`);

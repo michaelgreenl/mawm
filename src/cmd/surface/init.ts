@@ -17,9 +17,14 @@ const PROJECT_LOCAL_ASSETS_ROOT = fileURLToPath(
 const PROJECT_LOCAL_GRAPHS_ROOT = join(PROJECT_LOCAL_ASSETS_ROOT, "graphs");
 const PROJECT_LOCAL_AGENTS_ROOT = join(PROJECT_LOCAL_ASSETS_ROOT, "agents");
 const AGENT_ASSETS_ROOT = fileURLToPath(new URL("../../assets/.config/agents", import.meta.url));
-const INIT_USAGE = "init [-g] [-i] [-a <agent>]";
+const TEMPLATE_ASSETS_ROOT = fileURLToPath(
+    new URL("../../../dist/assets/workflow-templates", import.meta.url),
+);
+const INIT_USAGE = "init [-g] [-i] [-a <agent>] [-t [type]]";
 const GLOBAL_INIT_INCLUDE_AGENTS_ERROR =
     "The -i option only initializes target-project initiative documents/workspace and cannot be used with -g.";
+const TEMPLATE_MODE_ERROR = "The -t option cannot be combined with -g, -i, or -a.";
+const TEMPLATE_TYPES = ["base", "initiative"] as const;
 
 type ConfirmOverwrite = (targetPath: string) => Promise<boolean>;
 
@@ -116,8 +121,31 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
                 alias: "a",
                 type: "string",
             }),
+            option("template", {
+                alias: "t",
+                omittedValue: "base",
+                type: "string",
+            }),
         ] as const,
         async run({ context, options }) {
+            if (options.template !== undefined) {
+                if (options.global || options.includeAgents || options.agent) {
+                    throw new Error(TEMPLATE_MODE_ERROR);
+                }
+
+                if (options.template !== "base" && options.template !== "initiative") {
+                    throw new Error(
+                        `Unknown template type: ${options.template}. Expected one of: ${TEMPLATE_TYPES.join(
+                            ", ",
+                        )}.`,
+                    );
+                }
+
+                await copyMissing(join(TEMPLATE_ASSETS_ROOT, options.template), context.cwd);
+                process.stdout.write(`Initialized ${options.template} template scaffold.\n`);
+                return 0;
+            }
+
             if (options.global && options.includeAgents) {
                 throw new Error(GLOBAL_INIT_INCLUDE_AGENTS_ERROR);
             }

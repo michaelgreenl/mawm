@@ -39,4 +39,38 @@ describe("parseCommandInputs", () => {
             options: { agent: "opencode", includeAgents: true },
         });
     });
+
+    test("uses the omitted option value when -t is present without an explicit type", () => {
+        const optionDefs = [
+            option("template", { alias: "t", omittedValue: "base", type: "string" }),
+        ] as const;
+
+        expect(parseCommandInputs(undefined, optionDefs, ["-t"])).toEqual({
+            args: {},
+            options: { template: "base" },
+        });
+    });
+
+    test("parses an explicit template type when -t is followed by a value", () => {
+        const optionDefs = [
+            option("template", { alias: "t", omittedValue: "base", type: "string" }),
+        ] as const;
+
+        expect(parseCommandInputs(undefined, optionDefs, ["-t", "initiative"])).toEqual({
+            args: {},
+            options: { template: "initiative" },
+        });
+    });
+
+    test("parses grouped short options when an omitted-value option appears last", () => {
+        const optionDefs = [
+            option("global", { alias: "g", type: "boolean" }),
+            option("template", { alias: "t", omittedValue: "base", type: "string" }),
+        ] as const;
+
+        expect(parseCommandInputs(undefined, optionDefs, ["-gt"])).toEqual({
+            args: {},
+            options: { global: true, template: "base" },
+        });
+    });
 });
