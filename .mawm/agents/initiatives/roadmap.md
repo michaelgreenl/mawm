@@ -11,13 +11,11 @@
 
 ### North Star
 
-MAWM should ship reusable workflow templates and a truthful CLI surface so teams can scaffold initiative-run or standalone workflows, install them, and understand exactly what the CLI changed without relying on stale examples or misleading output.
+- Publish v0.1.0  
 
 ### Strategic Outcomes
 
-- Canonical workflow template source assets exist under `src/assets/workflow-templates/{base,initiative,shared}` and ship distributed template assets under `dist/assets/workflow-templates/{base,initiative}`.
-- `mawm init` can clearly scaffold local MAWM state, workflow templates, and agent assets with accurate mode handling and output.
-- The README matches the real package name, command surface, and shipped workflow model, while also carrying a clearly labeled post-v0.1.0 direction section covering global workflow execution with project-local customization, expansion of the root config directory into a broader asset hub, and broader agentic-dev tool integrations.
+- 
 
 ## State Model
 
