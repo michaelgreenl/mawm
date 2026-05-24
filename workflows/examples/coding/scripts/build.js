@@ -6,12 +6,23 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(root, "dist");
 const src = join(root, "src");
+const langgraph = JSON.parse(readFileSync(join(root, "langgraph.json"), "utf8"));
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+
+const distLanggraph = {
+    ...langgraph,
+    graphs: Object.fromEntries(
+        Object.entries(langgraph.graphs ?? {}).map(([name, value]) => [
+            name,
+            value.replace(/^\.\/src\/graph\/index\.ts:/u, "./graph.js:"),
+        ]),
+    ),
+};
 
 rmSync(dist, { recursive: true, force: true });
 
 const build = spawnSync(
-    process.execPath,
+    globalThis.process.execPath,
     ["build", "src/graph/index.ts", "--outfile", "dist/graph.js", "--target=node", "--format=esm"],
     {
         cwd: root,
@@ -20,14 +31,14 @@ const build = spawnSync(
 );
 
 if (build.status !== 0) {
-    process.exit(build.status ?? 1);
+    globalThis.process.exit(build.status ?? 1);
 }
 
 cpSync(join(src, "agents", "assets"), join(dist, "assets"), {
     recursive: true,
 });
-cpSync(join(root, "langgraph.dist.json"), join(dist, "langgraph.json"));
 cpSync(join(root, "mawm.json"), join(dist, "mawm.json"));
+writeFileSync(join(dist, "langgraph.json"), `${JSON.stringify(distLanggraph, null, 2)}\n`);
 writeFileSync(
     join(dist, ".gitignore"),
     [

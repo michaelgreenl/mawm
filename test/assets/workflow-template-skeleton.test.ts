@@ -10,7 +10,6 @@ const initiative = join(root, "initiative");
 const required = [
     "package.json",
     "langgraph.json",
-    "langgraph.dist.json",
     join("scripts", "build.js"),
     join("src", "graph", "index.ts"),
     "test",
@@ -55,6 +54,10 @@ describe("workflow template skeleton assets", () => {
 
     test("keeps mawm.json variant-owned", () => {
         expect(existsSync(join(shared, "mawm.json"))).toBe(false);
+    });
+
+    test("does not keep a separate dist langgraph config in the shared skeleton", () => {
+        expect(existsSync(join(shared, "langgraph.dist.json"))).toBe(false);
     });
 
     test("keeps the shared typecheck script scoped to source files", () => {

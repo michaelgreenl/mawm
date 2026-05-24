@@ -12,7 +12,7 @@ Establish the canonical `src/assets/workflow-templates/{base,initiative,shared}`
 
 - `workflows/examples/coding/` is still the only full workflow package example in the repo and remains the reference shape for the bundle surface this initiative is extracting.
 - A source-side template tree already exists at `src/assets/workflow-templates/{shared,base,initiative}` with shared scaffold files plus thin variant directories.
-- `src/assets/workflow-templates/shared/` already contains the common bundle paths this run is responsible for: `package.json`, `langgraph.json`, `langgraph.dist.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
+- `src/assets/workflow-templates/shared/` already contains the common bundle paths this run is responsible for: `package.json`, `langgraph.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
 - `src/assets/workflow-templates/base/overlay.json` and `src/assets/workflow-templates/initiative/overlay.json` already mark variant ownership for `mawm.json`, and `test/assets/workflow-template-skeleton.test.ts` already checks the canonical source layout and shared-layer neutrality.
 - Root build plumbing still just copies `src/assets/` to `dist/assets/` through `scripts/copy-assets.mjs`; there is no template materialization or variant-overlay shipping logic yet.
 - Root `tsconfig.json` includes `src/assets/**/*` but excludes `src/assets/**/*.ts`, so repo-level typecheck does not validate embedded template TypeScript directly. This run therefore relies on source-layout assertions and the shared template's own minimal test/build surface rather than on root typecheck coverage alone.
@@ -41,7 +41,7 @@ Leave the repo with a canonical source-of-truth workflow-template skeleton under
 ## Contracts
 
 - `src/assets/workflow-templates/shared` is an authoring-time shared layer only. It must not become a third installable workflow product.
-- The shared bundle surface for this run is fixed to `package.json`, `langgraph.json`, `langgraph.dist.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
+- The shared bundle surface for this run is fixed to `package.json`, `langgraph.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
 - The shared layer stays neutral. It must not encode OpenCode integrations, coding-specific prompts, initiative-doc semantics, branch semantics, or standalone-result semantics beyond generic scaffold-safe placeholders.
 - `mawm.json` is variant-owned and must not live under `src/assets/workflow-templates/shared`.
 - The source composition rule established in this run is: materialize files from `src/assets/workflow-templates/shared`, then overlay variant-specific files from either `src/assets/workflow-templates/base` or `src/assets/workflow-templates/initiative` on matching relative paths.
@@ -52,7 +52,7 @@ Leave the repo with a canonical source-of-truth workflow-template skeleton under
 ## Implementation Plan
 
 1. Audit the existing `src/assets/workflow-templates/{shared,base,initiative}` tree against the initiative contracts and remove or rewrite any stale source-side content that exceeds Run 1 scope.
-2. Keep `src/assets/workflow-templates/shared/` limited to the reusable workflow package skeleton at the final relative paths for the common surface: `package.json`, `langgraph.json`, `langgraph.dist.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
+2. Keep `src/assets/workflow-templates/shared/` limited to the reusable workflow package skeleton at the final relative paths for the common surface: `package.json`, `langgraph.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
 3. Preserve `mawm.json` as variant-owned by keeping the explicit overlay metadata in `src/assets/workflow-templates/base/overlay.json` and `src/assets/workflow-templates/initiative/overlay.json`, updating those markers only if needed to keep ownership machine-readable and unambiguous.
 4. Maintain or tighten `test/assets/workflow-template-skeleton.test.ts` so it proves the canonical source directories exist, the required shared skeleton paths exist, `src/assets/workflow-templates/shared/mawm.json` does not exist, both overlay markers exist and declare `mawm.json` as variant-owned, and the shared layer does not reference initiative-only inputs or OpenCode-specific strings.
 5. Keep all work confined to source assets and source-side tests. Do not modify CLI shipping, install/init flows, workflow manifests for the final variants, or `execute-graph` helpers in this run.

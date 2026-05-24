@@ -358,7 +358,7 @@ describe("workflow template distribution", () => {
             expect(distMeta).toEqual(sourceMeta);
             expect(await exists(join(distTemplates, variant, "package.json"))).toBe(true);
             expect(await exists(join(distTemplates, variant, "langgraph.json"))).toBe(true);
-            expect(await exists(join(distTemplates, variant, "langgraph.dist.json"))).toBe(true);
+            expect(await exists(join(distTemplates, variant, "langgraph.dist.json"))).toBe(false);
             expect(await exists(join(distTemplates, variant, "scripts", "build.js"))).toBe(true);
             expect(await exists(join(distTemplates, variant, "src", "graph", "index.ts"))).toBe(
                 true,

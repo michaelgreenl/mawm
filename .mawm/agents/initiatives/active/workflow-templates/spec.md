@@ -12,7 +12,7 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ## Initiative-wide Contracts
 
-- The shared bundle surface for both distributed templates stays consistent: `package.json`, `langgraph.json`, `langgraph.dist.json`, `mawm.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
+- The shared bundle surface for both distributed templates stays consistent: `package.json`, `langgraph.json`, `mawm.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
 - The shared layer standardizes install/build shape only. It must not force OpenCode-backed nodes or coding-specific prompts into either template.
 - Canonical source assets live under `src/assets/workflow-templates/{base,initiative,shared}`.
 - Distributed scaffold assets live under `dist/assets/workflow-templates/{base,initiative}` and must be derived from the canonical source assets instead of from `workflows/examples/coding`.
