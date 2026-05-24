@@ -211,78 +211,93 @@ const render = async (
 ) => {
     const state = await repo(context.targetRepoPath);
     const contracts = [initiative.contracts, run.contracts].filter(Boolean).join("\n\n").trim();
+
     const commands =
         run.verificationCommands?.map((value) => `- ${value}`).join("\n") ??
         "- Add verification commands before implementation proceeds.";
+
+    const currentState = [
+        ...lines(run.currentState, ["- The initiative spec did not include current-state notes."]),
+        `- Initiative branch: \`${context.initiativeBranch}\``,
+        ...state,
+        `- Requested run spec path: \`${runSpecPath}\``,
+        ...(run.runSpecPath && clean(run.runSpecPath) !== runSpecPath
+            ? [`- Initiative spec run path: \`${clean(run.runSpecPath)}\``]
+            : []),
+    ].join("\n");
+
+    const goal =
+        run.outcome ??
+        initiative.targetState ??
+        "Define the intended run outcome before implementation proceeds.";
+
+    const scope = run.scope ?? "- Scope is missing from the initiative spec.";
+    const outOfScope = run.outOfScope ?? "- No work outside the selected run entry.";
+
+    const contractSection =
+        contracts.length > 0
+            ? contracts
+            : "- Keep the workflow template generic and initiative-run compatible.";
+
+    const smokeMethod =
+        run.smokeMethod ?? "Define the smoke verification method before implementation proceeds.";
     const manual =
         run.smokeMode === "manual"
             ? (run.smokeMethod ?? "Complete the manual smoke flow and record the result.")
             : "None.";
 
-    return [
-        `# Run Spec: ${run.title}`,
-        "",
-        "## Assigned Workflow",
-        "",
-        `\`${run.workflow ?? "initiative-template"}\``,
-        "",
-        "## Task",
-        "",
-        run.task ?? "Fill in the run task before implementation proceeds.",
-        "",
-        "## Current State",
-        "",
-        ...lines(run.currentState, ["- The initiative spec did not include current-state notes."]),
-        `- Initiative branch: \`${context.initiativeBranch}\``,
-        ...state,
-        `- Requested run spec path: \`${runSpecPath}\``,
-        run.runSpecPath && clean(run.runSpecPath) !== runSpecPath
-            ? `- Initiative spec run path: \`${clean(run.runSpecPath)}\``
-            : "",
-        "",
-        "## Goal (Run Outcome)",
-        "",
-        run.outcome ??
-            initiative.targetState ??
-            "Define the intended run outcome before implementation proceeds.",
-        "",
-        "## Scope",
-        "",
-        run.scope ?? "- Scope is missing from the initiative spec.",
-        "",
-        "## Out of Scope",
-        "",
-        run.outOfScope ?? "- No work outside the selected run entry.",
-        "",
-        "## Contracts",
-        "",
-        contracts.length > 0
-            ? contracts
-            : "- Keep the workflow template generic and initiative-run compatible.",
-        "",
-        "## Implementation Plan",
-        "",
-        plan(run),
-        "",
-        "## Verification Commands",
-        "",
-        commands,
-        "",
-        "## Smoke Verification",
-        "",
-        `- Mode: \`${run.smokeMode ?? "manual"}\``,
-        `- Method: ${run.smokeMethod ?? "Define the smoke verification method before implementation proceeds."}`,
-        `- Manual instructions, if needed: ${manual}`,
-        "",
-        "## Completion Gate",
-        "",
-        "- TDD implementation is complete within scope.",
-        "- Code review is clear or all findings have been resolved.",
-        "- Verification commands pass.",
-        "- Smoke verification passes, or HITL confirms manual smoke instructions were completed.",
-        "- Run is ready to become one commit on the initiative branch.",
-        "",
-    ].join("\n");
+    return `# Run Spec: ${run.title}
+
+## Assigned Workflow
+
+\`${run.workflow ?? "initiative-template"}\`
+
+## Task
+
+${run.task ?? "Fill in the run task before implementation proceeds."}
+
+## Current State
+
+${currentState}
+
+## Goal (Run Outcome)
+
+${goal}
+
+## Scope
+
+${scope}
+
+## Out of Scope
+
+${outOfScope}
+
+## Contracts
+
+${contractSection}
+
+## Implementation Plan
+
+${plan(run)}
+
+## Verification Commands
+
+${commands}
+
+## Smoke Verification
+
+- Mode: \`${run.smokeMode ?? "manual"}\`
+- Method: ${smokeMethod}
+- Manual instructions, if needed: ${manual}
+
+## Completion Gate
+
+- TDD implementation is complete within scope.
+- Code review is clear or all findings have been resolved.
+- Verification commands pass.
+- Smoke verification passes, or HITL confirms manual smoke instructions were completed.
+- Run is ready to become one commit on the initiative branch.
+`;
 };
 
 export const materializeRunSpec = async (
