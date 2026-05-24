@@ -15,7 +15,9 @@
 
 ### Strategic Outcomes
 
-- 
+- Root CLI and asset tests only encode behavior the project currently supports in v0.
+- Repo and workflow-template asset tests share a Vitest-based path that can run headlessly from the repo root.
+- Example workflow coverage stays isolated from repo-level test cleanup unless a separate initiative explicitly expands scope.
 
 ## State Model
 
@@ -32,10 +34,17 @@
 
 | Initiative            | State    | Horizon | Why it matters                                                                 | Depends on             | Working doc                                                            |
 | --------------------- | -------- | ------- | ------------------------------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------- |
+| `Testing refactor and cleanup` | `active` | `Now`   | Replaces stale test coverage with a Vitest-based suite that matches current supported behavior. | `none` | `.mawm/agents/initiatives/active/testing-refactor-cleanup/spec.md` |
 
 ## Now
 
-- No additional initiatives are currently committed.
+### Testing refactor and cleanup
+
+- State: `active`
+- Goal: Move repo and workflow-template asset coverage to Vitest and keep only tests for current legitimate behavior.
+- Exit signal: Repo-root and workflow-template asset coverage pass headlessly on the new stack, stale legacy/implementation-detail tests are removed, and `workflows/examples/coding/test/**` remains untouched.
+- Working doc: `.mawm/agents/initiatives/active/testing-refactor-cleanup/spec.md`
+- Notes: This initiative applies to workflow-template asset tests, but explicitly excludes `workflows/examples/coding/test/**`.
 
 ## Next
 
