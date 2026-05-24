@@ -34,20 +34,9 @@ MAWM should ship reusable workflow templates and a truthful CLI surface so teams
 
 | Initiative            | State    | Horizon | Why it matters                                                                 | Depends on             | Working doc                                                            |
 | --------------------- | -------- | ------- | ------------------------------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------- |
-| `Workflow templates`  | `active` | `Now`   | Creates reusable initiative-run and standalone workflow scaffolds for the CLI. | `none`                 | `.mawm/agents/initiatives/active/workflow-templates/spec.md`           |
-| `CLI init cleanup`    | `active` | `Next`  | Exposes the template scaffolds through `mawm init` and fixes user-facing copy. | `workflow-templates`   | `.mawm/agents/initiatives/active/cli-init-cleanup/spec.md`             |
+| `CLI init cleanup`    | `active` | `Now`  | Exposes the template scaffolds through `mawm init` and fixes user-facing copy. | `none`   | `.mawm/agents/initiatives/active/cli-init-cleanup/spec.md`             |
 
 ## Now
-
-### Workflow templates
-
-- State: `active`
-- Goal: land canonical source template assets under `src/assets/workflow-templates/{base,initiative,shared}` plus distributed CLI assets under `dist/assets/workflow-templates/{base,initiative}` and automated install/launch smoke coverage.
-- Exit signal: the repo contains the source and distributed workflow template assets in those paths and headless smoke coverage proves global install, project install, and `execute-graph` launch behavior.
-- Working doc: `.mawm/agents/initiatives/active/workflow-templates/spec.md`
-- Notes: `coding` is the assigned workflow for all runs. Keep `mawm init` flag and output work out of this initiative.
-
-## Next
 
 ### CLI init cleanup
 
@@ -56,6 +45,10 @@ MAWM should ship reusable workflow templates and a truthful CLI surface so teams
 - Exit signal: `mawm init` can scaffold the new templates with accurate messaging and the README no longer advertises stale commands or packages.
 - Working doc: `.mawm/agents/initiatives/active/cli-init-cleanup/spec.md`
 - Notes: do not start execution until the workflow-templates initiative has produced the CLI-consumable template assets under `dist/assets/workflow-templates/{base,initiative}`.
+
+## Next
+
+- No additional initiatives are currently committed.
 
 ## Later
 
