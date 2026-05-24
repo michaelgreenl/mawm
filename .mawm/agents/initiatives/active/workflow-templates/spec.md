@@ -125,12 +125,12 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ### Run 4: CLI-shipped template assets and smoke coverage (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/template-smoke-coverage/spec.md`
 - Task: Ship the template assets with the CLI and add automated install/launch smoke coverage for the new template bundles.
 - Current state:
-  - Canonical source template assets now exist under `src/assets/workflow-templates/{base,initiative,shared}`, but the CLI does not yet ship scaffold-ready copies of them under `dist/assets/workflow-templates/{base,initiative}`.
-  - The repo does not yet prove global install, project install, and `execute-graph` launch behavior for the new template bundles.
+  - Canonical source template assets live under `src/assets/workflow-templates/{base,initiative,shared}`, and the CLI build now emits scaffold-ready copies under `dist/assets/workflow-templates/{base,initiative}`.
+  - The repo now proves global install, project install, and headless `execute-graph` launch behavior for the emitted template bundles through the distribution smoke suite.
 - Outcome:
   - CLI assets include scaffold-ready distributed copies of the canonical base and initiative templates under `dist/assets/workflow-templates/{base,initiative}`.
   - Automated smoke coverage proves global install, project install, and `execute-graph` launch for the template bundles.
@@ -150,9 +150,9 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 - Verification commands:
   - `bun run typecheck`
   - `bun run lint:all`
-  - `bun test`
+  - `bun run test`
   - `bun run build`
-- Smoke verification: `headless` - run the template smoke suite that covers global install, project install, and `execute-graph` launch using `dist/assets/workflow-templates/{base,initiative}`.
+- Smoke verification: `headless` - run `bun test test/assets/workflow-template-distribution.test.ts` after `bun run build` to cover global install, project install, and `execute-graph` launch using `dist/assets/workflow-templates/{base,initiative}`.
 
 ## Initiative Verification Gates
 
