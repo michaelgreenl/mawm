@@ -71,12 +71,7 @@ const isProcessAlive = (pid: number): boolean => {
 };
 
 const isMissingProcessError = (error: unknown): boolean => {
-    return (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === "ESRCH"
-    );
+    return typeof error === "object" && error !== null && "code" in error && error.code === "ESRCH";
 };
 
 const logDevServerEvent = async (logPath: string, message: string): Promise<void> => {
@@ -270,10 +265,7 @@ const waitForStartup = async (
             const logOutput = await readFile(logPath, "utf8").catch(() => "");
             detectedUrl = extractAgentServerUrl(logOutput, "");
 
-            if (
-                detectedUrl.length > 0 &&
-                (await isAgentServerReachable(detectedUrl))
-            ) {
+            if (detectedUrl.length > 0 && (await isAgentServerReachable(detectedUrl))) {
                 return detectedUrl;
             }
 
@@ -487,6 +479,7 @@ const createThread = async (apiUrl: string): Promise<string> => {
     return thread.thread_id;
 };
 
+/** Execute or resume an installed workflow through the local LangGraph server. */
 export default tool({
     description:
         "Executes or resumes an installed workflow from <target-project>/.mawm/graphs/<workflow> through the local LangGraph Agent Server.",

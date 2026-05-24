@@ -164,9 +164,44 @@ If a comment is worth writing, write it well:
 - Use correct grammar
 - Don't ramble or state the obvious
 - Be brief
-- Prefer TSDoc/JSDoc on exported APIs when behavior is not obvious
+- Use TSDoc/JSDoc on exported boundaries when it clarifies the contract (see C5)
 
-#### C5: Never Commit Commented-Out Code
+#### C5: Document Exported Boundaries with TSDoc/JSDoc
+
+Exports are module boundaries. A caller should not have to read the implementation to learn the contract. Add a short TSDoc/JSDoc block to new or materially changed exports unless the name and type already make the behavior completely obvious.
+
+```ts
+// Bad - exported behavior is not documented
+export async function retry<T>(
+  op: () => Promise<T>,
+  tries = 3,
+): Promise<T> {
+  // ...
+}
+
+// Good - callers can understand the contract at the boundary
+/**
+ * Retries `op` up to `tries` times.
+ * Throws the last error if every attempt fails.
+ */
+export async function retry<T>(
+  op: () => Promise<T>,
+  tries = 3,
+): Promise<T> {
+  // ...
+}
+```
+
+Document the parts the type system cannot express cleanly:
+
+- Side effects and mutation
+- Units, defaults, and invariants
+- Failure modes or thrown errors
+- Meaning that would otherwise require reading the implementation
+
+Do not write boilerplate that just repeats the name or types.
+
+#### C6: Never Commit Commented-Out Code
 
 ```ts
 // DELETE THIS - it is an abomination
@@ -794,6 +829,7 @@ When reviewing AI-generated code, verify:
 - [ ] No `enum`, no `Function`/`Object`/`{}` (TY7, TY13)
 - [ ] `readonly` applied where mutation would be a bug (TY9, F2)
 - [ ] Exported boundaries annotated; internals inferred (TY2)
+- [ ] Exported APIs include useful TSDoc/JSDoc when the contract is not obvious (C5)
 
 ---
 

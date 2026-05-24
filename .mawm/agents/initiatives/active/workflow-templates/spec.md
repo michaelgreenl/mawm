@@ -12,7 +12,7 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ## Initiative-wide Contracts
 
-- The shared bundle surface for both distributed templates stays consistent: `package.json`, `langgraph.json`, `langgraph.dist.json`, `mawm.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
+- The shared bundle surface for both distributed templates stays consistent: `package.json`, `langgraph.json`, `mawm.json`, `scripts/build.js`, `src/graph/index.ts`, and `test/`.
 - The shared layer standardizes install/build shape only. It must not force OpenCode-backed nodes or coding-specific prompts into either template.
 - Canonical source assets live under `src/assets/workflow-templates/{base,initiative,shared}`.
 - Distributed scaffold assets live under `dist/assets/workflow-templates/{base,initiative}` and must be derived from the canonical source assets instead of from `workflows/examples/coding`.
@@ -36,13 +36,13 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ### Run 1: Shared template asset skeleton (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/shared-template-skeleton/spec.md`
 - Task: Establish the canonical `src/assets/workflow-templates/{base,initiative,shared}` source tree and the shared workflow bundle skeleton both template variants will reuse.
 - Current state:
-  - The repo only has `workflows/examples/coding/` as a full workflow package example.
-  - There is no canonical `src/assets/workflow-templates/*` tree and no shared workflow package skeleton.
-  - CLI assets under `src/assets/` do not currently ship workflow template scaffolds.
+  - `workflows/examples/coding/` remains the only full workflow package example in the repo.
+  - The canonical source tree now exists at `src/assets/workflow-templates/{base,initiative,shared}` with `shared/` owning the reusable bundle/build/test scaffold.
+  - `base/` and `initiative/` currently remain thin overlay roots with explicit `overlay.json` ownership markers while CLI-shipped assets under `dist/assets/workflow-templates/*` are still pending later runs.
 - Outcome:
   - A canonical `src/assets/workflow-templates/{base,initiative,shared}` source tree exists with one shared bundle skeleton source used by both template variants.
   - The shared layer defines the common bundle/build/test surface without encoding initiative-run or standalone-specific behavior.
@@ -66,12 +66,13 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ### Run 2: Initiative template asset (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/initiative-run-template/spec.md`
 - Task: Build the generic initiative template asset as a thin variant on the shared skeleton.
 - Current state:
   - The installed `coding` workflow proves the initiative-run contract shape but is coding-specific.
-  - There is no reusable initiative template asset under `src/assets/workflow-templates/initiative` that initiative-driven execution can scaffold safely.
+  - `src/assets/workflow-templates/initiative` now contains the generic initiative template asset over the shared skeleton, including initiative-run metadata, graph modules, and template-local tests.
+  - Source-side smoke coverage now materializes the initiative template into a temp workspace and verifies install, typecheck, build, and test behavior without depending on coding-specific prompts or OpenCode integrations.
 - Outcome:
   - A canonical initiative template asset exists under `src/assets/workflow-templates/initiative` with the shared bundle surface and generic initiative-run mechanics.
   - The template includes planning/run-spec materialization flow, implementation placeholder flow, reviewer/gate plumbing, and an interrupt path without shipping coding-specific prompts.
@@ -95,12 +96,12 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ### Run 3: Base template asset and summary compatibility (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/base-template/spec.md`
 - Task: Build the minimal base template asset and make `execute-graph` summary handling generic enough to surface standalone results cleanly.
 - Current state:
-  - There is no reusable base template asset under `src/assets/workflow-templates/base` in the repo.
-  - `execute-graph-lib.ts:summarizeRunResult()` currently prefers initiative-shaped summary fields instead of a generic standalone-first result contract.
+  - `src/assets/workflow-templates/base` now contains the reusable standalone base template asset with standalone metadata, a minimal LangGraph flow, and template-local tests.
+  - `execute-graph-lib.ts:summarizeRunResult()` now prefers generic top-level `summary` output before legacy initiative-run summary fields in both helper copies.
 - Outcome:
   - A canonical base template asset exists under `src/assets/workflow-templates/base` as a pure LangGraph base template.
   - `execute-graph` result summarization prefers `summary`, then falls back to legacy initiative-run fields so standalone workflows are first-class.
@@ -124,12 +125,12 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 
 ### Run 4: CLI-shipped template assets and smoke coverage (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/workflow-templates/runs/active/template-smoke-coverage/spec.md`
 - Task: Ship the template assets with the CLI and add automated install/launch smoke coverage for the new template bundles.
 - Current state:
-  - The template assets may exist in canonical source form under `src/assets/workflow-templates/*`, but the CLI does not yet ship scaffold-ready copies of them under `dist/assets/workflow-templates/{base,initiative}`.
-  - The repo does not yet prove global install, project install, and `execute-graph` launch behavior for the new template bundles.
+  - Canonical source template assets live under `src/assets/workflow-templates/{base,initiative,shared}`, and the CLI build now emits scaffold-ready copies under `dist/assets/workflow-templates/{base,initiative}`.
+  - The repo now proves global install, project install, and headless `execute-graph` launch behavior for the emitted template bundles through the distribution smoke suite.
 - Outcome:
   - CLI assets include scaffold-ready distributed copies of the canonical base and initiative templates under `dist/assets/workflow-templates/{base,initiative}`.
   - Automated smoke coverage proves global install, project install, and `execute-graph` launch for the template bundles.
@@ -149,9 +150,9 @@ MAWM has two canonical workflow template assets backed by one shared bundle skel
 - Verification commands:
   - `bun run typecheck`
   - `bun run lint:all`
-  - `bun test`
+  - `bun run test`
   - `bun run build`
-- Smoke verification: `headless` - run the template smoke suite that covers global install, project install, and `execute-graph` launch using `dist/assets/workflow-templates/{base,initiative}`.
+- Smoke verification: `headless` - run `bun test test/assets/workflow-template-distribution.test.ts` after `bun run build` to cover global install, project install, and `execute-graph` launch using `dist/assets/workflow-templates/{base,initiative}`.
 
 ## Initiative Verification Gates
 

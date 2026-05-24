@@ -1,11 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(root, "dist");
-const src = join(root, "src");
 const langgraph = JSON.parse(readFileSync(join(root, "langgraph.json"), "utf8"));
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
@@ -20,6 +19,7 @@ const distLanggraph = {
 };
 
 rmSync(dist, { recursive: true, force: true });
+mkdirSync(dist, { recursive: true });
 
 const build = spawnSync(
     globalThis.process.execPath,
@@ -34,9 +34,6 @@ if (build.status !== 0) {
     globalThis.process.exit(build.status ?? 1);
 }
 
-cpSync(join(src, "agents", "assets"), join(dist, "assets"), {
-    recursive: true,
-});
 cpSync(join(root, "mawm.json"), join(dist, "mawm.json"));
 writeFileSync(join(dist, "langgraph.json"), `${JSON.stringify(distLanggraph, null, 2)}\n`);
 writeFileSync(
@@ -61,6 +58,6 @@ writeFileSync(
             dependencies: pkg.dependencies ?? {},
         },
         null,
-        2,
+        4,
     )}\n`,
 );

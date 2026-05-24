@@ -88,4 +88,56 @@ describe("execute-graph helper library", () => {
             summary: "Planning blocked.",
         });
     });
+
+    test("prefers a top-level summary for completed standalone responses", () => {
+        expect(
+            summarizeRunResult({
+                finalStatus: "completed",
+                implementationSummary: "Legacy implementation summary.",
+                planningSummary: "Legacy planning summary.",
+                summary: "Standalone workflow completed.",
+            }),
+        ).toEqual({
+            runSpecPath: undefined,
+            status: "completed",
+            summary: "Standalone workflow completed.",
+        });
+    });
+
+    test("prefers a top-level summary for interrupted standalone responses when the interrupt has none", () => {
+        expect(
+            summarizeRunResult({
+                implementationSummary: "Legacy implementation summary.",
+                summary: "Standalone workflow paused.",
+                __interrupt__: [
+                    {
+                        value: {
+                            kind: "awaiting_input",
+                        },
+                    },
+                ],
+            }),
+        ).toEqual({
+            interrupt: {
+                kind: "awaiting_input",
+            },
+            runSpecPath: undefined,
+            status: "interrupted",
+            summary: "Standalone workflow paused.",
+        });
+    });
+
+    test("falls back to initiative summaries when no standalone summary exists", () => {
+        expect(
+            summarizeRunResult({
+                finalStatus: "completed",
+                implementationSummary: "Implemented the approved run.",
+                planningSummary: "Planned the approved run.",
+            }),
+        ).toEqual({
+            runSpecPath: undefined,
+            status: "completed",
+            summary: "Implemented the approved run.",
+        });
+    });
 });
