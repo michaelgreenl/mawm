@@ -59081,10 +59081,6 @@ var implementationGate = (state, runtime) => {
   });
 };
 
-// src/integrations/opencode/node.ts
-import { randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
-
 // src/shared/runtime-context.ts
 var trimContextValue = (value) => {
   if (typeof value !== "string") {
@@ -59110,8 +59106,8 @@ var requireRuntimeContextValue = (runtime, key) => {
 
 // src/integrations/opencode/connection.ts
 import { Buffer as Buffer2 } from "node:buffer";
-// node_modules/@opencode-ai/sdk/dist/gen/core/serverSentEvents.gen.js
-var createSseClient = ({ onSseError, onSseEvent, responseTransformer, responseValidator, sseDefaultRetryDelay, sseMaxRetryAttempts, sseMaxRetryDelay, sseSleepFn, url: url2, ...options }) => {
+// node_modules/@opencode-ai/sdk/dist/v2/gen/core/serverSentEvents.gen.js
+var createSseClient = ({ onRequest, onSseError, onSseEvent, responseTransformer, responseValidator, sseDefaultRetryDelay, sseMaxRetryAttempts, sseMaxRetryDelay, sseSleepFn, url: url2, ...options }) => {
   let lastEventId;
   const sleep = sseSleepFn ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const createStream = async function* () {
@@ -59127,7 +59123,19 @@ var createSseClient = ({ onSseError, onSseEvent, responseTransformer, responseVa
         headers.set("Last-Event-ID", lastEventId);
       }
       try {
-        const response = await fetch(url2, { ...options, headers, signal });
+        const requestInit = {
+          redirect: "follow",
+          ...options,
+          body: options.serializedBody,
+          headers,
+          signal
+        };
+        let request = new Request(url2, requestInit);
+        if (onRequest) {
+          request = await onRequest(url2, requestInit);
+        }
+        const _fetch = options.fetch ?? globalThis.fetch;
+        const response = await _fetch(request);
         if (!response.ok)
           throw new Error(`SSE failed: ${response.status} ${response.statusText}`);
         if (!response.body)
@@ -59146,6 +59154,9 @@ var createSseClient = ({ onSseError, onSseEvent, responseTransformer, responseVa
             if (done)
               break;
             buffer += value;
+            buffer = buffer.replace(/\r\n/g, `
+`).replace(/\r/g, `
+`);
             const chunks = buffer.split(`
 
 `);
@@ -59219,27 +59230,7 @@ var createSseClient = ({ onSseError, onSseEvent, responseTransformer, responseVa
   return { stream };
 };
 
-// node_modules/@opencode-ai/sdk/dist/gen/core/auth.gen.js
-var getAuthToken = async (auth, callback) => {
-  const token = typeof callback === "function" ? await callback(auth) : callback;
-  if (!token) {
-    return;
-  }
-  if (auth.scheme === "bearer") {
-    return `Bearer ${token}`;
-  }
-  if (auth.scheme === "basic") {
-    return `Basic ${btoa(token)}`;
-  }
-  return token;
-};
-
-// node_modules/@opencode-ai/sdk/dist/gen/core/bodySerializer.gen.js
-var jsonBodySerializer = {
-  bodySerializer: (body) => JSON.stringify(body, (_key, value) => typeof value === "bigint" ? value.toString() : value)
-};
-
-// node_modules/@opencode-ai/sdk/dist/gen/core/pathSerializer.gen.js
+// node_modules/@opencode-ai/sdk/dist/v2/gen/core/pathSerializer.gen.js
 var separatorArrayExplode = (style) => {
   switch (style) {
     case "label":
@@ -59342,7 +59333,7 @@ var serializeObjectParam = ({ allowReserved, explode, name, style, value, valueO
   return style === "label" || style === "matrix" ? separator + joinedValues : joinedValues;
 };
 
-// node_modules/@opencode-ai/sdk/dist/gen/core/utils.gen.js
+// node_modules/@opencode-ai/sdk/dist/v2/gen/core/utils.gen.js
 var PATH_PARAM_RE = /\{[^{}]+\}/g;
 var defaultPathSerializer = ({ path: path2, url: _url2 }) => {
   let url2 = _url2;
@@ -59409,9 +59400,44 @@ var getUrl = ({ baseUrl, path: path2, query, querySerializer, url: _url2 }) => {
   }
   return url2;
 };
+function getValidRequestBody(options) {
+  const hasBody = options.body !== undefined;
+  const isSerializedBody = hasBody && options.bodySerializer;
+  if (isSerializedBody) {
+    if ("serializedBody" in options) {
+      const hasSerializedBody = options.serializedBody !== undefined && options.serializedBody !== "";
+      return hasSerializedBody ? options.serializedBody : null;
+    }
+    return options.body !== "" ? options.body : null;
+  }
+  if (hasBody) {
+    return options.body;
+  }
+  return;
+}
 
-// node_modules/@opencode-ai/sdk/dist/gen/client/utils.gen.js
-var createQuerySerializer = ({ allowReserved, array: array2, object: object2 } = {}) => {
+// node_modules/@opencode-ai/sdk/dist/v2/gen/core/auth.gen.js
+var getAuthToken = async (auth, callback) => {
+  const token = typeof callback === "function" ? await callback(auth) : callback;
+  if (!token) {
+    return;
+  }
+  if (auth.scheme === "bearer") {
+    return `Bearer ${token}`;
+  }
+  if (auth.scheme === "basic") {
+    return `Basic ${btoa(token)}`;
+  }
+  return token;
+};
+
+// node_modules/@opencode-ai/sdk/dist/v2/gen/core/bodySerializer.gen.js
+var jsonBodySerializer = {
+  bodySerializer: (body) => JSON.stringify(body, (_key, value) => typeof value === "bigint" ? value.toString() : value)
+};
+
+// node_modules/@opencode-ai/sdk/dist/v2/gen/client/utils.gen.js
+var createQuerySerializer = ({ parameters = {}, ...args } = {}) => {
   const querySerializer = (queryParams) => {
     const search = [];
     if (queryParams && typeof queryParams === "object") {
@@ -59420,31 +59446,32 @@ var createQuerySerializer = ({ allowReserved, array: array2, object: object2 } =
         if (value === undefined || value === null) {
           continue;
         }
+        const options = parameters[name] || args;
         if (Array.isArray(value)) {
           const serializedArray = serializeArrayParam({
-            allowReserved,
+            allowReserved: options.allowReserved,
             explode: true,
             name,
             style: "form",
             value,
-            ...array2
+            ...options.array
           });
           if (serializedArray)
             search.push(serializedArray);
         } else if (typeof value === "object") {
           const serializedObject = serializeObjectParam({
-            allowReserved,
+            allowReserved: options.allowReserved,
             explode: true,
             name,
             style: "deepObject",
             value,
-            ...object2
+            ...options.object
           });
           if (serializedObject)
             search.push(serializedObject);
         } else {
           const serializedPrimitive = serializePrimitiveParam({
-            allowReserved,
+            allowReserved: options.allowReserved,
             name,
             value
           });
@@ -59530,13 +59557,20 @@ var mergeConfigs2 = (a, b) => {
   config2.headers = mergeHeaders(a.headers, b.headers);
   return config2;
 };
+var headersEntries = (headers) => {
+  const entries = [];
+  headers.forEach((value, key) => {
+    entries.push([key, value]);
+  });
+  return entries;
+};
 var mergeHeaders = (...headers) => {
   const mergedHeaders = new Headers;
   for (const header of headers) {
-    if (!header || typeof header !== "object") {
+    if (!header) {
       continue;
     }
-    const iterator = header instanceof Headers ? header.entries() : Object.entries(header);
+    const iterator = header instanceof Headers ? headersEntries(header) : Object.entries(header);
     for (const [key, value] of iterator) {
       if (value === null) {
         mergedHeaders.delete(key);
@@ -59553,42 +59587,37 @@ var mergeHeaders = (...headers) => {
 };
 
 class Interceptors {
-  _fns;
-  constructor() {
-    this._fns = [];
-  }
+  fns = [];
   clear() {
-    this._fns = [];
+    this.fns = [];
   }
-  getInterceptorIndex(id) {
-    if (typeof id === "number") {
-      return this._fns[id] ? id : -1;
-    } else {
-      return this._fns.indexOf(id);
+  eject(id) {
+    const index2 = this.getInterceptorIndex(id);
+    if (this.fns[index2]) {
+      this.fns[index2] = null;
     }
   }
   exists(id) {
     const index2 = this.getInterceptorIndex(id);
-    return !!this._fns[index2];
+    return Boolean(this.fns[index2]);
   }
-  eject(id) {
-    const index2 = this.getInterceptorIndex(id);
-    if (this._fns[index2]) {
-      this._fns[index2] = null;
+  getInterceptorIndex(id) {
+    if (typeof id === "number") {
+      return this.fns[id] ? id : -1;
     }
+    return this.fns.indexOf(id);
   }
   update(id, fn) {
     const index2 = this.getInterceptorIndex(id);
-    if (this._fns[index2]) {
-      this._fns[index2] = fn;
+    if (this.fns[index2]) {
+      this.fns[index2] = fn;
       return id;
-    } else {
-      return false;
     }
+    return false;
   }
   use(fn) {
-    this._fns = [...this._fns, fn];
-    return this._fns.length - 1;
+    this.fns.push(fn);
+    return this.fns.length - 1;
   }
 }
 var createInterceptors = () => ({
@@ -59618,7 +59647,7 @@ var createConfig = (override = {}) => ({
   ...override
 });
 
-// node_modules/@opencode-ai/sdk/dist/gen/client/client.gen.js
+// node_modules/@opencode-ai/sdk/dist/v2/gen/client/client.gen.js
 var createClient = (config2 = {}) => {
   let _config = mergeConfigs2(createConfig(), config2);
   const getConfig2 = () => ({ ..._config });
@@ -59644,10 +59673,10 @@ var createClient = (config2 = {}) => {
     if (opts.requestValidator) {
       await opts.requestValidator(opts);
     }
-    if (opts.body && opts.bodySerializer) {
+    if (opts.body !== undefined && opts.bodySerializer) {
       opts.serializedBody = opts.bodySerializer(opts.body);
     }
-    if (opts.serializedBody === undefined || opts.serializedBody === "") {
+    if (opts.body === undefined || opts.serializedBody === "") {
       opts.headers.delete("Content-Type");
     }
     const url2 = buildUrl(opts);
@@ -59658,17 +59687,36 @@ var createClient = (config2 = {}) => {
     const requestInit = {
       redirect: "follow",
       ...opts,
-      body: opts.serializedBody
+      body: getValidRequestBody(opts)
     };
     let request2 = new Request(url2, requestInit);
-    for (const fn of interceptors.request._fns) {
+    for (const fn of interceptors.request.fns) {
       if (fn) {
         request2 = await fn(request2, opts);
       }
     }
     const _fetch = opts.fetch;
-    let response = await _fetch(request2);
-    for (const fn of interceptors.response._fns) {
+    let response;
+    try {
+      response = await _fetch(request2);
+    } catch (error52) {
+      let finalError2 = error52;
+      for (const fn of interceptors.error.fns) {
+        if (fn) {
+          finalError2 = await fn(error52, undefined, request2, opts);
+        }
+      }
+      finalError2 = finalError2 || {};
+      if (opts.throwOnError) {
+        throw finalError2;
+      }
+      return opts.responseStyle === "data" ? undefined : {
+        error: finalError2,
+        request: request2,
+        response: undefined
+      };
+    }
+    for (const fn of interceptors.response.fns) {
       if (fn) {
         response = await fn(response, request2, opts);
       }
@@ -59678,22 +59726,44 @@ var createClient = (config2 = {}) => {
       response
     };
     if (response.ok) {
+      const parseAs = (opts.parseAs === "auto" ? getParseAs(response.headers.get("Content-Type")) : opts.parseAs) ?? "json";
       if (response.status === 204 || response.headers.get("Content-Length") === "0") {
-        return opts.responseStyle === "data" ? {} : {
-          data: {},
+        let emptyData;
+        switch (parseAs) {
+          case "arrayBuffer":
+          case "blob":
+          case "text":
+            emptyData = await response[parseAs]();
+            break;
+          case "formData":
+            emptyData = new FormData;
+            break;
+          case "stream":
+            emptyData = response.body;
+            break;
+          case "json":
+          default:
+            emptyData = {};
+            break;
+        }
+        return opts.responseStyle === "data" ? emptyData : {
+          data: emptyData,
           ...result
         };
       }
-      const parseAs = (opts.parseAs === "auto" ? getParseAs(response.headers.get("Content-Type")) : opts.parseAs) ?? "json";
       let data;
       switch (parseAs) {
         case "arrayBuffer":
         case "blob":
         case "formData":
-        case "json":
         case "text":
           data = await response[parseAs]();
           break;
+        case "json": {
+          const text = await response.text();
+          data = text ? JSON.parse(text) : {};
+          break;
+        }
         case "stream":
           return opts.responseStyle === "data" ? response.body : {
             data: response.body,
@@ -59720,7 +59790,7 @@ var createClient = (config2 = {}) => {
     } catch {}
     const error51 = jsonError ?? textError;
     let finalError = error51;
-    for (const fn of interceptors.error._fns) {
+    for (const fn of interceptors.error.fns) {
       if (fn) {
         finalError = await fn(error51, response, request2, opts);
       }
@@ -59734,38 +59804,56 @@ var createClient = (config2 = {}) => {
       ...result
     };
   };
-  const makeMethod = (method) => {
-    const fn = (options) => request({ ...options, method });
-    fn.sse = async (options) => {
-      const { opts, url: url2 } = await beforeRequest(options);
-      return createSseClient({
-        ...opts,
-        body: opts.body,
-        headers: opts.headers,
-        method,
-        url: url2
-      });
-    };
-    return fn;
+  const makeMethodFn = (method) => (options) => request({ ...options, method });
+  const makeSseFn = (method) => async (options) => {
+    const { opts, url: url2 } = await beforeRequest(options);
+    return createSseClient({
+      ...opts,
+      body: opts.body,
+      headers: opts.headers,
+      method,
+      onRequest: async (url3, init) => {
+        let request2 = new Request(url3, init);
+        for (const fn of interceptors.request.fns) {
+          if (fn) {
+            request2 = await fn(request2, opts);
+          }
+        }
+        return request2;
+      },
+      serializedBody: getValidRequestBody(opts),
+      url: url2
+    });
   };
   return {
     buildUrl,
-    connect: makeMethod("CONNECT"),
-    delete: makeMethod("DELETE"),
-    get: makeMethod("GET"),
+    connect: makeMethodFn("CONNECT"),
+    delete: makeMethodFn("DELETE"),
+    get: makeMethodFn("GET"),
     getConfig: getConfig2,
-    head: makeMethod("HEAD"),
+    head: makeMethodFn("HEAD"),
     interceptors,
-    options: makeMethod("OPTIONS"),
-    patch: makeMethod("PATCH"),
-    post: makeMethod("POST"),
-    put: makeMethod("PUT"),
+    options: makeMethodFn("OPTIONS"),
+    patch: makeMethodFn("PATCH"),
+    post: makeMethodFn("POST"),
+    put: makeMethodFn("PUT"),
     request,
     setConfig,
-    trace: makeMethod("TRACE")
+    sse: {
+      connect: makeSseFn("CONNECT"),
+      delete: makeSseFn("DELETE"),
+      get: makeSseFn("GET"),
+      head: makeSseFn("HEAD"),
+      options: makeSseFn("OPTIONS"),
+      patch: makeSseFn("PATCH"),
+      post: makeSseFn("POST"),
+      put: makeSseFn("PUT"),
+      trace: makeSseFn("TRACE")
+    },
+    trace: makeMethodFn("TRACE")
   };
 };
-// node_modules/@opencode-ai/sdk/dist/gen/core/params.gen.js
+// node_modules/@opencode-ai/sdk/dist/v2/gen/core/params.gen.js
 var extraPrefixesMap = {
   $body_: "body",
   $headers_: "headers",
@@ -59773,679 +59861,2719 @@ var extraPrefixesMap = {
   $query_: "query"
 };
 var extraPrefixes = Object.entries(extraPrefixesMap);
-// node_modules/@opencode-ai/sdk/dist/gen/client.gen.js
-var client2 = createClient(createConfig({
-  baseUrl: "http://localhost:4096"
-}));
-
-// node_modules/@opencode-ai/sdk/dist/gen/sdk.gen.js
-class _HeyApiClient {
-  _client = client2;
-  constructor(args) {
-    if (args?.client) {
-      this._client = args.client;
+var buildKeyMap = (fields, map2) => {
+  if (!map2) {
+    map2 = new Map;
+  }
+  for (const config2 of fields) {
+    if ("in" in config2) {
+      if (config2.key) {
+        map2.set(config2.key, {
+          in: config2.in,
+          map: config2.map
+        });
+      }
+    } else if ("key" in config2) {
+      map2.set(config2.key, {
+        map: config2.map
+      });
+    } else if (config2.args) {
+      buildKeyMap(config2.args, map2);
     }
+  }
+  return map2;
+};
+var stripEmptySlots = (params) => {
+  for (const [slot, value] of Object.entries(params)) {
+    if (value && typeof value === "object" && !Object.keys(value).length) {
+      delete params[slot];
+    }
+  }
+};
+var buildClientParams = (args, fields) => {
+  const params = {
+    body: {},
+    headers: {},
+    path: {},
+    query: {}
+  };
+  const map2 = buildKeyMap(fields);
+  let config2;
+  for (const [index2, arg] of args.entries()) {
+    if (fields[index2]) {
+      config2 = fields[index2];
+    }
+    if (!config2) {
+      continue;
+    }
+    if ("in" in config2) {
+      if (config2.key) {
+        const field = map2.get(config2.key);
+        const name = field.map || config2.key;
+        if (field.in) {
+          params[field.in][name] = arg;
+        }
+      } else {
+        params.body = arg;
+      }
+    } else {
+      for (const [key, value] of Object.entries(arg ?? {})) {
+        const field = map2.get(key);
+        if (field) {
+          if (field.in) {
+            const name = field.map || key;
+            params[field.in][name] = value;
+          } else {
+            params[field.map] = value;
+          }
+        } else {
+          const extra = extraPrefixes.find(([prefix]) => key.startsWith(prefix));
+          if (extra) {
+            const [prefix, slot] = extra;
+            params[slot][key.slice(prefix.length)] = value;
+          } else if ("allowExtra" in config2 && config2.allowExtra) {
+            for (const [slot, allowed] of Object.entries(config2.allowExtra)) {
+              if (allowed) {
+                params[slot][key] = value;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  stripEmptySlots(params);
+  return params;
+};
+// node_modules/@opencode-ai/sdk/dist/v2/gen/client.gen.js
+var client2 = createClient(createConfig({ baseUrl: "http://localhost:4096" }));
+
+// node_modules/@opencode-ai/sdk/dist/v2/gen/sdk.gen.js
+class HeyApiClient {
+  client;
+  constructor(args) {
+    this.client = args?.client ?? client2;
   }
 }
 
-class Global extends _HeyApiClient {
+class HeyApiRegistry {
+  defaultKey = "default";
+  instances = new Map;
+  get(key) {
+    const instance = this.instances.get(key ?? this.defaultKey);
+    if (!instance) {
+      throw new Error(`No SDK client found. Create one with "new OpencodeClient()" to fix this error.`);
+    }
+    return instance;
+  }
+  set(value, key) {
+    this.instances.set(key ?? this.defaultKey, value);
+  }
+}
+
+class Auth extends HeyApiClient {
+  remove(parameters, options) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "providerID" }] }]);
+    return (options?.client ?? this.client).delete({
+      url: "/auth/{providerID}",
+      ...options,
+      ...params
+    });
+  }
+  set(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "providerID" },
+          { key: "auth", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).put({
+      url: "/auth/{providerID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+}
+
+class App extends HeyApiClient {
+  log(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "service" },
+          { in: "body", key: "level" },
+          { in: "body", key: "message" },
+          { in: "body", key: "extra" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/log",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  agents(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/agent",
+      ...options,
+      ...params
+    });
+  }
+  skills(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/skill",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Config extends HeyApiClient {
+  get(options) {
+    return (options?.client ?? this.client).get({
+      url: "/global/config",
+      ...options
+    });
+  }
+  update(parameters, options) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "config", map: "body" }] }]);
+    return (options?.client ?? this.client).patch({
+      url: "/global/config",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+}
+
+class Global extends HeyApiClient {
+  health(options) {
+    return (options?.client ?? this.client).get({
+      url: "/global/health",
+      ...options
+    });
+  }
   event(options) {
-    return (options?.client ?? this._client).get.sse({
+    return (options?.client ?? this.client).sse.get({
       url: "/global/event",
       ...options
     });
   }
-}
-
-class Project extends _HeyApiClient {
-  list(options) {
-    return (options?.client ?? this._client).get({
-      url: "/project",
-      ...options
-    });
-  }
-  current(options) {
-    return (options?.client ?? this._client).get({
-      url: "/project/current",
-      ...options
-    });
-  }
-}
-
-class Pty extends _HeyApiClient {
-  list(options) {
-    return (options?.client ?? this._client).get({
-      url: "/pty",
-      ...options
-    });
-  }
-  create(options) {
-    return (options?.client ?? this._client).post({
-      url: "/pty",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers
-      }
-    });
-  }
-  remove(options) {
-    return (options.client ?? this._client).delete({
-      url: "/pty/{id}",
-      ...options
-    });
-  }
-  get(options) {
-    return (options.client ?? this._client).get({
-      url: "/pty/{id}",
-      ...options
-    });
-  }
-  update(options) {
-    return (options.client ?? this._client).put({
-      url: "/pty/{id}",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  connect(options) {
-    return (options.client ?? this._client).get({
-      url: "/pty/{id}/connect",
-      ...options
-    });
-  }
-}
-
-class Config extends _HeyApiClient {
-  get(options) {
-    return (options?.client ?? this._client).get({
-      url: "/config",
-      ...options
-    });
-  }
-  update(options) {
-    return (options?.client ?? this._client).patch({
-      url: "/config",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers
-      }
-    });
-  }
-  providers(options) {
-    return (options?.client ?? this._client).get({
-      url: "/config/providers",
-      ...options
-    });
-  }
-}
-
-class Tool2 extends _HeyApiClient {
-  ids(options) {
-    return (options?.client ?? this._client).get({
-      url: "/experimental/tool/ids",
-      ...options
-    });
-  }
-  list(options) {
-    return (options.client ?? this._client).get({
-      url: "/experimental/tool",
-      ...options
-    });
-  }
-}
-
-class Instance extends _HeyApiClient {
   dispose(options) {
-    return (options?.client ?? this._client).post({
-      url: "/instance/dispose",
+    return (options?.client ?? this.client).post({
+      url: "/global/dispose",
       ...options
+    });
+  }
+  upgrade(parameters, options) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "body", key: "target" }] }]);
+    return (options?.client ?? this.client).post({
+      url: "/global/upgrade",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  _config;
+  get config() {
+    return this._config ??= new Config({ client: this.client });
+  }
+}
+
+class Event extends HeyApiClient {
+  subscribe(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).sse.get({
+      url: "/event",
+      ...options,
+      ...params
     });
   }
 }
 
-class Path extends _HeyApiClient {
-  get(options) {
-    return (options?.client ?? this._client).get({
-      url: "/path",
-      ...options
+class Config2 extends HeyApiClient {
+  get(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/config",
+      ...options,
+      ...params
+    });
+  }
+  update(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "config", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).patch({
+      url: "/config",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  providers(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/config/providers",
+      ...options,
+      ...params
     });
   }
 }
 
-class Vcs extends _HeyApiClient {
-  get(options) {
-    return (options?.client ?? this._client).get({
-      url: "/vcs",
-      ...options
-    });
-  }
-}
-
-class Session extends _HeyApiClient {
-  list(options) {
-    return (options?.client ?? this._client).get({
-      url: "/session",
-      ...options
-    });
-  }
-  create(options) {
-    return (options?.client ?? this._client).post({
-      url: "/session",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers
+class Console extends HeyApiClient {
+  get(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
       }
-    });
-  }
-  status(options) {
-    return (options?.client ?? this._client).get({
-      url: "/session/status",
-      ...options
-    });
-  }
-  delete(options) {
-    return (options.client ?? this._client).delete({
-      url: "/session/{id}",
-      ...options
-    });
-  }
-  get(options) {
-    return (options.client ?? this._client).get({
-      url: "/session/{id}",
-      ...options
-    });
-  }
-  update(options) {
-    return (options.client ?? this._client).patch({
-      url: "/session/{id}",
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/console",
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
+      ...params
+    });
+  }
+  listOrgs(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
       }
-    });
-  }
-  children(options) {
-    return (options.client ?? this._client).get({
-      url: "/session/{id}/children",
-      ...options
-    });
-  }
-  todo(options) {
-    return (options.client ?? this._client).get({
-      url: "/session/{id}/todo",
-      ...options
-    });
-  }
-  init(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/init",
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/console/orgs",
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
+      ...params
+    });
+  }
+  switchOrg(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "accountID" },
+          { in: "body", key: "orgID" }
+        ]
       }
-    });
-  }
-  fork(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/fork",
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/experimental/console/switch",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  abort(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/abort",
-      ...options
-    });
-  }
-  unshare(options) {
-    return (options.client ?? this._client).delete({
-      url: "/session/{id}/share",
-      ...options
-    });
-  }
-  share(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/share",
-      ...options
-    });
-  }
-  diff(options) {
-    return (options.client ?? this._client).get({
-      url: "/session/{id}/diff",
-      ...options
-    });
-  }
-  summarize(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/summarize",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  messages(options) {
-    return (options.client ?? this._client).get({
-      url: "/session/{id}/message",
-      ...options
-    });
-  }
-  prompt(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/message",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  message(options) {
-    return (options.client ?? this._client).get({
-      url: "/session/{id}/message/{messageID}",
-      ...options
-    });
-  }
-  promptAsync(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/prompt_async",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  command(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/command",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  shell(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/shell",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  revert(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/revert",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  unrevert(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/unrevert",
-      ...options
-    });
-  }
-}
-
-class Command2 extends _HeyApiClient {
-  list(options) {
-    return (options?.client ?? this._client).get({
-      url: "/command",
-      ...options
-    });
-  }
-}
-
-class Oauth extends _HeyApiClient {
-  authorize(options) {
-    return (options.client ?? this._client).post({
-      url: "/provider/{id}/oauth/authorize",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
-    });
-  }
-  callback(options) {
-    return (options.client ?? this._client).post({
-      url: "/provider/{id}/oauth/callback",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
 }
 
-class Provider extends _HeyApiClient {
-  list(options) {
-    return (options?.client ?? this._client).get({
-      url: "/provider",
-      ...options
+class Session extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "roots" },
+          { in: "query", key: "start" },
+          { in: "query", key: "cursor" },
+          { in: "query", key: "search" },
+          { in: "query", key: "limit" },
+          { in: "query", key: "archived" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/session",
+      ...options,
+      ...params
     });
   }
-  auth(options) {
-    return (options?.client ?? this._client).get({
-      url: "/provider/auth",
-      ...options
-    });
-  }
-  oauth = new Oauth({ client: this._client });
 }
 
-class Find extends _HeyApiClient {
-  text(options) {
-    return (options.client ?? this._client).get({
+class Resource extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/resource",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Adapter extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/workspace/adapter",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Workspace extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/workspace",
+      ...options,
+      ...params
+    });
+  }
+  create(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "id" },
+          { in: "body", key: "type" },
+          { in: "body", key: "branch" },
+          { in: "body", key: "extra" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/experimental/workspace",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  syncList(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/experimental/workspace/sync-list",
+      ...options,
+      ...params
+    });
+  }
+  status(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/workspace/status",
+      ...options,
+      ...params
+    });
+  }
+  remove(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "id" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/experimental/workspace/{id}",
+      ...options,
+      ...params
+    });
+  }
+  warp(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "id" },
+          { in: "body", key: "sessionID" },
+          { in: "body", key: "copyChanges" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/experimental/workspace/warp",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  _adapter;
+  get adapter() {
+    return this._adapter ??= new Adapter({ client: this.client });
+  }
+}
+
+class Experimental extends HeyApiClient {
+  _console;
+  get console() {
+    return this._console ??= new Console({ client: this.client });
+  }
+  _session;
+  get session() {
+    return this._session ??= new Session({ client: this.client });
+  }
+  _resource;
+  get resource() {
+    return this._resource ??= new Resource({ client: this.client });
+  }
+  _workspace;
+  get workspace() {
+    return this._workspace ??= new Workspace({ client: this.client });
+  }
+}
+
+class Tool2 extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "provider" },
+          { in: "query", key: "model" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/tool",
+      ...options,
+      ...params
+    });
+  }
+  ids(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/tool/ids",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Worktree extends HeyApiClient {
+  remove(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "worktreeRemoveInput", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/experimental/worktree",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/experimental/worktree",
+      ...options,
+      ...params
+    });
+  }
+  create(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "worktreeCreateInput", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/experimental/worktree",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  reset(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "worktreeResetInput", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/experimental/worktree/reset",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+}
+
+class Find extends HeyApiClient {
+  text(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "pattern" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
       url: "/find",
-      ...options
-    });
-  }
-  files(options) {
-    return (options.client ?? this._client).get({
-      url: "/find/file",
-      ...options
-    });
-  }
-  symbols(options) {
-    return (options.client ?? this._client).get({
-      url: "/find/symbol",
-      ...options
-    });
-  }
-}
-
-class File2 extends _HeyApiClient {
-  list(options) {
-    return (options.client ?? this._client).get({
-      url: "/file",
-      ...options
-    });
-  }
-  read(options) {
-    return (options.client ?? this._client).get({
-      url: "/file/content",
-      ...options
-    });
-  }
-  status(options) {
-    return (options?.client ?? this._client).get({
-      url: "/file/status",
-      ...options
-    });
-  }
-}
-
-class App extends _HeyApiClient {
-  log(options) {
-    return (options?.client ?? this._client).post({
-      url: "/log",
       ...options,
+      ...params
+    });
+  }
+  files(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "query" },
+          { in: "query", key: "dirs" },
+          { in: "query", key: "type" },
+          { in: "query", key: "limit" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/find/file",
+      ...options,
+      ...params
+    });
+  }
+  symbols(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "query" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/find/symbol",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class File2 extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "path" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/file",
+      ...options,
+      ...params
+    });
+  }
+  read(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "path" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/file/content",
+      ...options,
+      ...params
+    });
+  }
+  status(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/file/status",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Instance extends HeyApiClient {
+  dispose(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/instance/dispose",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Path extends HeyApiClient {
+  get(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/path",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Diff extends HeyApiClient {
+  raw(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/vcs/diff/raw",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Vcs extends HeyApiClient {
+  get(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/vcs",
+      ...options,
+      ...params
+    });
+  }
+  status(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/vcs/status",
+      ...options,
+      ...params
+    });
+  }
+  diff(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "mode" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/vcs/diff",
+      ...options,
+      ...params
+    });
+  }
+  apply(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "patch" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/vcs/apply",
+      ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options?.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  agents(options) {
-    return (options?.client ?? this._client).get({
-      url: "/agent",
-      ...options
+  _diff;
+  get diff2() {
+    return this._diff ??= new Diff({ client: this.client });
+  }
+}
+
+class Command2 extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/command",
+      ...options,
+      ...params
     });
   }
 }
 
-class Auth extends _HeyApiClient {
-  remove(options) {
-    return (options.client ?? this._client).delete({
-      url: "/mcp/{name}/auth",
-      ...options
+class Lsp extends HeyApiClient {
+  status(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/lsp",
+      ...options,
+      ...params
     });
   }
-  start(options) {
-    return (options.client ?? this._client).post({
-      url: "/mcp/{name}/auth",
-      ...options
+}
+
+class Formatter extends HeyApiClient {
+  status(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/formatter",
+      ...options,
+      ...params
     });
   }
-  callback(options) {
-    return (options.client ?? this._client).post({
+}
+
+class Auth2 extends HeyApiClient {
+  remove(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "name" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/mcp/{name}/auth",
+      ...options,
+      ...params
+    });
+  }
+  start(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "name" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/mcp/{name}/auth",
+      ...options,
+      ...params
+    });
+  }
+  callback(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "name" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "code" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/mcp/{name}/auth/callback",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  authenticate(options) {
-    return (options.client ?? this._client).post({
+  authenticate(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "name" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/mcp/{name}/auth/authenticate",
-      ...options
-    });
-  }
-  set(options) {
-    return (options.client ?? this._client).put({
-      url: "/auth/{id}",
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers
-      }
+      ...params
     });
   }
 }
 
-class Mcp extends _HeyApiClient {
-  status(options) {
-    return (options?.client ?? this._client).get({
-      url: "/mcp",
-      ...options
-    });
-  }
-  add(options) {
-    return (options?.client ?? this._client).post({
+class Mcp extends HeyApiClient {
+  status(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
       url: "/mcp",
       ...options,
+      ...params
+    });
+  }
+  add(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "name" },
+          { in: "body", key: "config" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/mcp",
+      ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options?.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  connect(options) {
-    return (options.client ?? this._client).post({
+  connect(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "name" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/mcp/{name}/connect",
-      ...options
+      ...options,
+      ...params
     });
   }
-  disconnect(options) {
-    return (options.client ?? this._client).post({
+  disconnect(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "name" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/mcp/{name}/disconnect",
-      ...options
+      ...options,
+      ...params
     });
   }
-  auth = new Auth({ client: this._client });
-}
-
-class Lsp extends _HeyApiClient {
-  status(options) {
-    return (options?.client ?? this._client).get({
-      url: "/lsp",
-      ...options
-    });
+  _auth;
+  get auth() {
+    return this._auth ??= new Auth2({ client: this.client });
   }
 }
 
-class Formatter extends _HeyApiClient {
-  status(options) {
-    return (options?.client ?? this._client).get({
-      url: "/formatter",
-      ...options
+class Project extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/project",
+      ...options,
+      ...params
+    });
+  }
+  current(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/project/current",
+      ...options,
+      ...params
+    });
+  }
+  initGit(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/project/git/init",
+      ...options,
+      ...params
+    });
+  }
+  update(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "projectID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "name" },
+          { in: "body", key: "icon" },
+          { in: "body", key: "commands" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).patch({
+      url: "/project/{projectID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
     });
   }
 }
 
-class Control extends _HeyApiClient {
-  next(options) {
-    return (options?.client ?? this._client).get({
+class Pty extends HeyApiClient {
+  shells(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/pty/shells",
+      ...options,
+      ...params
+    });
+  }
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/pty",
+      ...options,
+      ...params
+    });
+  }
+  create(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "command" },
+          { in: "body", key: "args" },
+          { in: "body", key: "cwd" },
+          { in: "body", key: "title" },
+          { in: "body", key: "env" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/pty",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  remove(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "ptyID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/pty/{ptyID}",
+      ...options,
+      ...params
+    });
+  }
+  get(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "ptyID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/pty/{ptyID}",
+      ...options,
+      ...params
+    });
+  }
+  update(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "ptyID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "title" },
+          { in: "body", key: "size" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).put({
+      url: "/pty/{ptyID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  connectToken(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "ptyID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/pty/{ptyID}/connect-token",
+      ...options,
+      ...params
+    });
+  }
+  connect(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "ptyID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/pty/{ptyID}/connect",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Question extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/question",
+      ...options,
+      ...params
+    });
+  }
+  reply(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "requestID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "answers" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/question/{requestID}/reply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  reject(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "requestID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/question/{requestID}/reject",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Permission extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/permission",
+      ...options,
+      ...params
+    });
+  }
+  reply(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "requestID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "reply" },
+          { in: "body", key: "message" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/permission/{requestID}/reply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  respond(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "path", key: "permissionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "response" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/permissions/{permissionID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+}
+
+class Oauth extends HeyApiClient {
+  authorize(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "providerID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "method" },
+          { in: "body", key: "inputs" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/provider/{providerID}/oauth/authorize",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  callback(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "providerID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "method" },
+          { in: "body", key: "code" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/provider/{providerID}/oauth/callback",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+}
+
+class Provider extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/provider",
+      ...options,
+      ...params
+    });
+  }
+  auth(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/provider/auth",
+      ...options,
+      ...params
+    });
+  }
+  _oauth;
+  get oauth() {
+    return this._oauth ??= new Oauth({ client: this.client });
+  }
+}
+
+class Session2 extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "scope" },
+          { in: "query", key: "path" },
+          { in: "query", key: "roots" },
+          { in: "query", key: "start" },
+          { in: "query", key: "search" },
+          { in: "query", key: "limit" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session",
+      ...options,
+      ...params
+    });
+  }
+  create(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "parentID" },
+          { in: "body", key: "title" },
+          { in: "body", key: "agent" },
+          { in: "body", key: "model" },
+          { in: "body", key: "permission" },
+          { in: "body", key: "workspaceID" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  status(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session/status",
+      ...options,
+      ...params
+    });
+  }
+  delete(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/session/{sessionID}",
+      ...options,
+      ...params
+    });
+  }
+  get(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session/{sessionID}",
+      ...options,
+      ...params
+    });
+  }
+  update(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "title" },
+          { in: "body", key: "permission" },
+          { in: "body", key: "time" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).patch({
+      url: "/session/{sessionID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  children(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session/{sessionID}/children",
+      ...options,
+      ...params
+    });
+  }
+  todo(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session/{sessionID}/todo",
+      ...options,
+      ...params
+    });
+  }
+  diff(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "messageID" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session/{sessionID}/diff",
+      ...options,
+      ...params
+    });
+  }
+  messages(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "limit" },
+          { in: "query", key: "before" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session/{sessionID}/message",
+      ...options,
+      ...params
+    });
+  }
+  prompt(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "messageID" },
+          { in: "body", key: "model" },
+          { in: "body", key: "agent" },
+          { in: "body", key: "noReply" },
+          { in: "body", key: "tools" },
+          { in: "body", key: "format" },
+          { in: "body", key: "system" },
+          { in: "body", key: "variant" },
+          { in: "body", key: "parts" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/message",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  deleteMessage(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "path", key: "messageID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/session/{sessionID}/message/{messageID}",
+      ...options,
+      ...params
+    });
+  }
+  message(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "path", key: "messageID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/session/{sessionID}/message/{messageID}",
+      ...options,
+      ...params
+    });
+  }
+  fork(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "messageID" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/fork",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  abort(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/abort",
+      ...options,
+      ...params
+    });
+  }
+  init(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "modelID" },
+          { in: "body", key: "providerID" },
+          { in: "body", key: "messageID" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/init",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  unshare(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/session/{sessionID}/share",
+      ...options,
+      ...params
+    });
+  }
+  share(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/share",
+      ...options,
+      ...params
+    });
+  }
+  summarize(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "providerID" },
+          { in: "body", key: "modelID" },
+          { in: "body", key: "auto" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/summarize",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  promptAsync(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "messageID" },
+          { in: "body", key: "model" },
+          { in: "body", key: "agent" },
+          { in: "body", key: "noReply" },
+          { in: "body", key: "tools" },
+          { in: "body", key: "format" },
+          { in: "body", key: "system" },
+          { in: "body", key: "variant" },
+          { in: "body", key: "parts" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/prompt_async",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  command(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "messageID" },
+          { in: "body", key: "agent" },
+          { in: "body", key: "model" },
+          { in: "body", key: "arguments" },
+          { in: "body", key: "command" },
+          { in: "body", key: "variant" },
+          { in: "body", key: "parts" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/command",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  shell(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "messageID" },
+          { in: "body", key: "agent" },
+          { in: "body", key: "model" },
+          { in: "body", key: "command" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/shell",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  revert(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "messageID" },
+          { in: "body", key: "partID" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/revert",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  unrevert(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/session/{sessionID}/unrevert",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Part extends HeyApiClient {
+  delete(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "path", key: "messageID" },
+          { in: "path", key: "partID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).delete({
+      url: "/session/{sessionID}/message/{messageID}/part/{partID}",
+      ...options,
+      ...params
+    });
+  }
+  update(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "path", key: "messageID" },
+          { in: "path", key: "partID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "part", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).patch({
+      url: "/session/{sessionID}/message/{messageID}/part/{partID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+}
+
+class History extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "body", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/sync/history",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+}
+
+class Sync extends HeyApiClient {
+  start(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/sync/start",
+      ...options,
+      ...params
+    });
+  }
+  replay(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          {
+            in: "query",
+            key: "query_directory",
+            map: "directory"
+          },
+          { in: "query", key: "workspace" },
+          {
+            in: "body",
+            key: "body_directory",
+            map: "directory"
+          },
+          { in: "body", key: "events" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/sync/replay",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  steal(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "sessionID" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/sync/steal",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  _history;
+  get history() {
+    return this._history ??= new History({ client: this.client });
+  }
+}
+
+class Session3 extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "limit" },
+          { in: "query", key: "order" },
+          { in: "query", key: "path" },
+          { in: "query", key: "roots" },
+          { in: "query", key: "start" },
+          { in: "query", key: "search" },
+          { in: "query", key: "cursor" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/api/session",
+      ...options,
+      ...params
+    });
+  }
+  prompt(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "prompt" },
+          { in: "body", key: "delivery" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/api/session/{sessionID}/prompt",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers
+      }
+    });
+  }
+  compact(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/api/session/{sessionID}/compact",
+      ...options,
+      ...params
+    });
+  }
+  wait(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/api/session/{sessionID}/wait",
+      ...options,
+      ...params
+    });
+  }
+  context(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/api/session/{sessionID}/context",
+      ...options,
+      ...params
+    });
+  }
+  messages(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "sessionID" },
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "query", key: "limit" },
+          { in: "query", key: "order" },
+          { in: "query", key: "cursor" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/api/session/{sessionID}/message",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Model extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }]);
+    return (options?.client ?? this.client).get({
+      url: "/api/model",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class Provider2 extends HeyApiClient {
+  list(parameters, options) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }]);
+    return (options?.client ?? this.client).get({
+      url: "/api/provider",
+      ...options,
+      ...params
+    });
+  }
+  get(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "path", key: "providerID" },
+          { in: "query", key: "location" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
+      url: "/api/provider/{providerID}",
+      ...options,
+      ...params
+    });
+  }
+}
+
+class V2 extends HeyApiClient {
+  _session;
+  get session() {
+    return this._session ??= new Session3({ client: this.client });
+  }
+  _model;
+  get model() {
+    return this._model ??= new Model({ client: this.client });
+  }
+  _provider;
+  get provider() {
+    return this._provider ??= new Provider2({ client: this.client });
+  }
+}
+
+class Control extends HeyApiClient {
+  next(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).get({
       url: "/tui/control/next",
-      ...options
+      ...options,
+      ...params
     });
   }
-  response(options) {
-    return (options?.client ?? this._client).post({
+  response(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "body", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/control/response",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options?.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
 }
 
-class Tui extends _HeyApiClient {
-  appendPrompt(options) {
-    return (options?.client ?? this._client).post({
+class Tui extends HeyApiClient {
+  appendPrompt(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "text" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/append-prompt",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options?.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  openHelp(options) {
-    return (options?.client ?? this._client).post({
+  openHelp(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/open-help",
-      ...options
+      ...options,
+      ...params
     });
   }
-  openSessions(options) {
-    return (options?.client ?? this._client).post({
+  openSessions(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/open-sessions",
-      ...options
+      ...options,
+      ...params
     });
   }
-  openThemes(options) {
-    return (options?.client ?? this._client).post({
+  openThemes(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/open-themes",
-      ...options
+      ...options,
+      ...params
     });
   }
-  openModels(options) {
-    return (options?.client ?? this._client).post({
+  openModels(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/open-models",
-      ...options
+      ...options,
+      ...params
     });
   }
-  submitPrompt(options) {
-    return (options?.client ?? this._client).post({
+  submitPrompt(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/submit-prompt",
-      ...options
+      ...options,
+      ...params
     });
   }
-  clearPrompt(options) {
-    return (options?.client ?? this._client).post({
+  clearPrompt(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/clear-prompt",
-      ...options
+      ...options,
+      ...params
     });
   }
-  executeCommand(options) {
-    return (options?.client ?? this._client).post({
+  executeCommand(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "command" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/execute-command",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options?.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  showToast(options) {
-    return (options?.client ?? this._client).post({
+  showToast(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "title" },
+          { in: "body", key: "message" },
+          { in: "body", key: "variant" },
+          { in: "body", key: "duration" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/show-toast",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options?.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  publish(options) {
-    return (options?.client ?? this._client).post({
+  publish(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { key: "body", map: "body" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
       url: "/tui/publish",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options?.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  control = new Control({ client: this._client });
-}
-
-class Event extends _HeyApiClient {
-  subscribe(options) {
-    return (options?.client ?? this._client).get.sse({
-      url: "/event",
-      ...options
-    });
-  }
-}
-
-class OpencodeClient extends _HeyApiClient {
-  postSessionIdPermissionsPermissionId(options) {
-    return (options.client ?? this._client).post({
-      url: "/session/{id}/permissions/{permissionID}",
+  selectSession(parameters, options) {
+    const params = buildClientParams([parameters], [
+      {
+        args: [
+          { in: "query", key: "directory" },
+          { in: "query", key: "workspace" },
+          { in: "body", key: "sessionID" }
+        ]
+      }
+    ]);
+    return (options?.client ?? this.client).post({
+      url: "/tui/select-session",
       ...options,
+      ...params,
       headers: {
         "Content-Type": "application/json",
-        ...options.headers
+        ...options?.headers,
+        ...params.headers
       }
     });
   }
-  global = new Global({ client: this._client });
-  project = new Project({ client: this._client });
-  pty = new Pty({ client: this._client });
-  config = new Config({ client: this._client });
-  tool = new Tool2({ client: this._client });
-  instance = new Instance({ client: this._client });
-  path = new Path({ client: this._client });
-  vcs = new Vcs({ client: this._client });
-  session = new Session({ client: this._client });
-  command = new Command2({ client: this._client });
-  provider = new Provider({ client: this._client });
-  find = new Find({ client: this._client });
-  file = new File2({ client: this._client });
-  app = new App({ client: this._client });
-  mcp = new Mcp({ client: this._client });
-  lsp = new Lsp({ client: this._client });
-  formatter = new Formatter({ client: this._client });
-  tui = new Tui({ client: this._client });
-  auth = new Auth({ client: this._client });
-  event = new Event({ client: this._client });
+  _control;
+  get control() {
+    return this._control ??= new Control({ client: this.client });
+  }
+}
+
+class OpencodeClient extends HeyApiClient {
+  static __registry = new HeyApiRegistry;
+  constructor(args) {
+    super(args);
+    OpencodeClient.__registry.set(this, args?.key);
+  }
+  _auth;
+  get auth() {
+    return this._auth ??= new Auth({ client: this.client });
+  }
+  _app;
+  get app() {
+    return this._app ??= new App({ client: this.client });
+  }
+  _global;
+  get global() {
+    return this._global ??= new Global({ client: this.client });
+  }
+  _event;
+  get event() {
+    return this._event ??= new Event({ client: this.client });
+  }
+  _config;
+  get config() {
+    return this._config ??= new Config2({ client: this.client });
+  }
+  _experimental;
+  get experimental() {
+    return this._experimental ??= new Experimental({ client: this.client });
+  }
+  _tool;
+  get tool() {
+    return this._tool ??= new Tool2({ client: this.client });
+  }
+  _worktree;
+  get worktree() {
+    return this._worktree ??= new Worktree({ client: this.client });
+  }
+  _find;
+  get find() {
+    return this._find ??= new Find({ client: this.client });
+  }
+  _file;
+  get file() {
+    return this._file ??= new File2({ client: this.client });
+  }
+  _instance;
+  get instance() {
+    return this._instance ??= new Instance({ client: this.client });
+  }
+  _path;
+  get path() {
+    return this._path ??= new Path({ client: this.client });
+  }
+  _vcs;
+  get vcs() {
+    return this._vcs ??= new Vcs({ client: this.client });
+  }
+  _command;
+  get command() {
+    return this._command ??= new Command2({ client: this.client });
+  }
+  _lsp;
+  get lsp() {
+    return this._lsp ??= new Lsp({ client: this.client });
+  }
+  _formatter;
+  get formatter() {
+    return this._formatter ??= new Formatter({ client: this.client });
+  }
+  _mcp;
+  get mcp() {
+    return this._mcp ??= new Mcp({ client: this.client });
+  }
+  _project;
+  get project() {
+    return this._project ??= new Project({ client: this.client });
+  }
+  _pty;
+  get pty() {
+    return this._pty ??= new Pty({ client: this.client });
+  }
+  _question;
+  get question() {
+    return this._question ??= new Question({ client: this.client });
+  }
+  _permission;
+  get permission() {
+    return this._permission ??= new Permission({ client: this.client });
+  }
+  _provider;
+  get provider() {
+    return this._provider ??= new Provider({ client: this.client });
+  }
+  _session;
+  get session() {
+    return this._session ??= new Session2({ client: this.client });
+  }
+  _part;
+  get part() {
+    return this._part ??= new Part({ client: this.client });
+  }
+  _sync;
+  get sync() {
+    return this._sync ??= new Sync({ client: this.client });
+  }
+  _v2;
+  get v2() {
+    return this._v2 ??= new V2({ client: this.client });
+  }
+  _tui;
+  get tui() {
+    return this._tui ??= new Tui({ client: this.client });
+  }
 }
 
 // node_modules/@opencode-ai/sdk/dist/error-interceptor.js
@@ -60475,30 +62603,40 @@ function describe3(request, response) {
   return `${method} ${url2}${status ? " → " + status : ""}${statusText ? " " + statusText : ""}`;
 }
 
-// node_modules/@opencode-ai/sdk/dist/client.js
-function pick2(value, fallback) {
+// node_modules/@opencode-ai/sdk/dist/v2/client.js
+function pick2(value, fallback, encode3) {
   if (!value)
     return;
   if (!fallback)
     return value;
   if (value === fallback)
     return fallback;
-  if (value === encodeURIComponent(fallback))
+  if (encode3 && value === encode3(fallback))
     return fallback;
   return value;
 }
-function rewrite(request, directory) {
+function rewrite(request, values) {
   if (request.method !== "GET" && request.method !== "HEAD")
     return request;
-  const value = pick2(request.headers.get("x-opencode-directory"), directory);
-  if (!value)
-    return request;
   const url2 = new URL(request.url);
-  if (!url2.searchParams.has("directory")) {
-    url2.searchParams.set("directory", value);
+  let changed = false;
+  for (const [name, key] of [
+    ["x-opencode-directory", "directory"],
+    ["x-opencode-workspace", "workspace"]
+  ]) {
+    const value = pick2(request.headers.get(name), key === "directory" ? values.directory : values.workspace, key === "directory" ? encodeURIComponent : undefined);
+    if (!value)
+      continue;
+    if (!url2.searchParams.has(key)) {
+      url2.searchParams.set(key, value);
+    }
+    changed = true;
   }
+  if (!changed)
+    return request;
   const next = new Request(url2, request);
   next.headers.delete("x-opencode-directory");
+  next.headers.delete("x-opencode-workspace");
   return next;
 }
 function createOpencodeClient(config2) {
@@ -60518,12 +62656,27 @@ function createOpencodeClient(config2) {
       "x-opencode-directory": encodeURIComponent(config2.directory)
     };
   }
+  if (config2?.experimental_workspaceID) {
+    config2.headers = {
+      ...config2.headers,
+      "x-opencode-workspace": config2.experimental_workspaceID
+    };
+  }
   const client3 = createClient(config2);
-  client3.interceptors.request.use((request) => rewrite(request, config2?.directory));
+  client3.interceptors.request.use((request) => rewrite(request, {
+    directory: config2?.directory,
+    workspace: config2?.experimental_workspaceID
+  }));
+  client3.interceptors.response.use((response) => {
+    const contentType = response.headers.get("content-type");
+    if (contentType === "text/html")
+      throw new Error("Request is not supported by this version of OpenCode Server (Server responded with text/html)");
+    return response;
+  });
   client3.interceptors.error.use(wrapClientError);
   return new OpencodeClient({ client: client3 });
 }
-// node_modules/@opencode-ai/sdk/dist/server.js
+// node_modules/@opencode-ai/sdk/dist/v2/server.js
 var import_cross_spawn = __toESM(require_cross_spawn(), 1);
 
 // node_modules/@opencode-ai/sdk/dist/process.js
@@ -60559,7 +62712,7 @@ function bindAbort(proc, signal, onAbort) {
   return clear;
 }
 
-// node_modules/@opencode-ai/sdk/dist/server.js
+// node_modules/@opencode-ai/sdk/dist/v2/server.js
 async function createOpencodeServer(options) {
   options = Object.assign({
     hostname: "127.0.0.1",
@@ -60870,21 +63023,162 @@ var createOpenCodeReplyMessage = (name, reply, sessionID) => {
 };
 
 // src/integrations/opencode/node.ts
-var ASYNC_PROMPT_TIMEOUT_MS = 15 * 60 * 1000;
-var ASYNC_PROMPT_POLL_INTERVAL_MS = 1000;
-var TRANSIENT_OPENCODE_ERROR_PATTERNS = [
-  /fetch failed/i,
-  /network error \(no response\)/i,
-  /ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|socket hang up/i
-];
-var createPromptMessageID = () => {
-  return `msg_${randomUUID()}`;
-};
+var SESSION_MESSAGE_LIMIT = 32;
+var RECONNECT_POLL_INTERVAL_MS = 250;
+var MAX_IDLE_POLLS = 4;
 var unwrapResult = (value) => {
   if (typeof value === "object" && value !== null && "data" in value) {
     return value.data;
   }
   return value;
+};
+var getLatestWorkflowReplyID = (messages, name) => {
+  for (let index2 = messages.length - 1;index2 >= 0; index2 -= 1) {
+    const message = messages[index2];
+    if (message?.getType() === "ai" && message.name === name && typeof message.id === "string" && message.id.length > 0) {
+      return message.id;
+    }
+  }
+  return;
+};
+var sleep = async () => {
+  await new Promise((resolve) => setTimeout(resolve, RECONNECT_POLL_INTERVAL_MS));
+};
+var sortSessionMessages = (messages) => {
+  return [...messages].sort((left, right) => {
+    const leftCreated = left.info.time?.created ?? 0;
+    const rightCreated = right.info.time?.created ?? 0;
+    return leftCreated - rightCreated;
+  });
+};
+var readSessionMessages = async (sdk, sessionID, limit) => {
+  const messages = unwrapResult(await sdk.client.session.messages({
+    sessionID,
+    ...typeof limit === "number" ? {
+      limit
+    } : {}
+  }, {
+    responseStyle: "data",
+    throwOnError: true
+  }));
+  return sortSessionMessages(messages);
+};
+var readSessionStatus = async (sdk, sessionID) => {
+  const statuses = unwrapResult(await sdk.client.session.status(undefined, {
+    responseStyle: "data",
+    throwOnError: true
+  }));
+  return statuses[sessionID];
+};
+var sliceAfterReply = (messages, lastReplyID) => {
+  if (!lastReplyID) {
+    return messages;
+  }
+  const index2 = messages.findIndex((message) => message.info.id === lastReplyID);
+  if (index2 < 0) {
+    return;
+  }
+  return messages.slice(index2 + 1);
+};
+var readRelevantSessionMessages = async (sdk, sessionID, lastReplyID, requireAnchor) => {
+  const recent = await readSessionMessages(sdk, sessionID, SESSION_MESSAGE_LIMIT);
+  const recentSlice = sliceAfterReply(recent, lastReplyID);
+  if (recentSlice) {
+    return recentSlice;
+  }
+  if (!lastReplyID) {
+    return recent;
+  }
+  const complete = await readSessionMessages(sdk, sessionID);
+  const completeSlice = sliceAfterReply(complete, lastReplyID);
+  if (completeSlice) {
+    return completeSlice;
+  }
+  return requireAnchor ? undefined : complete;
+};
+var inspectPromptSnapshot = (messages, prompt) => {
+  for (let index2 = messages.length - 1;index2 >= 0; index2 -= 1) {
+    const message = messages[index2];
+    if (!message) {
+      continue;
+    }
+    if (message.info.role !== "user") {
+      continue;
+    }
+    if (flattenOpenCodePrompt(message.parts) !== prompt) {
+      return {
+        hasMatchingUser: false
+      };
+    }
+    for (let replyIndex = messages.length - 1;replyIndex > index2; replyIndex -= 1) {
+      const reply = messages[replyIndex];
+      if (!reply) {
+        continue;
+      }
+      if (reply.info.role === "assistant" && reply.info.parentID === message.info.id) {
+        return {
+          hasMatchingUser: true,
+          reply: {
+            info: reply.info,
+            parts: reply.parts
+          }
+        };
+      }
+    }
+    return {
+      hasMatchingUser: true
+    };
+  }
+  return {
+    hasMatchingUser: false
+  };
+};
+var flattenOpenCodePrompt = (parts) => {
+  if (!Array.isArray(parts)) {
+    return "";
+  }
+  return parts.map((part) => {
+    if (typeof part !== "object" || part === null) {
+      return "";
+    }
+    return "text" in part && typeof part.text === "string" ? part.text.trim() : "";
+  }).filter((part) => part.length > 0).join(`
+`).trim();
+};
+var waitForPromptReply = async (sdk, sessionID, prompt, lastReplyID, requireAnchor) => {
+  let idlePolls = 0;
+  while (true) {
+    const messages = await readRelevantSessionMessages(sdk, sessionID, lastReplyID, requireAnchor);
+    const snapshot = messages ? inspectPromptSnapshot(messages, prompt) : { hasMatchingUser: false };
+    if (snapshot.reply) {
+      return snapshot.reply;
+    }
+    const status = await readSessionStatus(sdk, sessionID);
+    const active = snapshot.hasMatchingUser || status?.type === "busy" || status?.type === "retry";
+    if (active) {
+      idlePolls = 0;
+    } else {
+      idlePolls += 1;
+      if (idlePolls >= MAX_IDLE_POLLS) {
+        throw new Error("OpenCode session did not produce a reconnectable reply.");
+      }
+    }
+    await sleep();
+  }
+};
+var tryReconnectToExistingPrompt = async (sdk, sessionID, prompt, lastReplyID) => {
+  if (!lastReplyID) {
+    return;
+  }
+  const messages = await readRelevantSessionMessages(sdk, sessionID, lastReplyID, true);
+  if (!messages) {
+    return;
+  }
+  const snapshot = inspectPromptSnapshot(messages, prompt);
+  if (!snapshot.hasMatchingUser) {
+    return;
+  }
+  return snapshot.reply ?? waitForPromptReply(sdk, sessionID, prompt, lastReplyID, true);
 };
 var resolveModel = (agent, override) => {
   if (override) {
@@ -60899,98 +63193,20 @@ var resolveModel = (agent, override) => {
     modelID: agent.model.slice(slash + 1)
   };
 };
-var isTransientOpenCodeError = (error51) => {
-  if (!(error51 instanceof Error)) {
-    return false;
-  }
-  return TRANSIENT_OPENCODE_ERROR_PATTERNS.some((pattern) => pattern.test(error51.message));
-};
-var listSessionMessages = async (client4, sessionID) => {
-  return unwrapResult(await client4.session.messages({
-    path: {
-      id: sessionID
-    },
-    responseStyle: "data",
-    throwOnError: true
-  }));
-};
-var listSessionStatuses = async (client4) => {
-  return unwrapResult(await client4.session.status({
-    responseStyle: "data",
-    throwOnError: true
-  }));
-};
-var hasPromptMessage = (messages, promptMessageID) => {
-  return messages.some((message) => message.info.role === "user" && message.info.id === promptMessageID);
-};
-var findAssistantReply = (messages, promptMessageID) => {
-  for (let index2 = messages.length - 1;index2 >= 0; index2 -= 1) {
-    const message = messages[index2];
-    if (message?.info.role === "assistant" && message.info.parentID === promptMessageID) {
-      return message;
-    }
-  }
-  return;
-};
-var waitForAssistantReply = async (client4, sessionID, submitPrompt, promptMessageID) => {
-  const startedAt = Date.now();
-  let promptQueued = false;
-  while (Date.now() - startedAt < ASYNC_PROMPT_TIMEOUT_MS) {
-    if (!promptQueued) {
-      try {
-        await submitPrompt();
-        promptQueued = true;
-      } catch (error51) {
-        if (!isTransientOpenCodeError(error51)) {
-          throw error51;
-        }
-      }
-    }
-    try {
-      const messages = await listSessionMessages(client4, sessionID);
-      const reply = findAssistantReply(messages, promptMessageID);
-      if (reply) {
-        return reply;
-      }
-      if (hasPromptMessage(messages, promptMessageID)) {
-        promptQueued = true;
-      }
-    } catch (error51) {
-      if (!isTransientOpenCodeError(error51)) {
-        throw error51;
-      }
-    }
-    try {
-      const statuses = await listSessionStatuses(client4);
-      const status = statuses[sessionID];
-      if (status?.type !== "busy") {
-        const messages = await listSessionMessages(client4, sessionID);
-        const reply = findAssistantReply(messages, promptMessageID);
-        if (reply) {
-          return reply;
-        }
-        if (hasPromptMessage(messages, promptMessageID)) {
-          promptQueued = true;
-        }
-      }
-    } catch (error51) {
-      if (!isTransientOpenCodeError(error51)) {
-        throw error51;
-      }
-    }
-    await delay(ASYNC_PROMPT_POLL_INTERVAL_MS);
-  }
-  throw new Error(`Timed out waiting for OpenCode session ${sessionID} reply.`);
+var resolveVariant = (agent) => {
+  return typeof agent.variant === "string" && agent.variant.length > 0 ? agent.variant : undefined;
 };
 function createOpenCodeNode(name, agent = {}, options = {}) {
   const connection = createConnectionLoader(name, agent, options);
   const model = resolveModel(agent, options.model);
+  const variant = resolveVariant(agent);
   const system = options.system ?? agent.prompt;
   const tools = options.tools ?? agent.tools;
   const invoke = async (state, runtime) => {
     const seen = getOpenCodeCursor(state.opencode, name) ?? 0;
     const count = seen > state.messages.length ? 0 : seen;
     const next = state.messages.slice(count);
+    const lastReplyID = getLatestWorkflowReplyID(state.messages, name);
     if (next.length === 0) {
       return {};
     }
@@ -61006,24 +63222,21 @@ function createOpenCodeNode(name, agent = {}, options = {}) {
     }
     const sdk = await connection.load(runtime);
     const parentID = getRuntimeContextValue(runtime, "parentSessionID") ?? options.parentID;
-    const sessionID = getOpenCodeSessionID(state.opencode, name) ?? unwrapResult(await sdk.client.session.create({
-      body: {
-        parentID,
-        title: options.title ?? name
-      },
+    const existingSessionID = getOpenCodeSessionID(state.opencode, name);
+    const sessionID = existingSessionID ?? unwrapResult(await sdk.client.session.create({
+      parentID,
+      title: options.title ?? name
+    }, {
       responseStyle: "data",
       throwOnError: true
     })).id;
-    const promptMessageID = createPromptMessageID();
-    const submitPrompt = async () => {
-      await sdk.client.session.promptAsync({
-        path: {
-          id: sessionID
-        },
-        body: {
-          messageID: promptMessageID,
+    const reply = (existingSessionID ? await tryReconnectToExistingPrompt(sdk, sessionID, prompt, lastReplyID) : undefined) ?? await (async () => {
+      try {
+        return unwrapResult(await sdk.client.session.prompt({
+          sessionID,
           ...sdk.named ? { agent: name } : {},
           model,
+          variant,
           system,
           tools: tools ? { ...tools } : undefined,
           parts: [
@@ -61032,12 +63245,18 @@ function createOpenCodeNode(name, agent = {}, options = {}) {
               text: prompt
             }
           ]
-        },
-        responseStyle: "data",
-        throwOnError: true
-      });
-    };
-    const reply = await waitForAssistantReply(sdk.client, sessionID, submitPrompt, promptMessageID);
+        }, {
+          responseStyle: "data",
+          throwOnError: true
+        }));
+      } catch (error51) {
+        try {
+          return await waitForPromptReply(sdk, sessionID, prompt, lastReplyID, false);
+        } catch {
+          throw error51;
+        }
+      }
+    })();
     if (reply.info.error) {
       const errorData = reply.info.error.data;
       const message = typeof errorData === "object" && errorData !== null && "message" in errorData && typeof errorData.message === "string" ? errorData.message : reply.info.error.name;
@@ -61065,6 +63284,7 @@ var commonTools = {
   grep: true,
   list: true,
   read: true,
+  webfetch: true,
   task: true
 };
 var commonPermission = {
@@ -61073,20 +63293,31 @@ var commonPermission = {
   grep: "allow",
   list: "allow",
   read: "allow",
+  webfetch: "allow",
   task: {
     explore: "allow"
   }
 };
-var createWorkflowAgentConfig = (canEdit) => {
+var commonSkillPermissions = {
+  "*": "deny"
+};
+var createWorkflowAgentConfig = (canEdit, skillPermissions = {}) => {
+  const resolvedSkillPermissions = {
+    ...commonSkillPermissions,
+    ...skillPermissions
+  };
+  const canUseSkillTool = Object.values(resolvedSkillPermissions).some((permission) => permission !== "deny");
   return {
     model: "openai/gpt-5.4",
     permission: {
       ...commonPermission,
-      edit: canEdit ? "allow" : "deny"
+      edit: canEdit ? "allow" : "deny",
+      skill: resolvedSkillPermissions
     },
     tools: {
       ...commonTools,
-      edit: canEdit
+      edit: canEdit,
+      skill: canUseSkillTool
     }
   };
 };
@@ -61114,11 +63345,10 @@ var agents = {
 };
 var shared = [text("snippets/bun-pm-node-runtime.txt")];
 var clean = text("snippets/clean-code-ts.txt");
-var tdd = text("snippets/test-driven-development.txt");
 var agentPrompts = {
   planner: blocks2(agents.planner, ...shared),
   planReviewer: blocks2(agents.planReviewer, ...shared),
-  coder: blocks2(agents.coder, clean, tdd, ...shared),
+  coder: blocks2(agents.coder, clean, ...shared),
   codeReviewer: blocks2(agents.codeReviewer, clean, ...shared)
 };
 
@@ -61137,7 +63367,8 @@ var workflowAgentDefinitions = {
   coder: {
     name: "coder",
     canEdit: true,
-    prompt: agentPrompts.coder
+    prompt: agentPrompts.coder,
+    skillPermissions: { tdd: "allow" }
   },
   codeReviewer: {
     name: "code-reviewer",
@@ -61145,19 +63376,16 @@ var workflowAgentDefinitions = {
     prompt: agentPrompts.codeReviewer
   }
 };
+var createWorkflowAgentNode = (definition) => {
+  return createOpenCodeNode(definition.name, createWorkflowAgentConfig(definition.canEdit, definition.skillPermissions), {
+    system: definition.prompt
+  });
+};
 var workflowAgentNodes = {
-  planner: createOpenCodeNode(workflowAgentDefinitions.planner.name, createWorkflowAgentConfig(workflowAgentDefinitions.planner.canEdit), {
-    system: workflowAgentDefinitions.planner.prompt
-  }),
-  planReviewer: createOpenCodeNode(workflowAgentDefinitions.planReviewer.name, createWorkflowAgentConfig(workflowAgentDefinitions.planReviewer.canEdit), {
-    system: workflowAgentDefinitions.planReviewer.prompt
-  }),
-  coder: createOpenCodeNode(workflowAgentDefinitions.coder.name, createWorkflowAgentConfig(workflowAgentDefinitions.coder.canEdit), {
-    system: workflowAgentDefinitions.coder.prompt
-  }),
-  codeReviewer: createOpenCodeNode(workflowAgentDefinitions.codeReviewer.name, createWorkflowAgentConfig(workflowAgentDefinitions.codeReviewer.canEdit), {
-    system: workflowAgentDefinitions.codeReviewer.prompt
-  })
+  planner: createWorkflowAgentNode(workflowAgentDefinitions.planner),
+  planReviewer: createWorkflowAgentNode(workflowAgentDefinitions.planReviewer),
+  coder: createWorkflowAgentNode(workflowAgentDefinitions.coder),
+  codeReviewer: createWorkflowAgentNode(workflowAgentDefinitions.codeReviewer)
 };
 
 // src/shared/reducers.ts

@@ -6,8 +6,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "build": "bun scripts/build.js",
     "clean": "rm -rf dist",
+    "build": "bun scripts/build.js",
+    "build:mawm": "bun clean && bun run build && mawm update -g coding",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "lint": "eslint src",
