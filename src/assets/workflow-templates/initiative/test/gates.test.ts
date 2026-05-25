@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { implementationGate, planningGate } from "../src/graph/gates.ts";
 
 describe("initiative template gates", () => {
@@ -57,7 +57,7 @@ describe("initiative template gates", () => {
                 planningSummary: undefined,
                 runSpecPath: "run.md",
                 selectedRunLabel: "Run 1",
-                verificationSummary: "Planned verification commands:\n- bun test",
+                verificationSummary: "Planned verification commands:\n- bun run test",
             },
             {
                 interrupt: () => ({
@@ -71,7 +71,7 @@ describe("initiative template gates", () => {
         expect(command.update).toEqual({
             finalStatus: "completed",
             verificationSummary:
-                "Planned verification commands:\n- bun test\n\nManual smoke verification: Confirmed in the browser.",
+                "Planned verification commands:\n- bun run test\n\nManual smoke verification: Confirmed in the browser.",
         });
     });
 });

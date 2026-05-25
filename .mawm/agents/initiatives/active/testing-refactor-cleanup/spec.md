@@ -36,7 +36,7 @@
 
 ### Run 1: Vitest foundation and root test support (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/testing-refactor-cleanup/runs/active/vitest-foundation/spec.md`
 - Task:
   - Introduce Vitest for repo-root testing, add shared fixtures/support utilities, and migrate the current root suite under `test/**` off `bun:test` without doing the deeper scope-pruning work yet.
@@ -67,7 +67,7 @@
 
 ### Run 2: Root supported-behavior suite cleanup (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/testing-refactor-cleanup/runs/active/root-supported-behavior-suite-cleanup/spec.md`
 - Task:
   - Audit and trim the repo-root suite so retained non-template tests assert only current supported behavior and use the shared fixtures/support from run 1.
@@ -97,7 +97,7 @@
 
 ### Run 3: Workflow-template test cleanup and Vitest migration (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/testing-refactor-cleanup/runs/active/workflow-template-test-cleanup-and-vitest-migration/spec.md`
 - Task:
   - Clean up workflow-template coverage, migrate workflow-template asset tests to Vitest, and keep only current supported template behavior while leaving excluded example workflow tests unchanged.

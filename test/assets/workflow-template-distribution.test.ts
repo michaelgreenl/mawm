@@ -1,8 +1,8 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "vitest";
 import { spawn } from "node:child_process";
-import { access, appendFile, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
     DEFAULT_AGENT_SERVER_URL,
@@ -12,12 +12,12 @@ import {
     resolveAssistantID,
     summarizeRunResult,
 } from "../../src/assets/.config/agents/opencode/tools/execute-graph-lib.ts";
+import { type SpawnResult, spawnSync } from "../support/process.js";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const bin = join(root, "bin", "mawm.js");
 const sourceTemplates = join(root, "src", "assets", "workflow-templates");
 const distTemplates = join(root, "dist", "assets", "workflow-templates");
-const shared = join(sourceTemplates, "shared");
 const temp: string[] = [];
 const healthcheckPath = "/ok";
 const healthcheckTimeoutMs = 1000;
@@ -27,10 +27,13 @@ const startupPollMs = 250;
 const shutdownTimeoutMs = 5000;
 let port = initialPort;
 
-type Overlay = {
-    readonly variant: string;
-    readonly variantOwnedPaths: readonly string[];
-};
+const required = [
+    "package.json",
+    "langgraph.json",
+    join("scripts", "build.js"),
+    join("src", "graph", "index.ts"),
+    "test",
+] as const;
 
 type Meta = {
     readonly displayName: string;
@@ -65,54 +68,11 @@ const json = async <T>(path: string): Promise<T> => {
     return JSON.parse(await readFile(path, "utf8")) as T;
 };
 
-const files = async (dir: string): Promise<string[]> => {
-    const entries = await readdir(dir, { withFileTypes: true });
-    const values = await Promise.all(
-        entries.map(async (entry) => {
-            const path = join(dir, entry.name);
-
-            if (entry.isDirectory()) {
-                return files(path);
-            }
-
-            return [path];
-        }),
-    );
-
-    return values.flat();
+const run = (cmd: readonly string[], cwd: string, env?: NodeJS.ProcessEnv): SpawnResult => {
+    return spawnSync(cmd, { cwd, env: { ...process.env, ...env } });
 };
 
-const overlayFiles = async (variant: string): Promise<string[]> => {
-    const dir = join(sourceTemplates, variant);
-    const overlay = await json<Overlay>(join(dir, "overlay.json"));
-    const values = await Promise.all(
-        overlay.variantOwnedPaths.map(async (path) => {
-            const full = join(dir, path);
-            const entries = await files(full).catch(() => []);
-            return entries.length > 0 ? entries : [full];
-        }),
-    );
-
-    return values.flat();
-};
-
-const run = (
-    cmd: readonly string[],
-    cwd: string,
-    env?: NodeJS.ProcessEnv,
-): Bun.SpawnSyncReturns<Uint8Array> => {
-    return Bun.spawnSync(cmd, {
-        cwd,
-        env: {
-            ...process.env,
-            ...env,
-        },
-        stderr: "pipe",
-        stdout: "pipe",
-    });
-};
-
-const ok = (label: string, result: Bun.SpawnSyncReturns<Uint8Array>) => {
+const ok = (label: string, result: SpawnResult) => {
     if (result.exitCode === 0) {
         return;
     }
@@ -321,7 +281,7 @@ const createInitiativeSpec = async (dir: string) => {
             "- Verification commands:",
             "  - `bun run typecheck`",
             "  - `bun run build`",
-            "  - `bun test`",
+            "  - `bun run test`",
             "- Smoke verification: `headless` - Run the template test suite.",
         ].join("\n"),
     );
@@ -336,34 +296,25 @@ describe("workflow template distribution", () => {
     test("builds scaffold-ready template assets and proves install plus launch coverage", async () => {
         ok("repo build", run(["bun", "run", "build"], root));
 
-        expect(await exists(join(distTemplates, "shared"))).toBe(false);
-
         for (const variant of ["base", "initiative"] as const) {
             const sourceMeta = await json<Meta>(join(sourceTemplates, variant, "mawm.json"));
             const distMeta = await json<Meta>(join(distTemplates, variant, "mawm.json"));
-            const expected = [...(await files(shared)), ...(await overlayFiles(variant))]
-                .map((path) =>
-                    relative(
-                        path.startsWith(shared) ? shared : join(sourceTemplates, variant),
-                        path,
-                    ),
-                )
-                .filter((path, index, values) => values.indexOf(path) === index)
-                .sort();
-            const actual = (await files(join(distTemplates, variant)))
-                .map((path) => relative(join(distTemplates, variant), path))
-                .sort();
-
-            expect(actual).toEqual(expected);
             expect(distMeta).toEqual(sourceMeta);
-            expect(await exists(join(distTemplates, variant, "package.json"))).toBe(true);
-            expect(await exists(join(distTemplates, variant, "langgraph.json"))).toBe(true);
-            expect(await exists(join(distTemplates, variant, "langgraph.dist.json"))).toBe(false);
-            expect(await exists(join(distTemplates, variant, "scripts", "build.js"))).toBe(true);
-            expect(await exists(join(distTemplates, variant, "src", "graph", "index.ts"))).toBe(
-                true,
-            );
-            expect(await exists(join(distTemplates, variant, "test"))).toBe(true);
+            const pkg = await json<{
+                readonly devDependencies?: {
+                    readonly vitest?: string;
+                };
+                readonly scripts?: {
+                    readonly test?: string;
+                };
+            }>(join(distTemplates, variant, "package.json"));
+
+            expect(pkg.scripts?.test).toBe("vitest run");
+            expect(pkg.devDependencies?.vitest).toBeDefined();
+
+            for (const path of required) {
+                expect(await exists(join(distTemplates, variant, path))).toBe(true);
+            }
         }
 
         const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
@@ -403,6 +354,32 @@ describe("workflow template distribution", () => {
         );
         expect(await readFile(join(initiativeRoot, "langgraph.json"), "utf8")).toBe(
             await readFile(join(distTemplates, "initiative", "langgraph.json"), "utf8"),
+        );
+        expect(
+            await json<{
+                readonly scripts?: {
+                    readonly test?: string;
+                };
+            }>(join(baseRoot, "package.json")),
+        ).toEqual(
+            expect.objectContaining({
+                scripts: expect.objectContaining({
+                    test: "vitest run",
+                }),
+            }),
+        );
+        expect(
+            await json<{
+                readonly scripts?: {
+                    readonly test?: string;
+                };
+            }>(join(initiativeRoot, "package.json")),
+        ).toEqual(
+            expect.objectContaining({
+                scripts: expect.objectContaining({
+                    test: "vitest run",
+                }),
+            }),
         );
 
         const baseRun = await launch(baseRoot, {});

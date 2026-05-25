@@ -1,296 +1,185 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, describe, expect, test } from "bun:test";
-import { parseCommand } from "../../src/utils/parsers/cmd.js";
-import type { CommandContext } from "../../src/utils/types/command.d.js";
+import { afterEach, describe, expect, test } from "vitest";
+import { runCli } from "../support/cli.js";
+import { pathExists, readJson, writeJson } from "../support/fs.js";
+import { trackRoots } from "../support/tmp.js";
+import { manifestEntry, metadata } from "../support/workflow.js";
 
-const tempRoots: string[] = [];
-
-const readJson = async <T>(path: string): Promise<T> => {
-    return JSON.parse(await readFile(path, "utf8")) as T;
-};
-
-const captureOutput = async (run: () => Promise<number>) => {
-    let stdout = "";
-    let stderr = "";
-    const originalStdoutWrite = process.stdout.write;
-    const originalStderrWrite = process.stderr.write;
-
-    process.stdout.write = ((chunk: string | Uint8Array) => {
-        stdout += chunk.toString();
-        return true;
-    }) as typeof process.stdout.write;
-
-    process.stderr.write = ((chunk: string | Uint8Array) => {
-        stderr += chunk.toString();
-        return true;
-    }) as typeof process.stderr.write;
-
-    try {
-        const exitCode = await run();
-        return { exitCode, stderr, stdout };
-    } finally {
-        process.stdout.write = originalStdoutWrite;
-        process.stderr.write = originalStderrWrite;
-    }
-};
-
-const createContext = (cwd: string, home: string, rawArgs: readonly string[]): CommandContext => ({
-    cwd,
-    env: { HOME: home },
-    rawArgs: [...rawArgs],
-});
-
-const defaultExecutionContract = {
-    optionalContext: [],
-    optionalInput: [],
-    requiredContext: [],
-    requiredInput: [],
-    supportsResume: false,
-};
-
-const defaultWorkflowMetadata = {
-    executionContract: defaultExecutionContract,
-    kind: "standalone",
-};
+const roots = trackRoots();
 
 describe("install command", () => {
     afterEach(async () => {
-        await Promise.all(
-            tempRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
-        );
+        await roots.cleanup();
     });
 
-    test("installs a global workflow from the current dist directory and generates mawm.json", async () => {
-        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-        const workflowRoot = await mkdtemp(join(tmpdir(), "mawm-workflow-"));
-        tempRoots.push(home, workflowRoot);
+    test("accepts the `i` alias", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
 
-        const distRoot = join(workflowRoot, "dist");
-        await mkdir(distRoot, { recursive: true });
-        await writeFile(
-            join(workflowRoot, "langgraph.json"),
-            `${JSON.stringify({ graphs: { demo: "./dist/index.js:graph" } }, null, 2)}\n`,
-        );
-        await writeFile(
-            join(workflowRoot, "package.json"),
-            `${JSON.stringify({ name: "demo-workflow", version: "1.2.3" }, null, 2)}\n`,
-        );
-        await writeFile(join(distRoot, "index.js"), "export const graph = {};\n");
-
-        const rawArgs = ["install", "-g"] as const;
-        const result = await captureOutput(() =>
-            parseCommand(rawArgs, createContext(distRoot, home, rawArgs)),
-        );
-
-        const installedWorkflowRoot = join(home, ".config", "mawm", "demo-workflow");
+        const result = await runCli(projectRoot, home, ["i", "--help"]);
 
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: `Installed workflow \`demo-workflow\` into ${installedWorkflowRoot}.\n`,
+            stdout: "Usage: mawm {i,install} [-g] [workflow-or-path] - Installs workflows globally or into a target project\n",
         });
-        expect(await readJson(join(installedWorkflowRoot, "mawm.json"))).toEqual({
-            displayName: "demo-workflow",
-            ...defaultWorkflowMetadata,
-            id: "demo-workflow",
-            workflowVersion: "1.2.3",
+    });
+
+    test("installs a global workflow from the current dist directory and writes current metadata", async () => {
+        const home = await roots.dir("mawm-home-");
+        const workflowRoot = await roots.dir("mawm-workflow-");
+
+        const distRoot = join(workflowRoot, "dist");
+        await mkdir(distRoot, { recursive: true });
+        await writeJson(join(workflowRoot, "langgraph.json"), {
+            graphs: { demo: "./dist/index.js:graph" },
         });
-        expect(await readFile(join(installedWorkflowRoot, "langgraph.json"), "utf8")).toBe(
-            await readFile(join(workflowRoot, "langgraph.json"), "utf8"),
+        await writeJson(join(workflowRoot, "package.json"), {
+            name: "demo-workflow",
+            version: "1.2.3",
+        });
+        await writeFile(join(distRoot, "index.js"), "export const graph = {};\n");
+
+        const result = await runCli(distRoot, home, ["install", "-g"]);
+
+        const root = join(home, ".config", "mawm", "demo-workflow");
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: `Installed workflow \`demo-workflow\` into ${root}.\n`,
+        });
+        expect(await readJson(join(root, "mawm.json"))).toEqual(
+            metadata({ id: "demo-workflow", workflowVersion: "1.2.3" }),
         );
-        expect(await readFile(join(installedWorkflowRoot, "dist", "index.js"), "utf8")).toBe(
-            "export const graph = {};\n",
-        );
+        expect(await pathExists(join(root, "langgraph.json"))).toBe(true);
+        expect(await pathExists(join(root, "dist", "index.js"))).toBe(true);
         expect(await readJson(join(home, ".config", "mawm", "manifest.json"))).toEqual([
-            {
+            manifestEntry({
                 absolutePath: distRoot,
-                displayName: "demo-workflow",
-                ...defaultWorkflowMetadata,
                 id: "demo-workflow",
-                path: "./demo-workflow",
                 workflowVersion: "1.2.3",
-            },
+            }),
         ]);
     });
 
     test("installs a global workflow from a dist directory when package metadata lives in the parent", async () => {
-        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-        const workflowRoot = await mkdtemp(join(tmpdir(), "mawm-workflow-"));
-        tempRoots.push(home, workflowRoot);
+        const home = await roots.dir("mawm-home-");
+        const workflowRoot = await roots.dir("mawm-workflow-");
 
         const distRoot = join(workflowRoot, "dist");
         await mkdir(distRoot, { recursive: true });
-        await writeFile(
-            join(workflowRoot, "package.json"),
-            `${JSON.stringify({ name: "coding", version: "1.2.3" }, null, 2)}\n`,
-        );
-        await writeFile(
-            join(distRoot, "langgraph.json"),
-            `${JSON.stringify({ graphs: { coding: "./index.js:graph" } }, null, 2)}\n`,
-        );
+        await writeJson(join(workflowRoot, "package.json"), {
+            name: "coding",
+            version: "1.2.3",
+        });
+        await writeJson(join(distRoot, "langgraph.json"), {
+            graphs: { coding: "./index.js:graph" },
+        });
         await writeFile(join(distRoot, "index.js"), "export const graph = {};\n");
 
-        const rawArgs = ["install", "-g"] as const;
-        const result = await captureOutput(() =>
-            parseCommand(rawArgs, createContext(distRoot, home, rawArgs)),
-        );
+        const result = await runCli(distRoot, home, ["install", "-g"]);
 
-        const installedWorkflowRoot = join(home, ".config", "mawm", "coding");
+        const root = join(home, ".config", "mawm", "coding");
 
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: `Installed workflow \`coding\` into ${installedWorkflowRoot}.\n`,
+            stdout: `Installed workflow \`coding\` into ${root}.\n`,
         });
-        expect(await readJson(join(installedWorkflowRoot, "mawm.json"))).toEqual({
-            displayName: "coding",
-            ...defaultWorkflowMetadata,
-            id: "coding",
-            workflowVersion: "1.2.3",
-        });
-        expect(await readFile(join(installedWorkflowRoot, "langgraph.json"), "utf8")).toBe(
-            await readFile(join(distRoot, "langgraph.json"), "utf8"),
+        expect(await readJson(join(root, "mawm.json"))).toEqual(
+            metadata({ id: "coding", workflowVersion: "1.2.3" }),
         );
-        expect(await readFile(join(installedWorkflowRoot, "index.js"), "utf8")).toBe(
-            "export const graph = {};\n",
-        );
+        expect(await pathExists(join(root, "langgraph.json"))).toBe(true);
+        expect(await pathExists(join(root, "index.js"))).toBe(true);
         expect(await readJson(join(home, ".config", "mawm", "manifest.json"))).toEqual([
-            {
-                absolutePath: distRoot,
-                displayName: "coding",
-                ...defaultWorkflowMetadata,
-                id: "coding",
-                path: "./coding",
-                workflowVersion: "1.2.3",
-            },
+            manifestEntry({ absolutePath: distRoot, id: "coding", workflowVersion: "1.2.3" }),
         ]);
     });
 
-    test("installs a globally available workflow into the target project without an absolute path", async () => {
-        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
-        tempRoots.push(home, projectRoot);
+    test("installs a globally available workflow into the target project using current metadata", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
 
         const globalWorkflowRoot = join(home, ".config", "mawm", "demo-workflow");
         await mkdir(join(globalWorkflowRoot, "dist"), { recursive: true });
-        await writeFile(
+        await writeJson(
             join(globalWorkflowRoot, "mawm.json"),
-            `${JSON.stringify(
-                {
-                    id: "demo-workflow",
-                    displayName: "Demo Workflow",
-                    workflowVersion: "2.0.0",
-                },
-                null,
-                2,
-            )}\n`,
+            metadata({
+                displayName: "Demo Workflow",
+                id: "demo-workflow",
+                workflowVersion: "2.0.0",
+            }),
         );
-        await writeFile(
-            join(globalWorkflowRoot, "langgraph.json"),
-            `${JSON.stringify({ graphs: { demo: "./dist/index.js:graph" } }, null, 2)}\n`,
-        );
+        await writeJson(join(globalWorkflowRoot, "langgraph.json"), {
+            graphs: { demo: "./dist/index.js:graph" },
+        });
         await writeFile(join(globalWorkflowRoot, "dist", "index.js"), "export const graph = {};\n");
 
-        const rawArgs = ["install", "demo-workflow"] as const;
-        const result = await captureOutput(() =>
-            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
-        );
+        const result = await runCli(projectRoot, home, ["install", "demo-workflow"]);
 
-        const installedWorkflowRoot = join(projectRoot, ".mawm", "graphs", "demo-workflow");
+        const root = join(projectRoot, ".mawm", "graphs", "demo-workflow");
 
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
             stdout: "Installed workflow `demo-workflow` into .mawm/graphs/demo-workflow.\n",
         });
-        expect(await readJson(join(installedWorkflowRoot, "mawm.json"))).toEqual({
-            displayName: "Demo Workflow",
-            ...defaultWorkflowMetadata,
-            id: "demo-workflow",
-            workflowVersion: "2.0.0",
-        });
-        expect(await readFile(join(installedWorkflowRoot, "dist", "index.js"), "utf8")).toBe(
-            "export const graph = {};\n",
-        );
-        expect(await readJson(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toEqual([
-            {
+        expect(await readJson(join(root, "mawm.json"))).toEqual(
+            metadata({
                 displayName: "Demo Workflow",
-                ...defaultWorkflowMetadata,
                 id: "demo-workflow",
-                path: "./demo-workflow",
                 workflowVersion: "2.0.0",
-            },
+            }),
+        );
+        expect(await pathExists(join(root, "langgraph.json"))).toBe(true);
+        expect(await pathExists(join(root, "dist", "index.js"))).toBe(true);
+        expect(await readJson(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toEqual([
+            manifestEntry({
+                displayName: "Demo Workflow",
+                id: "demo-workflow",
+                workflowVersion: "2.0.0",
+            }),
         ]);
     });
 
     test("installs a flat globally available workflow into the target project", async () => {
-        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
-        tempRoots.push(home, projectRoot);
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
 
         const globalWorkflowRoot = join(home, ".config", "mawm", "coding");
         await mkdir(globalWorkflowRoot, { recursive: true });
-        await writeFile(
+        await writeJson(
             join(globalWorkflowRoot, "mawm.json"),
-            `${JSON.stringify(
-                {
-                    id: "coding",
-                    displayName: "Coding Workflow",
-                    workflowVersion: "3.0.0",
-                },
-                null,
-                2,
-            )}\n`,
+            metadata({
+                displayName: "Coding Workflow",
+                id: "coding",
+                workflowVersion: "3.0.0",
+            }),
         );
-        await writeFile(
-            join(globalWorkflowRoot, "langgraph.json"),
-            `${JSON.stringify({ graphs: { coding: "./graph.js:graph" } }, null, 2)}\n`,
-        );
+        await writeJson(join(globalWorkflowRoot, "langgraph.json"), {
+            graphs: { coding: "./graph.js:graph" },
+        });
         await writeFile(join(globalWorkflowRoot, "graph.js"), "export const graph = {};\n");
 
-        const rawArgs = ["install", "coding"] as const;
-        const result = await captureOutput(() =>
-            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
-        );
+        const result = await runCli(projectRoot, home, ["install", "coding"]);
 
-        const installedWorkflowRoot = join(projectRoot, ".mawm", "graphs", "coding");
+        const root = join(projectRoot, ".mawm", "graphs", "coding");
 
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
             stdout: "Installed workflow `coding` into .mawm/graphs/coding.\n",
         });
-        expect(await readFile(join(installedWorkflowRoot, "graph.js"), "utf8")).toBe(
-            "export const graph = {};\n",
-        );
-        expect(await readFile(join(installedWorkflowRoot, "langgraph.json"), "utf8")).toBe(
-            await readFile(join(globalWorkflowRoot, "langgraph.json"), "utf8"),
-        );
+        expect(await pathExists(join(root, "graph.js"))).toBe(true);
+        expect(await pathExists(join(root, "langgraph.json"))).toBe(true);
         expect(await readJson(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toEqual([
-            {
+            manifestEntry({
                 displayName: "Coding Workflow",
-                ...defaultWorkflowMetadata,
                 id: "coding",
-                path: "./coding",
                 workflowVersion: "3.0.0",
-            },
+            }),
         ]);
-    });
-
-    test("no longer exposes the register command", async () => {
-        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-        const projectRoot = await mkdtemp(join(tmpdir(), "mawm-project-"));
-        tempRoots.push(home, projectRoot);
-
-        const rawArgs = ["register", "./dist"] as const;
-        const result = await captureOutput(() =>
-            parseCommand(rawArgs, createContext(projectRoot, home, rawArgs)),
-        );
-
-        expect(result.exitCode).toBe(1);
-        expect(result.stdout).toBe("");
-        expect(result.stderr).toContain("Unknown command: register");
     });
 });

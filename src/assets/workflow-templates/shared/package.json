@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit --module preserve --moduleResolution bundler --target esnext src/graph/index.ts",
-    "test": "bun test",
+    "test": "vitest run",
     "build": "bun scripts/build.js",
     "clean": "rm -rf dist"
   },
@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@types/node": "^24",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }
