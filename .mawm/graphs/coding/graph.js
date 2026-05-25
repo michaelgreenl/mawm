@@ -63095,14 +63095,16 @@ var sliceAfterReply = (messages, lastReplyID) => {
   }
   return messages.slice(index2 + 1);
 };
-var readRelevantSessionMessages = async (sdk, sessionID, lastReplyID, requireAnchor) => {
-  const recent = await readSessionMessages(sdk, sessionID, SESSION_MESSAGE_LIMIT);
-  const recentSlice = sliceAfterReply(recent, lastReplyID);
-  if (recentSlice) {
-    return recentSlice;
-  }
-  if (!lastReplyID) {
-    return recent;
+var readRelevantSessionMessages = async (sdk, sessionID, lastReplyID, requireAnchor, options = {}) => {
+  if (!options.forceComplete) {
+    const recent = await readSessionMessages(sdk, sessionID, SESSION_MESSAGE_LIMIT);
+    const recentSlice = sliceAfterReply(recent, lastReplyID);
+    if (recentSlice) {
+      return recentSlice;
+    }
+    if (!lastReplyID) {
+      return recent;
+    }
   }
   const complete = await readSessionMessages(sdk, sessionID);
   const completeSlice = sliceAfterReply(complete, lastReplyID);
@@ -63121,9 +63123,7 @@ var inspectPromptSnapshot = (messages, prompt) => {
       continue;
     }
     if (flattenOpenCodePrompt(message.parts) !== prompt) {
-      return {
-        hasMatchingUser: false
-      };
+      continue;
     }
     for (let replyIndex = messages.length - 1;replyIndex > index2; replyIndex -= 1) {
       const reply = messages[replyIndex];
@@ -63168,9 +63168,17 @@ var flattenOpenCodePrompt = (parts) => {
 };
 var waitForPromptReply = async (sdk, sessionID, prompt, lastReplyID, requireAnchor) => {
   let idlePolls = 0;
+  let useCompleteHistory = false;
   while (true) {
-    const messages = await readRelevantSessionMessages(sdk, sessionID, lastReplyID, requireAnchor);
-    const snapshot = messages ? inspectPromptSnapshot(messages, prompt) : { hasMatchingUser: false };
+    const readMessages = async () => {
+      const result = await readRelevantSessionMessages(sdk, sessionID, lastReplyID, requireAnchor, { forceComplete: useCompleteHistory });
+      return result ? inspectPromptSnapshot(result, prompt) : { hasMatchingUser: false };
+    };
+    let snapshot = await readMessages();
+    if (!useCompleteHistory && !snapshot.hasMatchingUser) {
+      useCompleteHistory = true;
+      snapshot = await readMessages();
+    }
     if (snapshot.reply) {
       return snapshot.reply;
     }
@@ -63251,33 +63259,30 @@ function createOpenCodeNode(name, agent = {}, options = {}) {
       responseStyle: "data",
       throwOnError: true
     })).id;
-    const reply = (existingSessionID ? await tryReconnectToExistingPrompt(sdk, sessionID, prompt, lastReplyID) : undefined) ?? await (async () => {
-      try {
-        return unwrapResult(await sdk.client.session.prompt({
-          sessionID,
-          ...sdk.named ? { agent: name } : {},
-          model,
-          variant,
-          system,
-          tools: tools ? { ...tools } : undefined,
-          parts: [
-            {
-              type: "text",
-              text: prompt
-            }
-          ]
-        }, {
-          responseStyle: "data",
-          throwOnError: true
-        }));
-      } catch (error51) {
-        try {
-          return await waitForPromptReply(sdk, sessionID, prompt, lastReplyID, false);
-        } catch {
-          throw error51;
-        }
-      }
-    })();
+    const reconnected = existingSessionID ? await tryReconnectToExistingPrompt(sdk, sessionID, prompt, lastReplyID) : undefined;
+    let reply;
+    if (reconnected) {
+      reply = reconnected;
+    } else {
+      await sdk.client.session.promptAsync({
+        sessionID,
+        ...sdk.named ? { agent: name } : {},
+        model,
+        variant,
+        system,
+        tools: tools ? { ...tools } : undefined,
+        parts: [
+          {
+            type: "text",
+            text: prompt
+          }
+        ]
+      }, {
+        responseStyle: "data",
+        throwOnError: true
+      });
+      reply = await waitForPromptReply(sdk, sessionID, prompt, lastReplyID, false);
+    }
     if (reply.info.error) {
       const errorData = reply.info.error.data;
       const message = typeof errorData === "object" && errorData !== null && "message" in errorData && typeof errorData.message === "string" ? errorData.message : reply.info.error.name;
