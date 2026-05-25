@@ -63026,6 +63026,21 @@ var createOpenCodeReplyMessage = (name, reply, sessionID) => {
 var SESSION_MESSAGE_LIMIT = 32;
 var RECONNECT_POLL_INTERVAL_MS = 250;
 var MAX_IDLE_POLLS = 4;
+var NON_TERMINAL_FINISH_REASONS = new Set([
+  "tool-calls",
+  "tool_calls",
+  "function-call",
+  "function_call"
+]);
+var isReplyFinished = (info) => {
+  if (info.error) {
+    return true;
+  }
+  if (typeof info.finish !== "string" || info.finish.length === 0) {
+    return false;
+  }
+  return !NON_TERMINAL_FINISH_REASONS.has(info.finish);
+};
 var unwrapResult = (value) => {
   if (typeof value === "object" && value !== null && "data" in value) {
     return value.data;
@@ -63115,15 +63130,21 @@ var inspectPromptSnapshot = (messages, prompt) => {
       if (!reply) {
         continue;
       }
-      if (reply.info.role === "assistant" && reply.info.parentID === message.info.id) {
+      if (reply.info.role !== "assistant" || reply.info.parentID !== message.info.id) {
+        continue;
+      }
+      if (!isReplyFinished(reply.info)) {
         return {
-          hasMatchingUser: true,
-          reply: {
-            info: reply.info,
-            parts: reply.parts
-          }
+          hasMatchingUser: true
         };
       }
+      return {
+        hasMatchingUser: true,
+        reply: {
+          info: reply.info,
+          parts: reply.parts
+        }
+      };
     }
     return {
       hasMatchingUser: true

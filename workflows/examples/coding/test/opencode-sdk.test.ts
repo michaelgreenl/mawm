@@ -419,7 +419,7 @@ describe("OpenCode SDK node", () => {
                     info: {
                         cost: undefined,
                         error: undefined,
-                        finish: undefined,
+                        finish: "stop",
                         id: "reply-1",
                         modelID: undefined,
                         parentID: "user-0",
@@ -446,7 +446,7 @@ describe("OpenCode SDK node", () => {
                     info: {
                         cost: undefined,
                         error: undefined,
-                        finish: undefined,
+                        finish: "stop",
                         id: "reply-2",
                         modelID: undefined,
                         parentID: "user-2",
@@ -521,7 +521,7 @@ describe("OpenCode SDK node", () => {
                     info: {
                         cost: undefined,
                         error: undefined,
-                        finish: undefined,
+                        finish: "stop",
                         id: "reply-timeout",
                         modelID: undefined,
                         parentID: "user-1",
@@ -560,5 +560,94 @@ describe("OpenCode SDK node", () => {
         expect(result.messages?.[0]?.content).toBe("done");
         expect(sessionPrompt).toHaveBeenCalledTimes(1);
         expect(sessionMessages).toHaveBeenCalledTimes(1);
+    });
+
+    test("waits past intermediate tool-call steps for the terminal reply after a prompt timeout", async () => {
+        resetSdkMocks();
+
+        sessionPrompt.mockImplementationOnce(() =>
+            Promise.reject(new Error("Request timed out after 300000ms")),
+        );
+
+        const intermediateSnapshot = [
+            {
+                info: {
+                    id: "user-1",
+                    role: "user",
+                    time: {
+                        created: 1,
+                    },
+                },
+                parts: [{ text: "User:\nPlan this run." }],
+            },
+            {
+                info: {
+                    cost: undefined,
+                    error: undefined,
+                    finish: "tool-calls",
+                    id: "reply-tool-step",
+                    modelID: undefined,
+                    parentID: "user-1",
+                    providerID: undefined,
+                    role: "assistant",
+                    time: {
+                        created: 2,
+                    },
+                    tokens: undefined,
+                },
+                parts: [],
+            },
+        ];
+        const terminalSnapshot = [
+            ...intermediateSnapshot,
+            {
+                info: {
+                    cost: undefined,
+                    error: undefined,
+                    finish: "stop",
+                    id: "reply-final",
+                    modelID: undefined,
+                    parentID: "user-1",
+                    providerID: undefined,
+                    role: "assistant",
+                    time: {
+                        created: 3,
+                    },
+                    tokens: undefined,
+                },
+                parts: [{ text: "done" }],
+            },
+        ];
+
+        sessionMessages.mockImplementationOnce(() => Promise.resolve(intermediateSnapshot));
+        sessionStatus.mockImplementationOnce(() =>
+            Promise.resolve({ "session-1": { type: "busy" } }),
+        );
+        sessionMessages.mockImplementationOnce(() => Promise.resolve(terminalSnapshot));
+
+        const node = createOpenCodeNode(
+            "planner",
+            {},
+            {
+                authHeader: "Basic test-token",
+            },
+        );
+
+        const result = await node(
+            {
+                messages: [new HumanMessage({ content: "Plan this run." })],
+            },
+            {
+                context: {
+                    opencodeBaseUrl: "http://127.0.0.1:4096",
+                    targetRepoPath: "/repo",
+                },
+            },
+        );
+
+        expect(result.messages?.[0]?.content).toBe("done");
+        expect(result.messages?.[0]?.id).toBe("reply-final");
+        expect(sessionMessages).toHaveBeenCalledTimes(2);
+        expect(sessionStatus).toHaveBeenCalledTimes(1);
     });
 });

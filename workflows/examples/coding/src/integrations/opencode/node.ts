@@ -46,6 +46,36 @@ type PromptSnapshot = {
 const SESSION_MESSAGE_LIMIT = 32;
 const RECONNECT_POLL_INTERVAL_MS = 250;
 const MAX_IDLE_POLLS = 4;
+const NON_TERMINAL_FINISH_REASONS: ReadonlySet<string> = new Set([
+    "tool-calls",
+    "tool_calls",
+    "function-call",
+    "function_call",
+]);
+
+/**
+ * Determines whether an assistant reply has reached a terminal state.
+ *
+ * A reply is terminal when OpenCode has stamped a finish reason that is not
+ * an intermediate tool/function step, or when the reply carries an error from
+ * the server. Replies still in flight (`finish` unset) and intermediate
+ * tool-call steps are treated as in-progress so the workflow keeps waiting
+ * for the final assistant turn.
+ *
+ * @param info - The reply info payload to inspect.
+ * @returns Whether the reply represents a completed assistant turn.
+ */
+const isReplyFinished = (info: OpenCodeReply["info"]): boolean => {
+    if (info.error) {
+        return true;
+    }
+
+    if (typeof info.finish !== "string" || info.finish.length === 0) {
+        return false;
+    }
+
+    return !NON_TERMINAL_FINISH_REASONS.has(info.finish);
+};
 
 /**
  * Unwraps SDK responses that may or may not be wrapped in a `data` field.
@@ -128,17 +158,20 @@ const readSessionMessages = async (
     limit?: number,
 ): Promise<readonly OpenCodeSessionMessage[]> => {
     const messages = unwrapResult(
-        (await sdk.client.session.messages({
-            sessionID,
-            ...(typeof limit === "number"
-                ? {
-                      limit,
-                  }
-                : {}),
-        }, {
-            responseStyle: "data",
-            throwOnError: true,
-        })) as Result<OpenCodeSessionMessage[]>,
+        (await sdk.client.session.messages(
+            {
+                sessionID,
+                ...(typeof limit === "number"
+                    ? {
+                          limit,
+                      }
+                    : {}),
+            },
+            {
+                responseStyle: "data",
+                throwOnError: true,
+            },
+        )) as Result<OpenCodeSessionMessage[]>,
     );
 
     return sortSessionMessages(messages);
@@ -260,15 +293,27 @@ const inspectPromptSnapshot = (
                 continue;
             }
 
-            if (reply.info.role === "assistant" && reply.info.parentID === message.info.id) {
+            if (reply.info.role !== "assistant" || reply.info.parentID !== message.info.id) {
+                continue;
+            }
+
+            if (!isReplyFinished(reply.info)) {
+                // The most recent assistant reply is an in-progress step (for
+                // example, a tool-call turn that has more steps to come). Treat
+                // the session as still running so the caller keeps polling for
+                // the terminal reply instead of accepting an intermediate one.
                 return {
                     hasMatchingUser: true,
-                    reply: {
-                        info: reply.info,
-                        parts: reply.parts,
-                    },
                 };
             }
+
+            return {
+                hasMatchingUser: true,
+                reply: {
+                    info: reply.info,
+                    parts: reply.parts,
+                },
+            };
         }
 
         return {
@@ -477,13 +522,16 @@ export function createOpenCodeNode<
         const sessionID =
             existingSessionID ??
             unwrapResult(
-                (await sdk.client.session.create({
-                    parentID,
-                    title: options.title ?? name,
-                }, {
-                    responseStyle: "data",
-                    throwOnError: true,
-                })) as Result<{ id: string }>,
+                (await sdk.client.session.create(
+                    {
+                        parentID,
+                        title: options.title ?? name,
+                    },
+                    {
+                        responseStyle: "data",
+                        throwOnError: true,
+                    },
+                )) as Result<{ id: string }>,
             ).id;
 
         const reply =
@@ -493,23 +541,26 @@ export function createOpenCodeNode<
             (await (async () => {
                 try {
                     return unwrapResult(
-                        (await sdk.client.session.prompt({
-                            sessionID,
-                            ...(sdk.named ? { agent: name } : {}),
-                            model,
-                            variant,
-                            system,
-                            tools: tools ? { ...tools } : undefined,
-                            parts: [
-                                {
-                                    type: "text",
-                                    text: prompt,
-                                },
-                            ],
-                        }, {
-                            responseStyle: "data",
-                            throwOnError: true,
-                        })) as Result<OpenCodeReply>,
+                        (await sdk.client.session.prompt(
+                            {
+                                sessionID,
+                                ...(sdk.named ? { agent: name } : {}),
+                                model,
+                                variant,
+                                system,
+                                tools: tools ? { ...tools } : undefined,
+                                parts: [
+                                    {
+                                        type: "text",
+                                        text: prompt,
+                                    },
+                                ],
+                            },
+                            {
+                                responseStyle: "data",
+                                throwOnError: true,
+                            },
+                        )) as Result<OpenCodeReply>,
                     );
                 } catch (error) {
                     try {
