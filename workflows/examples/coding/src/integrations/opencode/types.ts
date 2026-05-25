@@ -1,6 +1,6 @@
 import type { AIMessage, BaseMessage } from "@langchain/core/messages";
 import type { Runtime } from "@langchain/langgraph";
-import type { AgentConfig, Config, OpencodeClient, ServerOptions } from "@opencode-ai/sdk";
+import type { AgentConfig, Config, OpencodeClient, ServerOptions } from "@opencode-ai/sdk/v2";
 
 export type Model = {
     readonly providerID: string;

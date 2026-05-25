@@ -1,6 +1,6 @@
 import type { BaseMessage } from "@langchain/core/messages";
 import type { Runtime } from "@langchain/langgraph";
-import type { AgentConfig } from "@opencode-ai/sdk";
+import type { AgentConfig } from "@opencode-ai/sdk/v2";
 import { getRuntimeContextValue } from "../../shared/runtime-context.js";
 import { createConnectionLoader, type OpenCodeConnection } from "./connection.js";
 import { getOpenCodeCursor, getOpenCodeSessionID, mergeOpenCodeMemory } from "./memory.js";
@@ -129,16 +129,13 @@ const readSessionMessages = async (
 ): Promise<readonly OpenCodeSessionMessage[]> => {
     const messages = unwrapResult(
         (await sdk.client.session.messages({
-            path: {
-                id: sessionID,
-            },
+            sessionID,
             ...(typeof limit === "number"
                 ? {
-                      query: {
-                          limit,
-                      },
+                      limit,
                   }
                 : {}),
+        }, {
             responseStyle: "data",
             throwOnError: true,
         })) as Result<OpenCodeSessionMessage[]>,
@@ -159,7 +156,7 @@ const readSessionStatus = async (
     sessionID: string,
 ): Promise<OpenCodeSessionStatus | undefined> => {
     const statuses = unwrapResult(
-        (await sdk.client.session.status({
+        (await sdk.client.session.status(undefined, {
             responseStyle: "data",
             throwOnError: true,
         })) as Result<Record<string, OpenCodeSessionStatus>>,
@@ -419,6 +416,18 @@ const resolveModel = (agent: AgentConfig, override: Model | undefined): Model | 
 };
 
 /**
+ * Reads the configured model variant when available.
+ *
+ * @param agent - OpenCode agent configuration.
+ * @returns The configured variant, or `undefined` when unset.
+ */
+const resolveVariant = (agent: AgentConfig): string | undefined => {
+    return typeof agent.variant === "string" && agent.variant.length > 0
+        ? agent.variant
+        : undefined;
+};
+
+/**
  * LangGraph-compatible node backed by a persistent OpenCode session.
  *
  * @param name - Stable node and agent name.
@@ -436,6 +445,7 @@ export function createOpenCodeNode<
 ): OpenCodeNode<State, Context> {
     const connection = createConnectionLoader(name, agent, options);
     const model = resolveModel(agent, options.model);
+    const variant = resolveVariant(agent);
     const system = options.system ?? agent.prompt;
     const tools = options.tools ?? agent.tools;
 
@@ -468,10 +478,9 @@ export function createOpenCodeNode<
             existingSessionID ??
             unwrapResult(
                 (await sdk.client.session.create({
-                    body: {
-                        parentID,
-                        title: options.title ?? name,
-                    },
+                    parentID,
+                    title: options.title ?? name,
+                }, {
                     responseStyle: "data",
                     throwOnError: true,
                 })) as Result<{ id: string }>,
@@ -485,21 +494,19 @@ export function createOpenCodeNode<
                 try {
                     return unwrapResult(
                         (await sdk.client.session.prompt({
-                            path: {
-                                id: sessionID,
-                            },
-                            body: {
-                                ...(sdk.named ? { agent: name } : {}),
-                                model,
-                                system,
-                                tools: tools ? { ...tools } : undefined,
-                                parts: [
-                                    {
-                                        type: "text",
-                                        text: prompt,
-                                    },
-                                ],
-                            },
+                            sessionID,
+                            ...(sdk.named ? { agent: name } : {}),
+                            model,
+                            variant,
+                            system,
+                            tools: tools ? { ...tools } : undefined,
+                            parts: [
+                                {
+                                    type: "text",
+                                    text: prompt,
+                                },
+                            ],
+                        }, {
                             responseStyle: "data",
                             throwOnError: true,
                         })) as Result<OpenCodeReply>,

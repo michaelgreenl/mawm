@@ -5,7 +5,7 @@ import {
     createOpencodeServer,
     type AgentConfig,
     type OpencodeClient,
-} from "@opencode-ai/sdk";
+} from "@opencode-ai/sdk/v2";
 import { getRuntimeContextValue } from "../../shared/runtime-context.js";
 import type { OpenCodeNodeOptions, OpenCodeRuntimeContext } from "./types.js";
 

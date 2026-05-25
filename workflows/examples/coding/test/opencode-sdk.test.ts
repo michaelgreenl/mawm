@@ -88,7 +88,7 @@ const createServer = mock(() =>
     }),
 );
 
-mock.module("@opencode-ai/sdk", () => ({
+mock.module("@opencode-ai/sdk/v2", () => ({
     createOpencodeClient: createClient,
     createOpencodeServer: createServer,
 }));
@@ -224,6 +224,7 @@ describe("OpenCode SDK node", () => {
             "planner",
             {
                 model: "openai/gpt-5.4",
+                variant: "high",
                 tools: {
                     read: true,
                 },
@@ -246,18 +247,18 @@ describe("OpenCode SDK node", () => {
             },
         );
 
-        expect(sessionPrompt.mock.calls[0]?.[0]?.body.agent).toBeUndefined();
+        expect(sessionPrompt.mock.calls[0]?.[0]?.agent).toBeUndefined();
         expect(sessionPrompt.mock.calls[0]?.[0]).toMatchObject({
-            body: {
-                model: {
-                    modelID: "gpt-5.4",
-                    providerID: "openai",
-                },
-                system: "You are the planner.",
-                tools: {
-                    read: true,
-                },
+            model: {
+                modelID: "gpt-5.4",
+                providerID: "openai",
             },
+            sessionID: "session-1",
+            system: "You are the planner.",
+            tools: {
+                read: true,
+            },
+            variant: "high",
         });
     });
 
@@ -325,9 +326,7 @@ describe("OpenCode SDK node", () => {
             });
 
             expect(sessionPrompt.mock.calls[0]?.[0]).toMatchObject({
-                body: {
-                    agent: "planner",
-                },
+                agent: "planner",
             });
         } finally {
             globalThis.fetch = previousFetch;
@@ -358,7 +357,7 @@ describe("OpenCode SDK node", () => {
             },
         );
 
-        expect(sessionCreate.mock.calls[0]?.[0]?.body.parentID).toBe("parent-1");
+        expect(sessionCreate.mock.calls[0]?.[0]?.parentID).toBe("parent-1");
     });
 
     test("reuses existing sessions and only prompts with unseen messages", async () => {
@@ -402,8 +401,8 @@ describe("OpenCode SDK node", () => {
 
         expect(sessionCreate).toHaveBeenCalledTimes(1);
         expect(sessionPrompt).toHaveBeenCalledTimes(2);
-        expect(sessionPrompt.mock.calls[1]?.[0]?.path.id).toBe("session-1");
-        expect(sessionPrompt.mock.calls[1]?.[0]?.body.parts).toEqual([
+        expect(sessionPrompt.mock.calls[1]?.[0]?.sessionID).toBe("session-1");
+        expect(sessionPrompt.mock.calls[1]?.[0]?.parts).toEqual([
             {
                 type: "text",
                 text: "User:\nAdd verification steps.",
