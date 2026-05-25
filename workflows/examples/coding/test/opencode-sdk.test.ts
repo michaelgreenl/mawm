@@ -1,4 +1,4 @@
-import { HumanMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { describe, expect, mock, test } from "bun:test";
 
 /**
@@ -33,6 +33,32 @@ const sessionPrompt = mock(() =>
 );
 
 /**
+ * Mocks OpenCode session message snapshots.
+ *
+ * @returns An empty message list.
+ */
+const sessionMessages = mock(() => Promise.resolve([]));
+
+/**
+ * Mocks OpenCode session status snapshots.
+ *
+ * @returns An empty session status map.
+ */
+const sessionStatus = mock(() => Promise.resolve({}));
+
+/**
+ * Clears SDK-facing mocks between tests.
+ */
+const resetSdkMocks = () => {
+    createClient.mockClear();
+    createServer.mockClear();
+    sessionCreate.mockClear();
+    sessionMessages.mockClear();
+    sessionPrompt.mockClear();
+    sessionStatus.mockClear();
+};
+
+/**
  * Mocks the SDK client factory.
  *
  * @param cfg - Client configuration passed by the node.
@@ -43,7 +69,9 @@ const createClient = mock((cfg: unknown) => {
         cfg,
         session: {
             create: sessionCreate,
+            messages: sessionMessages,
             prompt: sessionPrompt,
+            status: sessionStatus,
         },
     };
 });
@@ -69,10 +97,7 @@ const { createOpenCodeNode } = await import("../src/integrations/opencode/node.t
 
 describe("OpenCode SDK node", () => {
     test("adds auth headers when using the shared server", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const node = createOpenCodeNode(
             "planner",
@@ -105,10 +130,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("adds auth headers when starting an embedded server", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const previousFetch = globalThis.fetch;
         globalThis.fetch = mock(() => Promise.reject(new Error("unreachable"))) as typeof fetch;
@@ -141,10 +163,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("uses a random free port when starting an embedded server by default", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const previousFetch = globalThis.fetch;
         globalThis.fetch = mock(() => Promise.reject(new Error("unreachable"))) as typeof fetch;
@@ -173,10 +192,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("accepts direct responseStyle data payloads from the SDK", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const node = createOpenCodeNode(
             "planner",
@@ -202,10 +218,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("omits workflow-local agent names when using the shared server", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const node = createOpenCodeNode(
             "planner",
@@ -249,10 +262,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("reuses the default shared server when it is already reachable", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const fetchMock = mock(() =>
             Promise.resolve(
@@ -289,10 +299,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("keeps workflow-local agent names when using an embedded server", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const previousFetch = globalThis.fetch;
         globalThis.fetch = mock(() => Promise.reject(new Error("unreachable"))) as typeof fetch;
@@ -328,10 +335,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("passes the parent session id from runtime context when creating a session", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const node = createOpenCodeNode(
             "planner",
@@ -358,10 +362,7 @@ describe("OpenCode SDK node", () => {
     });
 
     test("reuses existing sessions and only prompts with unseen messages", async () => {
-        createClient.mockClear();
-        createServer.mockClear();
-        sessionCreate.mockClear();
-        sessionPrompt.mockClear();
+        resetSdkMocks();
 
         const node = createOpenCodeNode(
             "planner",
@@ -408,5 +409,157 @@ describe("OpenCode SDK node", () => {
                 text: "User:\nAdd verification steps.",
             },
         ]);
+    });
+
+    test("reconnects to an existing completed prompt before sending it again", async () => {
+        resetSdkMocks();
+
+        sessionMessages.mockImplementationOnce(() =>
+            Promise.resolve([
+                {
+                    info: {
+                        cost: undefined,
+                        error: undefined,
+                        finish: undefined,
+                        id: "reply-1",
+                        modelID: undefined,
+                        parentID: "user-0",
+                        providerID: undefined,
+                        role: "assistant",
+                        time: {
+                            created: 1,
+                        },
+                        tokens: undefined,
+                    },
+                    parts: [{ text: "previous" }],
+                },
+                {
+                    info: {
+                        id: "user-2",
+                        role: "user",
+                        time: {
+                            created: 2,
+                        },
+                    },
+                    parts: [{ text: "User:\nAdd verification steps." }],
+                },
+                {
+                    info: {
+                        cost: undefined,
+                        error: undefined,
+                        finish: undefined,
+                        id: "reply-2",
+                        modelID: undefined,
+                        parentID: "user-2",
+                        providerID: undefined,
+                        role: "assistant",
+                        time: {
+                            created: 3,
+                        },
+                        tokens: undefined,
+                    },
+                    parts: [{ text: "done" }],
+                },
+            ]),
+        );
+
+        const node = createOpenCodeNode(
+            "planner",
+            {},
+            {
+                authHeader: "Basic test-token",
+            },
+        );
+
+        const result = await node(
+            {
+                messages: [
+                    new HumanMessage({ content: "Plan this run." }),
+                    new AIMessage({ content: "previous", id: "reply-1", name: "planner" }),
+                    new HumanMessage({ content: "Add verification steps." }),
+                ],
+                opencode: {
+                    cursors: {
+                        planner: 2,
+                    },
+                    sessions: {
+                        planner: "session-1",
+                    },
+                },
+            },
+            {
+                context: {
+                    opencodeBaseUrl: "http://127.0.0.1:4096",
+                    targetRepoPath: "/repo",
+                },
+            },
+        );
+
+        expect(result.messages?.[0]?.content).toBe("done");
+        expect(sessionCreate).not.toHaveBeenCalled();
+        expect(sessionPrompt).not.toHaveBeenCalled();
+    });
+
+    test("returns the completed session reply when the prompt request times out", async () => {
+        resetSdkMocks();
+
+        sessionPrompt.mockImplementationOnce(() =>
+            Promise.reject(new Error("Request timed out after 300000ms")),
+        );
+        sessionMessages.mockImplementationOnce(() =>
+            Promise.resolve([
+                {
+                    info: {
+                        id: "user-1",
+                        role: "user",
+                        time: {
+                            created: 1,
+                        },
+                    },
+                    parts: [{ text: "User:\nPlan this run." }],
+                },
+                {
+                    info: {
+                        cost: undefined,
+                        error: undefined,
+                        finish: undefined,
+                        id: "reply-timeout",
+                        modelID: undefined,
+                        parentID: "user-1",
+                        providerID: undefined,
+                        role: "assistant",
+                        time: {
+                            created: 2,
+                        },
+                        tokens: undefined,
+                    },
+                    parts: [{ text: "done" }],
+                },
+            ]),
+        );
+
+        const node = createOpenCodeNode(
+            "planner",
+            {},
+            {
+                authHeader: "Basic test-token",
+            },
+        );
+
+        const result = await node(
+            {
+                messages: [new HumanMessage({ content: "Plan this run." })],
+            },
+            {
+                context: {
+                    opencodeBaseUrl: "http://127.0.0.1:4096",
+                    targetRepoPath: "/repo",
+                },
+            },
+        );
+
+        expect(result.messages?.[0]?.content).toBe("done");
+        expect(sessionPrompt).toHaveBeenCalledTimes(1);
+        expect(sessionMessages).toHaveBeenCalledTimes(1);
     });
 });
