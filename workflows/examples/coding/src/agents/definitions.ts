@@ -1,11 +1,15 @@
 import { createOpenCodeNode } from "../integrations/opencode/node.js";
-import { createWorkflowAgentConfig } from "./config.js";
+import {
+    createWorkflowAgentConfig,
+    type WorkflowSkillPermissions,
+} from "./config.js";
 import { agentPrompts } from "./prompts.js";
 
 export interface WorkflowAgentDefinition {
     readonly name: string;
     readonly canEdit: boolean;
     readonly prompt: string;
+    readonly skillPermissions?: WorkflowSkillPermissions;
 }
 
 /**
@@ -35,37 +39,26 @@ export const workflowAgentDefinitions = {
 } as const satisfies Record<string, WorkflowAgentDefinition>;
 
 /**
+ * Builds an OpenCode-backed workflow agent node from a shared definition.
+ */
+const createWorkflowAgentNode = (definition: WorkflowAgentDefinition) => {
+    return createOpenCodeNode(
+        definition.name,
+        createWorkflowAgentConfig(definition.canEdit, definition.skillPermissions),
+        {
+            system: definition.prompt,
+        },
+    );
+};
+
+/**
  * Instantiates OpenCode-backed workflow agent nodes from the shared definitions.
  */
 export const workflowAgentNodes = {
-    planner: createOpenCodeNode(
-        workflowAgentDefinitions.planner.name,
-        createWorkflowAgentConfig(workflowAgentDefinitions.planner.canEdit),
-        {
-            system: workflowAgentDefinitions.planner.prompt,
-        },
-    ),
-    planReviewer: createOpenCodeNode(
-        workflowAgentDefinitions.planReviewer.name,
-        createWorkflowAgentConfig(workflowAgentDefinitions.planReviewer.canEdit),
-        {
-            system: workflowAgentDefinitions.planReviewer.prompt,
-        },
-    ),
-    coder: createOpenCodeNode(
-        workflowAgentDefinitions.coder.name,
-        createWorkflowAgentConfig(workflowAgentDefinitions.coder.canEdit),
-        {
-            system: workflowAgentDefinitions.coder.prompt,
-        },
-    ),
-    codeReviewer: createOpenCodeNode(
-        workflowAgentDefinitions.codeReviewer.name,
-        createWorkflowAgentConfig(workflowAgentDefinitions.codeReviewer.canEdit),
-        {
-            system: workflowAgentDefinitions.codeReviewer.prompt,
-        },
-    ),
+    planner: createWorkflowAgentNode(workflowAgentDefinitions.planner),
+    planReviewer: createWorkflowAgentNode(workflowAgentDefinitions.planReviewer),
+    coder: createWorkflowAgentNode(workflowAgentDefinitions.coder),
+    codeReviewer: createWorkflowAgentNode(workflowAgentDefinitions.codeReviewer),
 } as const;
 
 export type WorkflowAgentRole = keyof typeof workflowAgentDefinitions;
