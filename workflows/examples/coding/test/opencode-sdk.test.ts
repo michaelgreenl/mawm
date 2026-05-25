@@ -721,4 +721,75 @@ describe("OpenCode SDK node", () => {
         expect(result.messages?.[0]?.content).toBe("done");
         expect(result.messages?.[0]?.id).toBe("reply-current");
     });
+
+    test("falls back to complete session history when the user prompt is outside the recent limit", async () => {
+        resetSdkMocks();
+
+        sessionPrompt.mockImplementationOnce(() =>
+            Promise.reject(new Error("Request timed out after 300000ms")),
+        );
+
+        // Build a 41-step session: 1 user prompt at the start plus 41 assistant
+        // messages. The recent-message limit is 32, so the user prompt drops
+        // out of the limited window and only complete history will surface it.
+        const userMessage = {
+            info: {
+                id: "user-1",
+                role: "user" as const,
+                time: { created: 1 },
+            },
+            parts: [{ text: "User:\nPlan this run." }],
+        };
+        const assistantSteps = Array.from({ length: 41 }, (_, i) => ({
+            info: {
+                cost: undefined,
+                error: undefined,
+                finish: i === 40 ? "stop" : "tool-calls",
+                id: `reply-step-${i}`,
+                modelID: undefined,
+                parentID: "user-1",
+                providerID: undefined,
+                role: "assistant" as const,
+                time: { created: i + 2 },
+                tokens: undefined,
+            },
+            parts: i === 40 ? [{ text: "done" }] : [],
+        }));
+
+        // Persistent mock: callers that pass a limit see only the most recent
+        // `limit` assistant steps (user prompt drops out of view), while a
+        // call with no limit returns the complete history. This mirrors how
+        // a real OpenCode server behaves and is what forces the recovery
+        // path to fall back to complete history.
+        sessionMessages.mockImplementation((args: { limit?: number }) =>
+            Promise.resolve(
+                typeof args?.limit === "number"
+                    ? assistantSteps.slice(-args.limit)
+                    : [userMessage, ...assistantSteps],
+            ),
+        );
+
+        const node = createOpenCodeNode(
+            "planner",
+            {},
+            {
+                authHeader: "Basic test-token",
+            },
+        );
+
+        const result = await node(
+            {
+                messages: [new HumanMessage({ content: "Plan this run." })],
+            },
+            {
+                context: {
+                    opencodeBaseUrl: "http://127.0.0.1:4096",
+                    targetRepoPath: "/repo",
+                },
+            },
+        );
+
+        expect(result.messages?.[0]?.content).toBe("done");
+        expect(result.messages?.[0]?.id).toBe("reply-step-40");
+    });
 });

@@ -229,6 +229,10 @@ const sliceAfterReply = (
  * @param sessionID - Session identifier.
  * @param lastReplyID - Latest assistant reply id already present in workflow state.
  * @param requireAnchor - Whether the last reply must be found before reconnecting.
+ * @param options - Reader options.
+ * @param options.forceComplete - When true, skip the limited recent batch and
+ *   read the complete session history. Use this once the caller has detected
+ *   that the recent window does not contain the messages it needs.
  * @returns Relevant session messages, or `undefined` when reconnecting is unsafe.
  */
 const readRelevantSessionMessages = async (
@@ -236,16 +240,19 @@ const readRelevantSessionMessages = async (
     sessionID: string,
     lastReplyID: string | undefined,
     requireAnchor: boolean,
+    options: { forceComplete?: boolean } = {},
 ): Promise<readonly OpenCodeSessionMessage[] | undefined> => {
-    const recent = await readSessionMessages(sdk, sessionID, SESSION_MESSAGE_LIMIT);
-    const recentSlice = sliceAfterReply(recent, lastReplyID);
+    if (!options.forceComplete) {
+        const recent = await readSessionMessages(sdk, sessionID, SESSION_MESSAGE_LIMIT);
+        const recentSlice = sliceAfterReply(recent, lastReplyID);
 
-    if (recentSlice) {
-        return recentSlice;
-    }
+        if (recentSlice) {
+            return recentSlice;
+        }
 
-    if (!lastReplyID) {
-        return recent;
+        if (!lastReplyID) {
+            return recent;
+        }
     }
 
     const complete = await readSessionMessages(sdk, sessionID);
@@ -372,17 +379,34 @@ const waitForPromptReply = async (
     requireAnchor: boolean,
 ): Promise<OpenCodeReply> => {
     let idlePolls = 0;
+    let useCompleteHistory = false;
 
     while (true) {
-        const messages = await readRelevantSessionMessages(
-            sdk,
-            sessionID,
-            lastReplyID,
-            requireAnchor,
-        );
-        const snapshot = messages
-            ? inspectPromptSnapshot(messages, prompt)
-            : { hasMatchingUser: false };
+        const readMessages = async () => {
+            const result = await readRelevantSessionMessages(
+                sdk,
+                sessionID,
+                lastReplyID,
+                requireAnchor,
+                { forceComplete: useCompleteHistory },
+            );
+
+            return result
+                ? inspectPromptSnapshot(result, prompt)
+                : ({ hasMatchingUser: false } satisfies PromptSnapshot);
+        };
+
+        let snapshot = await readMessages();
+
+        // The recent-batch read is capped at SESSION_MESSAGE_LIMIT. For a long
+        // session the original user prompt can age out of that window, which
+        // makes `hasMatchingUser` false even though the prompt and its reply
+        // are still on disk. When that happens, upgrade to complete history
+        // and stay there for the rest of the wait.
+        if (!useCompleteHistory && !snapshot.hasMatchingUser) {
+            useCompleteHistory = true;
+            snapshot = await readMessages();
+        }
 
         if (snapshot.reply) {
             return snapshot.reply;
