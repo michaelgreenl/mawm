@@ -1,4 +1,4 @@
-import type { AgentConfig } from "@opencode-ai/sdk";
+import type { AgentConfig } from "@opencode-ai/sdk/v2";
 
 type WorkflowPermissionMode = "ask" | "allow" | "deny";
 
@@ -10,6 +10,7 @@ const commonTools = {
     grep: true,
     list: true,
     read: true,
+    webfetch: true,
     task: true,
 } as const;
 
@@ -19,6 +20,7 @@ const commonPermission = {
     grep: "allow",
     list: "allow",
     read: "allow",
+    webfetch: "allow",
     task: {
         explore: "allow",
     },

@@ -37,14 +37,12 @@ const agents = {
 };
 
 const shared = [text("snippets/bun-pm-node-runtime.txt")] as const;
-
 const clean = text("snippets/clean-code-ts.txt");
-const tdd = text("snippets/test-driven-development.txt");
 
 export const agentPrompts = {
     planner: blocks(agents.planner, ...shared),
     planReviewer: blocks(agents.planReviewer, ...shared),
-    coder: blocks(agents.coder, clean, tdd, ...shared),
+    coder: blocks(agents.coder, clean, ...shared),
     codeReviewer: blocks(agents.codeReviewer, clean, ...shared),
 } as const;
 

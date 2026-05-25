@@ -1,8 +1,5 @@
 import { createOpenCodeNode } from "../integrations/opencode/node.js";
-import {
-    createWorkflowAgentConfig,
-    type WorkflowSkillPermissions,
-} from "./config.js";
+import { createWorkflowAgentConfig, type WorkflowSkillPermissions } from "./config.js";
 import { agentPrompts } from "./prompts.js";
 
 export interface WorkflowAgentDefinition {
@@ -30,6 +27,7 @@ export const workflowAgentDefinitions = {
         name: "coder",
         canEdit: true,
         prompt: agentPrompts.coder,
+        skillPermissions: { tdd: "allow" },
     },
     codeReviewer: {
         name: "code-reviewer",
