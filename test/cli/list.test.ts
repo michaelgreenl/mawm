@@ -1,33 +1,36 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import list from "../../src/cmd/surface/list.js";
-import { captureOutput } from "../support/capture.js";
+import { runCli } from "../support/cli.js";
+import { trackRoots } from "../support/tmp.js";
 
-const tempRoots: string[] = [];
+const roots = trackRoots();
 
 describe("list command", () => {
     afterEach(async () => {
-        await Promise.all(
-            tempRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
-        );
+        await roots.cleanup();
+    });
+
+    test("lists project workflows by default", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
+
+        await mkdir(join(projectRoot, ".mawm", "graphs", "beta"), { recursive: true });
+        await mkdir(join(projectRoot, ".mawm", "graphs", "alpha"), { recursive: true });
+
+        const result = await runCli(projectRoot, home, ["list"]);
+
+        expect(result).toEqual({ exitCode: 0, stderr: "", stdout: "alpha\nbeta\n" });
     });
 
     test("lists global workflows from the user config root", async () => {
-        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-        tempRoots.push(home);
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
+
         await mkdir(join(home, ".config", "mawm", "alpha"), { recursive: true });
         await mkdir(join(home, ".config", "mawm", "beta"), { recursive: true });
 
-        const result = await captureOutput(
-            () =>
-                list.run?.({
-                    args: {},
-                    context: { cwd: home, env: { HOME: home }, rawArgs: ["list", "-g"] },
-                    options: { global: true },
-                }) ?? Promise.resolve(1),
-        );
+        const result = await runCli(projectRoot, home, ["list", "-g"]);
 
         expect(result).toEqual({ exitCode: 0, stderr: "", stdout: "alpha\nbeta\n" });
     });

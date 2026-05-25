@@ -67,7 +67,7 @@
 
 ### Run 2: Root supported-behavior suite cleanup (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/testing-refactor-cleanup/runs/active/root-supported-behavior-suite-cleanup/spec.md`
 - Task:
   - Audit and trim the repo-root suite so retained non-template tests assert only current supported behavior and use the shared fixtures/support from run 1.
