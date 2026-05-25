@@ -59081,6 +59081,10 @@ var implementationGate = (state, runtime) => {
   });
 };
 
+// src/integrations/opencode/node.ts
+import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
+
 // src/shared/runtime-context.ts
 var trimContextValue = (value) => {
   if (typeof value !== "string") {
@@ -60866,6 +60870,16 @@ var createOpenCodeReplyMessage = (name, reply, sessionID) => {
 };
 
 // src/integrations/opencode/node.ts
+var ASYNC_PROMPT_TIMEOUT_MS = 15 * 60 * 1000;
+var ASYNC_PROMPT_POLL_INTERVAL_MS = 1000;
+var TRANSIENT_OPENCODE_ERROR_PATTERNS = [
+  /fetch failed/i,
+  /network error \(no response\)/i,
+  /ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|socket hang up/i
+];
+var createPromptMessageID = () => {
+  return `msg_${randomUUID()}`;
+};
 var unwrapResult = (value) => {
   if (typeof value === "object" && value !== null && "data" in value) {
     return value.data;
@@ -60884,6 +60898,89 @@ var resolveModel = (agent, override) => {
     providerID: agent.model.slice(0, slash),
     modelID: agent.model.slice(slash + 1)
   };
+};
+var isTransientOpenCodeError = (error51) => {
+  if (!(error51 instanceof Error)) {
+    return false;
+  }
+  return TRANSIENT_OPENCODE_ERROR_PATTERNS.some((pattern) => pattern.test(error51.message));
+};
+var listSessionMessages = async (client4, sessionID) => {
+  return unwrapResult(await client4.session.messages({
+    path: {
+      id: sessionID
+    },
+    responseStyle: "data",
+    throwOnError: true
+  }));
+};
+var listSessionStatuses = async (client4) => {
+  return unwrapResult(await client4.session.status({
+    responseStyle: "data",
+    throwOnError: true
+  }));
+};
+var hasPromptMessage = (messages, promptMessageID) => {
+  return messages.some((message) => message.info.role === "user" && message.info.id === promptMessageID);
+};
+var findAssistantReply = (messages, promptMessageID) => {
+  for (let index2 = messages.length - 1;index2 >= 0; index2 -= 1) {
+    const message = messages[index2];
+    if (message?.info.role === "assistant" && message.info.parentID === promptMessageID) {
+      return message;
+    }
+  }
+  return;
+};
+var waitForAssistantReply = async (client4, sessionID, submitPrompt, promptMessageID) => {
+  const startedAt = Date.now();
+  let promptQueued = false;
+  while (Date.now() - startedAt < ASYNC_PROMPT_TIMEOUT_MS) {
+    if (!promptQueued) {
+      try {
+        await submitPrompt();
+        promptQueued = true;
+      } catch (error51) {
+        if (!isTransientOpenCodeError(error51)) {
+          throw error51;
+        }
+      }
+    }
+    try {
+      const messages = await listSessionMessages(client4, sessionID);
+      const reply = findAssistantReply(messages, promptMessageID);
+      if (reply) {
+        return reply;
+      }
+      if (hasPromptMessage(messages, promptMessageID)) {
+        promptQueued = true;
+      }
+    } catch (error51) {
+      if (!isTransientOpenCodeError(error51)) {
+        throw error51;
+      }
+    }
+    try {
+      const statuses = await listSessionStatuses(client4);
+      const status = statuses[sessionID];
+      if (status?.type !== "busy") {
+        const messages = await listSessionMessages(client4, sessionID);
+        const reply = findAssistantReply(messages, promptMessageID);
+        if (reply) {
+          return reply;
+        }
+        if (hasPromptMessage(messages, promptMessageID)) {
+          promptQueued = true;
+        }
+      }
+    } catch (error51) {
+      if (!isTransientOpenCodeError(error51)) {
+        throw error51;
+      }
+    }
+    await delay(ASYNC_PROMPT_POLL_INTERVAL_MS);
+  }
+  throw new Error(`Timed out waiting for OpenCode session ${sessionID} reply.`);
 };
 function createOpenCodeNode(name, agent = {}, options = {}) {
   const connection = createConnectionLoader(name, agent, options);
@@ -60917,25 +61014,30 @@ function createOpenCodeNode(name, agent = {}, options = {}) {
       responseStyle: "data",
       throwOnError: true
     })).id;
-    const reply = unwrapResult(await sdk.client.session.prompt({
-      path: {
-        id: sessionID
-      },
-      body: {
-        ...sdk.named ? { agent: name } : {},
-        model,
-        system,
-        tools: tools ? { ...tools } : undefined,
-        parts: [
-          {
-            type: "text",
-            text: prompt
-          }
-        ]
-      },
-      responseStyle: "data",
-      throwOnError: true
-    }));
+    const promptMessageID = createPromptMessageID();
+    const submitPrompt = async () => {
+      await sdk.client.session.promptAsync({
+        path: {
+          id: sessionID
+        },
+        body: {
+          messageID: promptMessageID,
+          ...sdk.named ? { agent: name } : {},
+          model,
+          system,
+          tools: tools ? { ...tools } : undefined,
+          parts: [
+            {
+              type: "text",
+              text: prompt
+            }
+          ]
+        },
+        responseStyle: "data",
+        throwOnError: true
+      });
+    };
+    const reply = await waitForAssistantReply(sdk.client, sessionID, submitPrompt, promptMessageID);
     if (reply.info.error) {
       const errorData = reply.info.error.data;
       const message = typeof errorData === "object" && errorData !== null && "message" in errorData && typeof errorData.message === "string" ? errorData.message : reply.info.error.name;
