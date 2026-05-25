@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import * as lib from "../../src/assets/.config/agents/opencode/tools/execute-graph-lib.ts";
 import {
     DEFAULT_AGENT_SERVER_URL,

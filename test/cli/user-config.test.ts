@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { resolveHomeDirectory, resolveUserConfigRoot } from "../../src/config/user-config.js";
 
 describe("user config helpers", () => {

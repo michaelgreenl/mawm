@@ -36,7 +36,7 @@
 
 ### Run 1: Vitest foundation and root test support (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/testing-refactor-cleanup/runs/active/vitest-foundation/spec.md`
 - Task:
   - Introduce Vitest for repo-root testing, add shared fixtures/support utilities, and migrate the current root suite under `test/**` off `bun:test` without doing the deeper scope-pruning work yet.

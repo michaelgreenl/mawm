@@ -1,59 +1,13 @@
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "vitest";
 import { parseCommand } from "../../src/utils/parsers/cmd.js";
-import type { CommandContext } from "../../src/utils/types/command.d.js";
+import { captureOutput } from "../support/capture.js";
+import { createContext } from "../support/context.js";
+import { pathExists, readJson, writeJson } from "../support/fs.js";
 
 const tempRoots: string[] = [];
-
-const readJson = async <T>(path: string): Promise<T> => {
-    return JSON.parse(await readFile(path, "utf8")) as T;
-};
-
-const writeJson = async (path: string, value: unknown): Promise<void> => {
-    await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
-};
-
-const pathExists = async (path: string): Promise<boolean> => {
-    try {
-        await access(path);
-        return true;
-    } catch {
-        return false;
-    }
-};
-
-const captureOutput = async (run: () => Promise<number>) => {
-    let stdout = "";
-    let stderr = "";
-    const originalStdoutWrite = process.stdout.write;
-    const originalStderrWrite = process.stderr.write;
-
-    process.stdout.write = ((chunk: string | Uint8Array) => {
-        stdout += chunk.toString();
-        return true;
-    }) as typeof process.stdout.write;
-
-    process.stderr.write = ((chunk: string | Uint8Array) => {
-        stderr += chunk.toString();
-        return true;
-    }) as typeof process.stderr.write;
-
-    try {
-        const exitCode = await run();
-        return { exitCode, stderr, stdout };
-    } finally {
-        process.stdout.write = originalStdoutWrite;
-        process.stderr.write = originalStderrWrite;
-    }
-};
-
-const createContext = (cwd: string, home: string, rawArgs: readonly string[]): CommandContext => ({
-    cwd,
-    env: { HOME: home },
-    rawArgs: [...rawArgs],
-});
 
 const defaultExecutionContract = {
     optionalContext: [],

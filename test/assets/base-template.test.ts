@@ -1,9 +1,10 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "vitest";
 import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createGraph } from "../../src/assets/workflow-templates/base/src/graph/index.ts";
+import { spawnSync } from "../support/process.js";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const templates = join(root, "src", "assets", "workflow-templates");
@@ -83,32 +84,16 @@ describe("base template assets", () => {
     test("materializes a temp workspace that installs, builds, typechecks, tests, and loads the standalone graph", async () => {
         const dir = await createWorkspace();
 
-        const install = Bun.spawnSync(["bun", "install"], {
-            cwd: dir,
-            stderr: "pipe",
-            stdout: "pipe",
-        });
+        const install = spawnSync(["bun", "install"], { cwd: dir });
         expect(install.exitCode).toBe(0);
 
-        const typecheck = Bun.spawnSync(["bun", "run", "typecheck"], {
-            cwd: dir,
-            stderr: "pipe",
-            stdout: "pipe",
-        });
+        const typecheck = spawnSync(["bun", "run", "typecheck"], { cwd: dir });
         expect(typecheck.exitCode).toBe(0);
 
-        const build = Bun.spawnSync(["bun", "run", "build"], {
-            cwd: dir,
-            stderr: "pipe",
-            stdout: "pipe",
-        });
+        const build = spawnSync(["bun", "run", "build"], { cwd: dir });
         expect(build.exitCode).toBe(0);
 
-        const tests = Bun.spawnSync(["bun", "test"], {
-            cwd: dir,
-            stderr: "pipe",
-            stdout: "pipe",
-        });
+        const tests = spawnSync(["bun", "test"], { cwd: dir });
         expect(tests.exitCode).toBe(0);
 
         const meta = JSON.parse(await readFile(join(dir, "dist", "mawm.json"), "utf8")) as {

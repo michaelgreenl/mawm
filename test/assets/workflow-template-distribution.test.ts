@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "vitest";
 import { spawn } from "node:child_process";
 import { access, appendFile, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -12,6 +12,7 @@ import {
     resolveAssistantID,
     summarizeRunResult,
 } from "../../src/assets/.config/agents/opencode/tools/execute-graph-lib.ts";
+import { type SpawnResult, spawnSync } from "../support/process.js";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const bin = join(root, "bin", "mawm.js");
@@ -96,23 +97,11 @@ const overlayFiles = async (variant: string): Promise<string[]> => {
     return values.flat();
 };
 
-const run = (
-    cmd: readonly string[],
-    cwd: string,
-    env?: NodeJS.ProcessEnv,
-): Bun.SpawnSyncReturns<Uint8Array> => {
-    return Bun.spawnSync(cmd, {
-        cwd,
-        env: {
-            ...process.env,
-            ...env,
-        },
-        stderr: "pipe",
-        stdout: "pipe",
-    });
+const run = (cmd: readonly string[], cwd: string, env?: NodeJS.ProcessEnv): SpawnResult => {
+    return spawnSync(cmd, { cwd, env: { ...process.env, ...env } });
 };
 
-const ok = (label: string, result: Bun.SpawnSyncReturns<Uint8Array>) => {
+const ok = (label: string, result: SpawnResult) => {
     if (result.exitCode === 0) {
         return;
     }

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,7 +23,7 @@ const readLines = async (path: string): Promise<string[]> => {
 
 const collectTypeScriptFiles = async (dir: string): Promise<string[]> => {
     const entries = await readdir(dir, { withFileTypes: true });
-    const files = await Promise.all(
+    const filesList = await Promise.all(
         entries.map(async (entry) => {
             const path = join(dir, entry.name);
 
@@ -35,7 +35,7 @@ const collectTypeScriptFiles = async (dir: string): Promise<string[]> => {
         }),
     );
 
-    return files.flat();
+    return filesList.flat();
 };
 
 const collectScopedFiles = async (): Promise<string[]> => {

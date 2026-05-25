@@ -1,27 +1,11 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "vitest";
 import list from "../../src/cmd/surface/list.js";
+import { captureOutput } from "../support/capture.js";
 
 const tempRoots: string[] = [];
-
-const captureStdout = async (run: () => Promise<number>) => {
-    let output = "";
-    const originalWrite = process.stdout.write;
-
-    process.stdout.write = ((chunk: string | Uint8Array) => {
-        output += chunk.toString();
-        return true;
-    }) as typeof process.stdout.write;
-
-    try {
-        const exitCode = await run();
-        return { exitCode, output };
-    } finally {
-        process.stdout.write = originalWrite;
-    }
-};
 
 describe("list command", () => {
     afterEach(async () => {
@@ -36,7 +20,7 @@ describe("list command", () => {
         await mkdir(join(home, ".config", "mawm", "alpha"), { recursive: true });
         await mkdir(join(home, ".config", "mawm", "beta"), { recursive: true });
 
-        const result = await captureStdout(
+        const result = await captureOutput(
             () =>
                 list.run?.({
                     args: {},
@@ -45,6 +29,6 @@ describe("list command", () => {
                 }) ?? Promise.resolve(1),
         );
 
-        expect(result).toEqual({ exitCode: 0, output: "alpha\nbeta\n" });
+        expect(result).toEqual({ exitCode: 0, stderr: "", stdout: "alpha\nbeta\n" });
     });
 });

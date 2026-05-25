@@ -1,14 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { access, mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname } from "node:path";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "vitest";
 import { runCommandTarget } from "../../src/cmd/runner.js";
 import { parseCommand } from "../../src/utils/parsers/cmd.js";
 import { createInitCommand } from "../../src/cmd/surface/init.js";
-import type { CommandContext } from "../../src/utils/types/command.d.js";
+import { captureOutput } from "../support/capture.js";
+import { createContext } from "../support/context.js";
 
 const repoRoot = dirname(fileURLToPath(new URL("../../package.json", import.meta.url)));
 const binPath = join(repoRoot, "bin", "mawm.js");
@@ -23,37 +23,6 @@ const pathExists = async (path: string): Promise<boolean> => {
         return false;
     }
 };
-
-const captureOutput = async (run: () => Promise<number>) => {
-    let stdout = "";
-    let stderr = "";
-    const originalStdoutWrite = process.stdout.write;
-    const originalStderrWrite = process.stderr.write;
-
-    process.stdout.write = ((chunk: string | Uint8Array) => {
-        stdout += chunk.toString();
-        return true;
-    }) as typeof process.stdout.write;
-
-    process.stderr.write = ((chunk: string | Uint8Array) => {
-        stderr += chunk.toString();
-        return true;
-    }) as typeof process.stderr.write;
-
-    try {
-        const exitCode = await run();
-        return { exitCode, stderr, stdout };
-    } finally {
-        process.stdout.write = originalStdoutWrite;
-        process.stderr.write = originalStderrWrite;
-    }
-};
-
-const createContext = (cwd: string, home: string, rawArgs: readonly string[]): CommandContext => ({
-    cwd,
-    env: { HOME: home },
-    rawArgs: [...rawArgs],
-});
 
 const requireBuiltTemplates = async () => {
     if (await pathExists(join(templateRoot, "base", "package.json"))) {

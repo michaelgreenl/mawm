@@ -1,8 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = join(import.meta.dir, "..", "..", "src", "assets", "workflow-templates");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = join(__dirname, "..", "..", "src", "assets", "workflow-templates");
 const shared = join(root, "shared");
 const base = join(root, "base");
 const initiative = join(root, "initiative");

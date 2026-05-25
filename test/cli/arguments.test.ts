@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { parseCommandInputs } from "../../src/utils/parsers/arguments.js";
 import { arg, option } from "../../src/utils/builders/command-builder.js";
 
