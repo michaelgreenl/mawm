@@ -4,6 +4,8 @@ import { agentPrompts } from "./prompts.js";
 
 export interface WorkflowAgentDefinition {
     readonly name: string;
+    readonly model: string;
+    readonly variant?: string;
     readonly canEdit: boolean;
     readonly prompt: string;
     readonly skillPermissions?: WorkflowSkillPermissions;
@@ -15,22 +17,30 @@ export interface WorkflowAgentDefinition {
 export const workflowAgentDefinitions = {
     planner: {
         name: "planner",
+        model: "openai/gpt-5.4",
+        variant: "xhigh",
         canEdit: true,
         prompt: agentPrompts.planner,
     },
     planReviewer: {
         name: "plan-reviewer",
+        model: "anthropic/claude-sonnet-4-6",
+        variant: "max",
         canEdit: false,
         prompt: agentPrompts.planReviewer,
     },
     coder: {
         name: "coder",
         canEdit: true,
+        model: "openai/gpt-5.4",
+        variant: "xhigh",
         prompt: agentPrompts.coder,
         skillPermissions: { tdd: "allow" },
     },
     codeReviewer: {
         name: "code-reviewer",
+        model: "anthropic/claude-sonnet-4-6",
+        variant: "max",
         canEdit: false,
         prompt: agentPrompts.codeReviewer,
     },
@@ -42,7 +52,12 @@ export const workflowAgentDefinitions = {
 const createWorkflowAgentNode = (definition: WorkflowAgentDefinition) => {
     return createOpenCodeNode(
         definition.name,
-        createWorkflowAgentConfig(definition.canEdit, definition.skillPermissions),
+        createWorkflowAgentConfig(
+            definition.model,
+            definition.variant,
+            definition.canEdit,
+            definition.skillPermissions,
+        ),
         {
             system: definition.prompt,
         },

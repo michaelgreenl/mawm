@@ -63322,14 +63322,15 @@ var commonPermission = {
 var commonSkillPermissions = {
   "*": "deny"
 };
-var createWorkflowAgentConfig = (canEdit, skillPermissions = {}) => {
+var createWorkflowAgentConfig = (model, variant, canEdit, skillPermissions = {}) => {
   const resolvedSkillPermissions = {
     ...commonSkillPermissions,
     ...skillPermissions
   };
   const canUseSkillTool = Object.values(resolvedSkillPermissions).some((permission) => permission !== "deny");
   return {
-    model: "openai/gpt-5.4",
+    model,
+    variant,
     permission: {
       ...commonPermission,
       edit: canEdit ? "allow" : "deny",
@@ -63377,28 +63378,36 @@ var agentPrompts = {
 var workflowAgentDefinitions = {
   planner: {
     name: "planner",
+    model: "openai/gpt-5.4",
+    variant: "xhigh",
     canEdit: true,
     prompt: agentPrompts.planner
   },
   planReviewer: {
     name: "plan-reviewer",
+    model: "anthropic/claude-sonnet-4-6",
+    variant: "max",
     canEdit: false,
     prompt: agentPrompts.planReviewer
   },
   coder: {
     name: "coder",
     canEdit: true,
+    model: "openai/gpt-5.4",
+    variant: "xhigh",
     prompt: agentPrompts.coder,
     skillPermissions: { tdd: "allow" }
   },
   codeReviewer: {
     name: "code-reviewer",
+    model: "anthropic/claude-sonnet-4-6",
+    variant: "max",
     canEdit: false,
     prompt: agentPrompts.codeReviewer
   }
 };
 var createWorkflowAgentNode = (definition) => {
-  return createOpenCodeNode(definition.name, createWorkflowAgentConfig(definition.canEdit, definition.skillPermissions), {
+  return createOpenCodeNode(definition.name, createWorkflowAgentConfig(definition.model, definition.variant, definition.canEdit, definition.skillPermissions), {
     system: definition.prompt
   });
 };

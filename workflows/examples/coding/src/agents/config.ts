@@ -38,6 +38,8 @@ const commonSkillPermissions = {
  * @returns The workflow agent configuration.
  */
 export const createWorkflowAgentConfig = (
+    model: string,
+    variant: string | undefined,
     canEdit: boolean,
     skillPermissions: WorkflowSkillPermissions = {},
 ): AgentConfig => {
@@ -50,7 +52,8 @@ export const createWorkflowAgentConfig = (
     );
 
     return {
-        model: "openai/gpt-5.4",
+        model,
+        variant,
         permission: {
             ...commonPermission,
             edit: canEdit ? "allow" : "deny",
