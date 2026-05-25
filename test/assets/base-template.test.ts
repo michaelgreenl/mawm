@@ -1,27 +1,16 @@
 import { afterAll, describe, expect, test } from "vitest";
-import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createGraph } from "../../src/assets/workflow-templates/base/src/graph/index.ts";
 import { spawnSync } from "../support/process.js";
+import { templateDir, trackTemplateWorkspaces } from "../support/template.js";
 
-const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const templates = join(root, "src", "assets", "workflow-templates");
-const shared = join(templates, "shared");
-const base = join(templates, "base");
-const workspaces: string[] = [];
-
-const createWorkspace = async () => {
-    const dir = await mkdtemp(join(tmpdir(), "mawm-base-template-"));
-    workspaces.push(dir);
-    await cp(shared, dir, { recursive: true });
-    await cp(base, dir, { recursive: true });
-    return dir;
-};
+const base = templateDir("base");
+const workspaces = trackTemplateWorkspaces();
 
 afterAll(async () => {
-    await Promise.all(workspaces.map(async (dir) => rm(dir, { recursive: true, force: true })));
+    await workspaces.cleanup();
 });
 
 describe("base template assets", () => {
@@ -51,21 +40,6 @@ describe("base template assets", () => {
         });
     });
 
-    test("declares the base-owned overlay paths", async () => {
-        const overlay = JSON.parse(await readFile(join(base, "overlay.json"), "utf8")) as {
-            variant: string;
-            variantOwnedPaths: string[];
-        };
-
-        expect(overlay.variant).toBe("base");
-        expect(overlay.variantOwnedPaths).toEqual([
-            "overlay.json",
-            "mawm.json",
-            join("src", "graph", "index.ts"),
-            join("test", "workflow.test.ts"),
-        ]);
-    });
-
     test("returns a standalone summary from the base graph", async () => {
         const result = await createGraph().invoke(
             {},
@@ -82,7 +56,18 @@ describe("base template assets", () => {
     });
 
     test("materializes a temp workspace that installs, builds, typechecks, tests, and loads the standalone graph", async () => {
-        const dir = await createWorkspace();
+        const dir = await workspaces.create("base");
+        const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as {
+            devDependencies?: {
+                vitest?: string;
+            };
+            scripts?: {
+                test?: string;
+            };
+        };
+
+        expect(pkg.scripts?.test).toBe("vitest run");
+        expect(pkg.devDependencies?.vitest).toBeDefined();
 
         const install = spawnSync(["bun", "install"], { cwd: dir });
         expect(install.exitCode).toBe(0);
@@ -93,7 +78,7 @@ describe("base template assets", () => {
         const build = spawnSync(["bun", "run", "build"], { cwd: dir });
         expect(build.exitCode).toBe(0);
 
-        const tests = spawnSync(["bun", "test"], { cwd: dir });
+        const tests = spawnSync(["bun", "run", "test"], { cwd: dir });
         expect(tests.exitCode).toBe(0);
 
         const meta = JSON.parse(await readFile(join(dir, "dist", "mawm.json"), "utf8")) as {

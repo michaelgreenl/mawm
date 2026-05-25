@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,7 +38,7 @@ const createSpec = async (dir: string, mode: "headless" | "manual") => {
             "- Verification commands:",
             "  - `bun run typecheck`",
             "  - `bun run build`",
-            "  - `bun test`",
+            "  - `bun run test`",
             `- Smoke verification: \`${mode}\` - ${mode === "manual" ? "Open the generated workspace and confirm the banner." : "Run the template tests."}`,
         ].join("\n"),
     );

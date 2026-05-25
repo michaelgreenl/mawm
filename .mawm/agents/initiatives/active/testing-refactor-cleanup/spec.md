@@ -97,7 +97,7 @@
 
 ### Run 3: Workflow-template test cleanup and Vitest migration (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/testing-refactor-cleanup/runs/active/workflow-template-test-cleanup-and-vitest-migration/spec.md`
 - Task:
   - Clean up workflow-template coverage, migrate workflow-template asset tests to Vitest, and keep only current supported template behavior while leaving excluded example workflow tests unchanged.

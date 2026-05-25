@@ -1,8 +1,6 @@
 import { afterAll, describe, expect, test } from "vitest";
-import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { createGraph } from "../../src/assets/workflow-templates/initiative/src/graph/index.ts";
 import {
     implementationGate,
@@ -11,20 +9,10 @@ import {
 import { runImplementation } from "../../src/assets/workflow-templates/initiative/src/graph/implementing.ts";
 import { materializeRunSpec } from "../../src/assets/workflow-templates/initiative/src/graph/planning.ts";
 import { spawnSync } from "../support/process.js";
+import { templateDir, trackTemplateWorkspaces } from "../support/template.js";
 
-const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const templates = join(root, "src", "assets", "workflow-templates");
-const shared = join(templates, "shared");
-const initiative = join(templates, "initiative");
-const workspaces: string[] = [];
-
-const createWorkspace = async () => {
-    const dir = await mkdtemp(join(tmpdir(), "mawm-initiative-template-"));
-    workspaces.push(dir);
-    await cp(shared, dir, { recursive: true });
-    await cp(initiative, dir, { recursive: true });
-    return dir;
-};
+const initiative = templateDir("initiative");
+const workspaces = trackTemplateWorkspaces();
 
 const createInitiativeSpec = async (dir: string, mode: "headless" | "manual") => {
     const spec = join(dir, "initiative-spec.md");
@@ -61,7 +49,7 @@ const createInitiativeSpec = async (dir: string, mode: "headless" | "manual") =>
             "- Verification commands:",
             "  - `bun run typecheck`",
             "  - `bun run build`",
-            "  - `bun test`",
+            "  - `bun run test`",
             `- Smoke verification: \`${mode}\` - ${mode === "manual" ? "Open the generated workspace and confirm the review checkpoint." : "Run the template test suite."}`,
         ].join("\n"),
     );
@@ -69,7 +57,7 @@ const createInitiativeSpec = async (dir: string, mode: "headless" | "manual") =>
 };
 
 afterAll(async () => {
-    await Promise.all(workspaces.map(async (dir) => rm(dir, { recursive: true, force: true })));
+    await workspaces.cleanup();
 });
 
 describe("initiative template assets", () => {
@@ -100,7 +88,7 @@ describe("initiative template assets", () => {
     });
 
     test("creates an implementation-ready run spec from initiative context", async () => {
-        const dir = await createWorkspace();
+        const dir = await workspaces.create("initiative");
         const target = join(dir, "repo");
         await mkdir(target, { recursive: true });
         await writeFile(join(target, "README.md"), "# Demo\n");
@@ -196,7 +184,7 @@ describe("initiative template assets", () => {
     });
 
     test("keeps manual smoke completion behind a resume confirmation", async () => {
-        const dir = await createWorkspace();
+        const dir = await workspaces.create("initiative");
         const target = join(dir, "repo");
         await mkdir(target, { recursive: true });
         const initiativeSpecPath = await createInitiativeSpec(dir, "manual");
@@ -257,13 +245,13 @@ describe("initiative template assets", () => {
         expect(command.update).toEqual({
             finalStatus: "completed",
             verificationSummary:
-                "Planned verification commands:\n- bun run typecheck\n- bun run build\n- bun test\n\nManual smoke verification: Confirmed by a manual smoke pass.",
+                "Planned verification commands:\n- bun run typecheck\n- bun run build\n- bun run test\n\nManual smoke verification: Confirmed by a manual smoke pass.",
         });
         expect(createGraph()).toBeDefined();
     });
 
     test("materializes a temp workspace that installs, builds, typechecks, and tests", async () => {
-        const dir = await createWorkspace();
+        const dir = await workspaces.create("initiative");
         await writeFile(
             join(dir, "mawm.json"),
             await readFile(join(initiative, "mawm.json"), "utf8"),
@@ -278,7 +266,7 @@ describe("initiative template assets", () => {
         const build = spawnSync(["bun", "run", "build"], { cwd: dir });
         expect(build.exitCode).toBe(0);
 
-        const tests = spawnSync(["bun", "test"], { cwd: dir });
+        const tests = spawnSync(["bun", "run", "test"], { cwd: dir });
         expect(tests.exitCode).toBe(0);
 
         const meta = JSON.parse(await readFile(join(dir, "dist", "mawm.json"), "utf8")) as {

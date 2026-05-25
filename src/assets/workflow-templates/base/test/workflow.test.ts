@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { createGraph, graph } from "../src/graph/index.ts";
 
 describe("base template workflow", () => {
