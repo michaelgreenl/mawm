@@ -281,9 +281,13 @@ const inspectPromptSnapshot = (
         }
 
         if (flattenOpenCodePrompt(message.parts) !== prompt) {
-            return {
-                hasMatchingUser: false,
-            };
+            // A later user message that doesn't match our prompt does not prove
+            // the prompt is absent: stray user messages (for example from a
+            // different turn that was concurrently appended to the session)
+            // can sit ahead of the matching prompt and reply. Keep walking
+            // backwards until we either find the matching prompt or exhaust
+            // the message list.
+            continue;
         }
 
         for (let replyIndex = messages.length - 1; replyIndex > index; replyIndex -= 1) {

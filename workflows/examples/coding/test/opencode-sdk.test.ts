@@ -650,4 +650,75 @@ describe("OpenCode SDK node", () => {
         expect(sessionMessages).toHaveBeenCalledTimes(2);
         expect(sessionStatus).toHaveBeenCalledTimes(1);
     });
+
+    test("continues searching backwards past non-matching user messages to find the matching prompt's reply", async () => {
+        resetSdkMocks();
+
+        sessionPrompt.mockImplementationOnce(() =>
+            Promise.reject(new Error("Request timed out after 300000ms")),
+        );
+
+        // Session contains a stray later user message that doesn't match our prompt.
+        // The matching prompt and its completed reply are earlier in the timeline.
+        // The recovery path must keep walking backwards instead of bailing on the
+        // first non-matching user message.
+        sessionMessages.mockImplementationOnce(() =>
+            Promise.resolve([
+                {
+                    info: {
+                        id: "user-current",
+                        role: "user",
+                        time: { created: 1 },
+                    },
+                    parts: [{ text: "User:\nPlan this run." }],
+                },
+                {
+                    info: {
+                        cost: undefined,
+                        error: undefined,
+                        finish: "stop",
+                        id: "reply-current",
+                        modelID: undefined,
+                        parentID: "user-current",
+                        providerID: undefined,
+                        role: "assistant",
+                        time: { created: 2 },
+                        tokens: undefined,
+                    },
+                    parts: [{ text: "done" }],
+                },
+                {
+                    info: {
+                        id: "user-stray",
+                        role: "user",
+                        time: { created: 3 },
+                    },
+                    parts: [{ text: "User:\nSomething else entirely." }],
+                },
+            ]),
+        );
+
+        const node = createOpenCodeNode(
+            "planner",
+            {},
+            {
+                authHeader: "Basic test-token",
+            },
+        );
+
+        const result = await node(
+            {
+                messages: [new HumanMessage({ content: "Plan this run." })],
+            },
+            {
+                context: {
+                    opencodeBaseUrl: "http://127.0.0.1:4096",
+                    targetRepoPath: "/repo",
+                },
+            },
+        );
+
+        expect(result.messages?.[0]?.content).toBe("done");
+        expect(result.messages?.[0]?.id).toBe("reply-current");
+    });
 });
