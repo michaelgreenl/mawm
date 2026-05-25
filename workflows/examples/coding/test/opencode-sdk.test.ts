@@ -13,31 +13,47 @@ const sessionCreate = mock(() =>
 );
 
 /**
- * Mocks OpenCode prompt responses.
+ * Mocks the OpenCode async-prompt endpoint.
  *
- * @returns A resolved assistant reply payload.
+ * @returns A resolved acknowledgement payload.
  */
-const sessionPrompt = mock(() =>
-    Promise.resolve({
-        info: {
-            cost: undefined,
-            error: undefined,
-            finish: undefined,
-            id: "reply-1",
-            modelID: undefined,
-            providerID: undefined,
-            tokens: undefined,
-        },
-        parts: [{ text: "done" }],
-    }),
-);
+const sessionPromptAsync = mock(() => Promise.resolve(undefined));
 
 /**
  * Mocks OpenCode session message snapshots.
  *
- * @returns An empty message list.
+ * Default implementation returns the canonical "Plan this run" exchange so
+ * tests that do not care about message timing just receive a finished reply.
+ *
+ * @returns A resolved message list containing the canonical exchange.
  */
-const sessionMessages = mock(() => Promise.resolve([]));
+const sessionMessages = mock(() =>
+    Promise.resolve([
+        {
+            info: {
+                id: "user-1",
+                role: "user",
+                time: { created: 1 },
+            },
+            parts: [{ text: "User:\nPlan this run." }],
+        },
+        {
+            info: {
+                cost: undefined,
+                error: undefined,
+                finish: "stop",
+                id: "reply-1",
+                modelID: undefined,
+                parentID: "user-1",
+                providerID: undefined,
+                role: "assistant",
+                time: { created: 2 },
+                tokens: undefined,
+            },
+            parts: [{ text: "done" }],
+        },
+    ]),
+);
 
 /**
  * Mocks OpenCode session status snapshots.
@@ -54,7 +70,7 @@ const resetSdkMocks = () => {
     createServer.mockClear();
     sessionCreate.mockClear();
     sessionMessages.mockClear();
-    sessionPrompt.mockClear();
+    sessionPromptAsync.mockClear();
     sessionStatus.mockClear();
 };
 
@@ -70,7 +86,7 @@ const createClient = mock((cfg: unknown) => {
         session: {
             create: sessionCreate,
             messages: sessionMessages,
-            prompt: sessionPrompt,
+            promptAsync: sessionPromptAsync,
             status: sessionStatus,
         },
     };
@@ -247,8 +263,8 @@ describe("OpenCode SDK node", () => {
             },
         );
 
-        expect(sessionPrompt.mock.calls[0]?.[0]?.agent).toBeUndefined();
-        expect(sessionPrompt.mock.calls[0]?.[0]).toMatchObject({
+        expect(sessionPromptAsync.mock.calls[0]?.[0]?.agent).toBeUndefined();
+        expect(sessionPromptAsync.mock.calls[0]?.[0]).toMatchObject({
             model: {
                 modelID: "gpt-5.4",
                 providerID: "openai",
@@ -325,7 +341,7 @@ describe("OpenCode SDK node", () => {
                 messages: [new HumanMessage({ content: "Plan this run." })],
             });
 
-            expect(sessionPrompt.mock.calls[0]?.[0]).toMatchObject({
+            expect(sessionPromptAsync.mock.calls[0]?.[0]).toMatchObject({
                 agent: "planner",
             });
         } finally {
@@ -362,6 +378,71 @@ describe("OpenCode SDK node", () => {
 
     test("reuses existing sessions and only prompts with unseen messages", async () => {
         resetSdkMocks();
+
+        const firstSnapshot = [
+            {
+                info: {
+                    id: "user-1",
+                    role: "user",
+                    time: { created: 1 },
+                },
+                parts: [{ text: "User:\nPlan this run." }],
+            },
+            {
+                info: {
+                    cost: undefined,
+                    error: undefined,
+                    finish: "stop",
+                    id: "reply-1",
+                    modelID: undefined,
+                    parentID: "user-1",
+                    providerID: undefined,
+                    role: "assistant",
+                    time: { created: 2 },
+                    tokens: undefined,
+                },
+                parts: [{ text: "first done" }],
+            },
+        ];
+        const secondSnapshot = [
+            ...firstSnapshot,
+            {
+                info: {
+                    id: "user-2",
+                    role: "user",
+                    time: { created: 3 },
+                },
+                parts: [{ text: "User:\nAdd verification steps." }],
+            },
+            {
+                info: {
+                    cost: undefined,
+                    error: undefined,
+                    finish: "stop",
+                    id: "reply-2",
+                    modelID: undefined,
+                    parentID: "user-2",
+                    providerID: undefined,
+                    role: "assistant",
+                    time: { created: 4 },
+                    tokens: undefined,
+                },
+                parts: [{ text: "second done" }],
+            },
+        ];
+
+        // First node call sees only firstSnapshot. tryReconnect on the second
+        // call also sees firstSnapshot (no new reply since the previous turn).
+        // Once promptAsync submits the second prompt, subsequent polls see
+        // the second snapshot with the new user message and its reply.
+        let secondPromptSubmitted = false;
+        sessionPromptAsync.mockImplementation(() => {
+            secondPromptSubmitted = sessionPromptAsync.mock.calls.length >= 2;
+            return Promise.resolve(undefined);
+        });
+        sessionMessages.mockImplementation(() =>
+            Promise.resolve(secondPromptSubmitted ? secondSnapshot : firstSnapshot),
+        );
 
         const node = createOpenCodeNode(
             "planner",
@@ -400,9 +481,9 @@ describe("OpenCode SDK node", () => {
         );
 
         expect(sessionCreate).toHaveBeenCalledTimes(1);
-        expect(sessionPrompt).toHaveBeenCalledTimes(2);
-        expect(sessionPrompt.mock.calls[1]?.[0]?.sessionID).toBe("session-1");
-        expect(sessionPrompt.mock.calls[1]?.[0]?.parts).toEqual([
+        expect(sessionPromptAsync).toHaveBeenCalledTimes(2);
+        expect(sessionPromptAsync.mock.calls[1]?.[0]?.sessionID).toBe("session-1");
+        expect(sessionPromptAsync.mock.calls[1]?.[0]?.parts).toEqual([
             {
                 type: "text",
                 text: "User:\nAdd verification steps.",
@@ -496,16 +577,13 @@ describe("OpenCode SDK node", () => {
 
         expect(result.messages?.[0]?.content).toBe("done");
         expect(sessionCreate).not.toHaveBeenCalled();
-        expect(sessionPrompt).not.toHaveBeenCalled();
+        expect(sessionPromptAsync).not.toHaveBeenCalled();
     });
 
-    test("returns the completed session reply when the prompt request times out", async () => {
+    test("submits the prompt asynchronously and reads the reply from session messages", async () => {
         resetSdkMocks();
 
-        sessionPrompt.mockImplementationOnce(() =>
-            Promise.reject(new Error("Request timed out after 300000ms")),
-        );
-        sessionMessages.mockImplementationOnce(() =>
+        sessionMessages.mockImplementation(() =>
             Promise.resolve([
                 {
                     info: {
@@ -522,7 +600,7 @@ describe("OpenCode SDK node", () => {
                         cost: undefined,
                         error: undefined,
                         finish: "stop",
-                        id: "reply-timeout",
+                        id: "reply-async",
                         modelID: undefined,
                         parentID: "user-1",
                         providerID: undefined,
@@ -557,17 +635,13 @@ describe("OpenCode SDK node", () => {
             },
         );
 
+        expect(sessionPromptAsync).toHaveBeenCalledTimes(1);
         expect(result.messages?.[0]?.content).toBe("done");
-        expect(sessionPrompt).toHaveBeenCalledTimes(1);
-        expect(sessionMessages).toHaveBeenCalledTimes(1);
+        expect(result.messages?.[0]?.id).toBe("reply-async");
     });
 
-    test("waits past intermediate tool-call steps for the terminal reply after a prompt timeout", async () => {
+    test("waits past intermediate tool-call steps for the terminal reply", async () => {
         resetSdkMocks();
-
-        sessionPrompt.mockImplementationOnce(() =>
-            Promise.reject(new Error("Request timed out after 300000ms")),
-        );
 
         const intermediateSnapshot = [
             {
@@ -654,15 +728,11 @@ describe("OpenCode SDK node", () => {
     test("continues searching backwards past non-matching user messages to find the matching prompt's reply", async () => {
         resetSdkMocks();
 
-        sessionPrompt.mockImplementationOnce(() =>
-            Promise.reject(new Error("Request timed out after 300000ms")),
-        );
-
         // Session contains a stray later user message that doesn't match our prompt.
         // The matching prompt and its completed reply are earlier in the timeline.
-        // The recovery path must keep walking backwards instead of bailing on the
+        // The polling path must keep walking backwards instead of bailing on the
         // first non-matching user message.
-        sessionMessages.mockImplementationOnce(() =>
+        sessionMessages.mockImplementation(() =>
             Promise.resolve([
                 {
                     info: {
@@ -724,10 +794,6 @@ describe("OpenCode SDK node", () => {
 
     test("falls back to complete session history when the user prompt is outside the recent limit", async () => {
         resetSdkMocks();
-
-        sessionPrompt.mockImplementationOnce(() =>
-            Promise.reject(new Error("Request timed out after 300000ms")),
-        );
 
         // Build a 41-step session: 1 user prompt at the start plus 41 assistant
         // messages. The recent-message limit is 32, so the user prompt drops

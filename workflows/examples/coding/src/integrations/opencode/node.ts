@@ -562,42 +562,44 @@ export function createOpenCodeNode<
                 )) as Result<{ id: string }>,
             ).id;
 
-        const reply =
-            (existingSessionID
-                ? await tryReconnectToExistingPrompt(sdk, sessionID, prompt, lastReplyID)
-                : undefined) ??
-            (await (async () => {
-                try {
-                    return unwrapResult(
-                        (await sdk.client.session.prompt(
-                            {
-                                sessionID,
-                                ...(sdk.named ? { agent: name } : {}),
-                                model,
-                                variant,
-                                system,
-                                tools: tools ? { ...tools } : undefined,
-                                parts: [
-                                    {
-                                        type: "text",
-                                        text: prompt,
-                                    },
-                                ],
-                            },
-                            {
-                                responseStyle: "data",
-                                throwOnError: true,
-                            },
-                        )) as Result<OpenCodeReply>,
-                    );
-                } catch (error) {
-                    try {
-                        return await waitForPromptReply(sdk, sessionID, prompt, lastReplyID, false);
-                    } catch {
-                        throw error;
-                    }
-                }
-            })());
+        const reconnected = existingSessionID
+            ? await tryReconnectToExistingPrompt(sdk, sessionID, prompt, lastReplyID)
+            : undefined;
+
+        let reply: OpenCodeReply;
+
+        if (reconnected) {
+            reply = reconnected;
+        } else {
+            // Submit the prompt asynchronously so we never depend on a
+            // long-lived streaming HTTP connection. The async endpoint
+            // returns once the server accepts the prompt; the assistant
+            // reply is then retrieved by polling session messages. This
+            // keeps the workflow resilient to socket-level disconnects for
+            // sessions that run for tens of minutes.
+            await sdk.client.session.promptAsync(
+                {
+                    sessionID,
+                    ...(sdk.named ? { agent: name } : {}),
+                    model,
+                    variant,
+                    system,
+                    tools: tools ? { ...tools } : undefined,
+                    parts: [
+                        {
+                            type: "text",
+                            text: prompt,
+                        },
+                    ],
+                },
+                {
+                    responseStyle: "data",
+                    throwOnError: true,
+                },
+            );
+
+            reply = await waitForPromptReply(sdk, sessionID, prompt, lastReplyID, false);
+        }
 
         if (reply.info.error) {
             const errorData = reply.info.error.data;
