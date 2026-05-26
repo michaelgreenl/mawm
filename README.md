@@ -10,24 +10,21 @@
 
 > Multi-Agent Workflow Management (MAWM) is a TypeScript CLI for packaging and installing LangGraph workflows with the purpose of agent execution and orchestration.
 
---- 
-
-##### Core Stack
-
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/docs/)
-[![LangGraph](https://img.shields.io/badge/LangChain-7FC8FF?logo=langgraph&logoColor=0B1220)](https://docs.langchain.com/) 
-[![Node](https://img.shields.io/badge/Node.js-6DA55F?logo=node.js&logoColor=white)](https://nodejs.org/) 
-##### Workflow Orchestration
-[![OpenCode](https://img.shields.io/badge/OpenCode-120F0F?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzEzMTAxMCIvPjxwYXRoIGQ9Ik0zMjAgMjI0djEyOEgxOTJWMjI0aDEyOFoiIGZpbGw9IiM1QTU4NTgiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zODQgNDE2SDEyOFY5NmgyNTZ2MzIwWk0zMjAgMTYwSDE5MnYxOTJoMTI4VjE2MFoiIGZpbGw9IiNmZmYiLz48L3N2Zz4%3D)](https://opencode.ai/docs)
-
 ## What It Provides
-
+  
 | Area               | Notes                                                                 |
 | ------------------ | --------------------------------------------------------------------- |
 | Project workspace  | `mawm init` creates project-local workflow state under `.mawm/`.       |
 | Workflow installs  | Install, list, update, and remove workflows globally or per project.   |
 | Workflow templates | `mawm init -t base` and `mawm init -t initiative` scaffold workflows.  |
 | Agent assets       | `mawm init -a opencode` copies bundled OpenCode agents and tools.      |
+
+## Stack
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/docs/)
+[![LangGraph](https://img.shields.io/badge/LangChain-7FC8FF?logo=langgraph&logoColor=0B1220)](https://docs.langchain.com/) 
+[![Node](https://img.shields.io/badge/Node.js-6DA55F?logo=node.js&logoColor=white)](https://nodejs.org/) 
+[![OpenCode](https://img.shields.io/badge/OpenCode-Workflow_Orchestration-5A5A5A?labelColor=120F0F&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzEzMTAxMCIvPjxwYXRoIGQ9Ik0zMjAgMjI0djEyOEgxOTJWMjI0aDEyOFoiIGZpbGw9IiM1QTU4NTgiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zODQgNDE2SDEyOFY5NmgyNTZ2MzIwWk0zMjAgMTYwSDE5MnYxOTJoMTI4VjE2MFoiIGZpbGw9IiNmZmYiLz48L3N2Zz4%3D)](https://opencode.ai/docs)
 
 ## Quick Start
 
@@ -124,7 +121,6 @@ The repository also includes `workflows/examples/coding` as a source example for
 ## Running Workflows
 
 Workflow execution is currently handled outside the top-level CLI. Generated workflow packages include LangGraph project files, and the bundled OpenCode assets include an `execute-graph` tool that can launch installed workflows when used by the relevant OpenCode agent.
-
 
 ## Status
 
