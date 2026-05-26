@@ -47,9 +47,6 @@ export const createWorkflowAgentConfig = (
         ...commonSkillPermissions,
         ...skillPermissions,
     };
-    const canUseSkillTool = Object.values(resolvedSkillPermissions).some(
-        (permission) => permission !== "deny",
-    );
 
     return {
         model,
@@ -62,7 +59,6 @@ export const createWorkflowAgentConfig = (
         tools: {
             ...commonTools,
             edit: canEdit,
-            skill: canUseSkillTool,
         },
     };
 };
