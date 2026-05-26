@@ -1,1 +1,1 @@
-Today, there is no need for backward compatibility since this is v0 (pre-release). So trying to make things backward compatible would just cause more issues than anything. This also includes regression testing. 
+> **Note:** Today, there is no need for backward compatibility since this is v0 (pre-release). So trying to make things backward compatible would just cause more issues than anything. This also includes regression testing. 
