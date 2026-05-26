@@ -72,13 +72,13 @@ MAWM separates reusable workflow installation from project-local workflow use.
 Install a workflow into the user-level MAWM config from a workflow package or built workflow directory:
 
 ```sh
-mawm install -g <workflow-or-path>
+mawm install -g [workflow-or-path]
 ```
 
 Install a globally available workflow into the current project:
 
 ```sh
-mawm install <workflow-id>
+mawm install [workflow-id]
 ```
 
 List installed workflows:
@@ -93,8 +93,8 @@ Update or remove workflows:
 ```sh
 mawm update [workflow-id]
 mawm update -g [workflow-id]
-mawm remove <workflow-id>
-mawm remove -g <workflow-id>
+mawm remove [workflow-id]
+mawm remove -g [workflow-id]
 ```
 
 ## Command Reference
