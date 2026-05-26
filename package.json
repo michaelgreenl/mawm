@@ -24,6 +24,7 @@
     "clean": "rm -rf dist",
     "rebuild": "bun clean && bun run build",
     "rebuild:link": "bun rebuild && bun link",
+    "release": "semantic-release",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write src test",
@@ -31,6 +32,11 @@
     "lint": "eslint src test",
     "lint:all": "bun lint && bun format:check",
     "hooks": "husky"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ]
   },
   "dependencies": {
     "@langchain/core": "^1.1.46",
@@ -45,6 +51,7 @@
     "globals": "^16.0.0",
     "husky": "^9.1.7",
     "prettier": "^3.5.3",
+    "semantic-release": "^25.0.3",
     "typescript": "^5",
     "typescript-eslint": "^8.32.0",
     "vitest": "^4.1.7"
