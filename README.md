@@ -2,7 +2,7 @@
 
 # MAWM 
 
-[![npm: mawm](https://img.shields.io/npm/v/mawm?label=mawm&color=111827&labelColor=CB3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/mawm)
+[![npm: mawm](https://img.shields.io/npm/v/@mawm/cli?label=@mawm/cli&color=CB3837&labelColor=5a5a5a&logo=npm&logoColor=white)](https://www.npmjs.com/package/mawm)
 [![License](https://img.shields.io/badge/License-MIT_+_Commons_Clause-DBC897)](https://github.com/michaelgreenl/mawm?tab=License-1-ov-file)
 [![Status](https://img.shields.io/badge/Status-Active_Development-f59e0b)](#status)
 
@@ -31,7 +31,7 @@
 Install the CLI:
 
 ```sh
-npm install -g mawm
+npm install -g @mawm/cli
 ```
 
 Initialize MAWM inside a project:
@@ -78,7 +78,7 @@ mawm install -g [workflow-or-path]
 Install a globally available workflow into the current project:
 
 ```sh
-mawm install [workflow-id]
+mawm install <workflow-id>
 ```
 
 List installed workflows:
@@ -93,8 +93,8 @@ Update or remove workflows:
 ```sh
 mawm update [workflow-id]
 mawm update -g [workflow-id]
-mawm remove [workflow-id]
-mawm remove -g [workflow-id]
+mawm remove <workflow-id>
+mawm remove -g <workflow-id>
 ```
 
 ## Command Reference
