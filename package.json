@@ -1,9 +1,18 @@
 {
   "name": "@mawm/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "description": "TypeScript CLI for packaging and installing LangGraph workflows for agent execution and orchestration.",
   "license": "MIT-with-Commons-Clause",
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://github.com/michaelgreenl/mawm#readme",
+  "bugs": {
+    "url": "https://github.com/michaelgreenl/mawm/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaelgreenl/mawm.git"
   },
   "type": "module",
   "main": "./dist/index.js",

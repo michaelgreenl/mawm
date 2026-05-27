@@ -2,7 +2,7 @@
 
 # MAWM 
 
-[![npm: mawm](https://img.shields.io/npm/v/@mawm/cli?label=@mawm/cli&color=CB3837&labelColor=5a5a5a&logo=npm&logoColor=white)](https://www.npmjs.com/package/mawm)
+[![npm: @mawm/cli](https://img.shields.io/npm/v/%40mawm%2Fcli?label=%40mawm%2Fcli&color=CB3837&labelColor=5a5a5a&logo=npm&logoColor=white)](https://www.npmjs.com/package/@mawm/cli)
 [![License](https://img.shields.io/badge/License-MIT_+_Commons_Clause-DBC897)](https://github.com/michaelgreenl/mawm?tab=License-1-ov-file)
 [![Status](https://img.shields.io/badge/Status-Active_Development-f59e0b)](#status)
 
@@ -43,7 +43,7 @@ mawm init
 Or run it without a global install:
 
 ```sh
-npx mawm init
+npx @mawm/cli init
 ```
 
 Add the project initiative workspace when you want MAWM's project-local planning docs and templates:
@@ -131,4 +131,3 @@ MAWM is in active development and pre-release.
 - Expanding the root MAWM config into a broader hub for workflow and agent-development settings.
 - Broader agentic-development integrations, including ClaudeCode and Codex support alongside OpenCode.
 - Other improvements/fixes
-
