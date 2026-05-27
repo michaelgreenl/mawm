@@ -10,40 +10,25 @@
 
 > Multi-Agent Workflow Management (MAWM) is a TypeScript CLI for packaging and installing LangGraph workflows with the purpose of agent execution and orchestration.
 
-## What It Provides
-  
-| Area               | Notes                                                                 |
-| ------------------ | --------------------------------------------------------------------- |
-| Project workspace  | `mawm init` creates project-local workflow state under `.mawm/`.       |
-| Workflow installs  | Install, list, update, and remove workflows globally or per project.   |
-| Workflow templates | `mawm init -t base` and `mawm init -t initiative` scaffold workflows.  |
-| Agent assets       | `mawm init -a opencode` copies bundled OpenCode agents and tools.      |
-
-## Stack
-
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/docs/)
-[![LangGraph](https://img.shields.io/badge/LangChain-7FC8FF?logo=langgraph&logoColor=0B1220)](https://docs.langchain.com/) 
-[![Node](https://img.shields.io/badge/Node.js-6DA55F?logo=node.js&logoColor=white)](https://nodejs.org/) 
-[![OpenCode](https://img.shields.io/badge/OpenCode-Workflow_Orchestration-5A5A5A?labelColor=120F0F&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzEzMTAxMCIvPjxwYXRoIGQ9Ik0zMjAgMjI0djEyOEgxOTJWMjI0aDEyOFoiIGZpbGw9IiM1QTU4NTgiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zODQgNDE2SDEyOFY5NmgyNTZ2MzIwWk0zMjAgMTYwSDE5MnYxOTJoMTI4VjE2MFoiIGZpbGw9IiNmZmYiLz48L3N2Zz4%3D)](https://opencode.ai/docs)
 
 ## Quick Start
 
-Install the CLI:
+Install the package globally 
 
 ```sh
-npm install -g @mawm/cli
+bun install -g @mawm/cli
 ```
 
-Initialize MAWM inside a project:
+Initialize `.mawm/` in target-project
 
 ```sh
-mawm init
+mawm init    
 ```
 
 Or run it without a global install:
 
 ```sh
-npx @mawm/cli init
+bunx @mawm/cli init
 ```
 
 Add the project initiative workspace when you want MAWM's project-local planning docs and templates:
@@ -69,43 +54,52 @@ mawm init -t initiative
 
 MAWM separates reusable workflow installation from project-local workflow use.
 
-Install a workflow into the user-level MAWM config from a workflow package or built workflow directory:
+Install a workflow package or built workflow directory into the user-level MAWM config:
 
 ```sh
-mawm install -g [workflow-or-path]
+mawm install -g [workflow-or-path]  # installs globally (~/.config/mawm/)
 ```
 
-Install a globally available workflow into the current project:
+Pull a globally installed workflow into the current project:
 
 ```sh
-mawm install <workflow-id>
+mawm install <workflow-id>          # copies into .mawm/graphs/
 ```
 
 List installed workflows:
 
 ```sh
-mawm list
-mawm list -g
+mawm list                           # project-local
+mawm list -g                        # global
 ```
 
-Update or remove workflows:
+Reinstall from source or remove:
 
 ```sh
-mawm update [workflow-id]
-mawm update -g [workflow-id]
-mawm remove <workflow-id>
-mawm remove -g <workflow-id>
+mawm update [workflow-id]           # reinstall workflow(s) (project-local)
+mawm update -g [workflow-id]        # reinstall workflow(s) (global)
+mawm remove <workflow-id>           # remove from project
+mawm remove -g <workflow-id>        # remove from global config
 ```
 
 ## Command Reference
 
-| Command                                           | Aliases | Purpose                                                                  |
-| ------------------------------------------------- | ------- | ------------------------------------------------------------------------ |
-| `mawm init [-g] [-i] [-a <agent>] [-t [type]]`    |         | Initialize project state, user config, agent assets, or workflow templates. |
-| `mawm install [-g] [workflow-or-path]`            | `i`     | Install workflows globally or into the current project.                  |
-| `mawm list [-g]`                                  |         | List project-local or global workflows.                                  |
-| `mawm update [-g] [workflow]`                     | `u`     | Reinstall one or all workflows from their source.                        |
-| `mawm remove [-g] <workflow>`                     | `rm`    | Remove an installed workflow.                                            |
+```sh
+# initialize project state, user config, agent assets, or workflow templates
+mawm init [-g] [-i] [-a <agent>] [-t [type]]  
+
+# install workflows globally or into the current project
+mawm [i, install] [-g] [workflow-or-path]      
+
+# list project-local or global workflows
+mawm list [-g]                                 
+
+# reinstall one or all workflows from their source
+mawm [u, update] [-g] [workflow]               
+
+# remove an installed workflow
+mawm [rm, remove] [-g] <workflow>              
+```
 
 ## Shipped Assets
 
@@ -130,4 +124,12 @@ MAWM is in active development and pre-release.
 - Running globally installed workflows with project-local customization.
 - Expanding the root MAWM config into a broader hub for workflow and agent-development settings.
 - Broader agentic-development integrations, including ClaudeCode and Codex support alongside OpenCode.
-- Other improvements/fixes
+- Other features, improvements, and fixes.
+
+## Stack
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=fff)](https://www.typescriptlang.org/docs/)
+[![LangGraph](https://img.shields.io/badge/LangChain-7FC8FF?style=for-the-badge&logo=langgraph&logoColor=0B1220)](https://docs.langchain.com/) 
+[![Node](https://img.shields.io/badge/Node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/) 
+[![OpenCode](https://img.shields.io/badge/OpenCode-Workflow_Orchestration-5A5A5A?style=for-the-badge&labelColor=120F0F&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzEzMTAxMCIvPjxwYXRoIGQ9Ik0zMjAgMjI0djEyOEgxOTJWMjI0aDEyOFoiIGZpbGw9IiM1QTU4NTgiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zODQgNDE2SDEyOFY5NmgyNTZ2MzIwWk0zMjAgMTYwSDE5MnYxOTJoMTI4VjE2MFoiIGZpbGw9IiNmZmYiLz48L3N2Zz4%3D)](https://opencode.ai/docs)
+
