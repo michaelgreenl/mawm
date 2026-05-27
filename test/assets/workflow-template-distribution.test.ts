@@ -26,8 +26,6 @@ const startupTimeoutMs = 15000;
 const startupPollMs = 250;
 const shutdownTimeoutMs = 5000;
 let port = initialPort;
-const isReleaseHook = process.env.MAWM_RELEASE_HOOK === "true";
-const releaseHookOnlyTest = isReleaseHook ? test.skip : test;
 
 const required = [
     "package.json",
@@ -295,123 +293,119 @@ afterAll(async () => {
 });
 
 describe("workflow template distribution", () => {
-    releaseHookOnlyTest(
-        "builds scaffold-ready template assets and proves install plus launch coverage",
-        async () => {
-            ok("repo build", run(["bun", "run", "build"], root));
+    test("builds scaffold-ready template assets and proves install plus launch coverage", async () => {
+        ok("repo build", run(["bun", "run", "build"], root));
 
-            for (const variant of ["base", "initiative"] as const) {
-                const sourceMeta = await json<Meta>(join(sourceTemplates, variant, "mawm.json"));
-                const distMeta = await json<Meta>(join(distTemplates, variant, "mawm.json"));
-                expect(distMeta).toEqual(sourceMeta);
-                const pkg = await json<{
-                    readonly devDependencies?: {
-                        readonly vitest?: string;
-                    };
-                    readonly scripts?: {
-                        readonly test?: string;
-                    };
-                }>(join(distTemplates, variant, "package.json"));
+        for (const variant of ["base", "initiative"] as const) {
+            const sourceMeta = await json<Meta>(join(sourceTemplates, variant, "mawm.json"));
+            const distMeta = await json<Meta>(join(distTemplates, variant, "mawm.json"));
+            expect(distMeta).toEqual(sourceMeta);
+            const pkg = await json<{
+                readonly devDependencies?: {
+                    readonly vitest?: string;
+                };
+                readonly scripts?: {
+                    readonly test?: string;
+                };
+            }>(join(distTemplates, variant, "package.json"));
 
-                expect(pkg.scripts?.test).toBe("vitest run");
-                expect(pkg.devDependencies?.vitest).toBeDefined();
+            expect(pkg.scripts?.test).toBe("vitest run");
+            expect(pkg.devDependencies?.vitest).toBeDefined();
 
-                for (const path of required) {
-                    expect(await exists(join(distTemplates, variant, path))).toBe(true);
-                }
+            for (const path of required) {
+                expect(await exists(join(distTemplates, variant, path))).toBe(true);
             }
+        }
 
-            const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-            const project = await mkdtemp(join(tmpdir(), "mawm-project-"));
-            const repo = await mkdtemp(join(tmpdir(), "mawm-repo-"));
-            temp.push(home, project, repo);
-            await writeFile(join(repo, "README.md"), "# Demo\n");
+        const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
+        const project = await mkdtemp(join(tmpdir(), "mawm-project-"));
+        const repo = await mkdtemp(join(tmpdir(), "mawm-repo-"));
+        temp.push(home, project, repo);
+        await writeFile(join(repo, "README.md"), "# Demo\n");
 
-            const env = { HOME: home };
-            ok(
-                "global install base-template",
-                run(["bun", bin, "install", "-g", join(distTemplates, "base")], root, env),
-            );
-            ok(
-                "global install initiative-template",
-                run(["bun", bin, "install", "-g", join(distTemplates, "initiative")], root, env),
-            );
-            ok(
-                "project install base-template",
-                run(["bun", bin, "install", "base-template"], project, env),
-            );
-            ok(
-                "project install initiative-template",
-                run(["bun", bin, "install", "initiative-template"], project, env),
-            );
+        const env = { HOME: home };
+        ok(
+            "global install base-template",
+            run(["bun", bin, "install", "-g", join(distTemplates, "base")], root, env),
+        );
+        ok(
+            "global install initiative-template",
+            run(["bun", bin, "install", "-g", join(distTemplates, "initiative")], root, env),
+        );
+        ok(
+            "project install base-template",
+            run(["bun", bin, "install", "base-template"], project, env),
+        );
+        ok(
+            "project install initiative-template",
+            run(["bun", bin, "install", "initiative-template"], project, env),
+        );
 
-            const baseRoot = join(project, ".mawm", "graphs", "base-template");
-            const initiativeRoot = join(project, ".mawm", "graphs", "initiative-template");
-            expect(await json<Meta>(join(baseRoot, "mawm.json"))).toEqual(
-                await json<Meta>(join(distTemplates, "base", "mawm.json")),
-            );
-            expect(await json<Meta>(join(initiativeRoot, "mawm.json"))).toEqual(
-                await json<Meta>(join(distTemplates, "initiative", "mawm.json")),
-            );
-            expect(await readFile(join(baseRoot, "langgraph.json"), "utf8")).toBe(
-                await readFile(join(distTemplates, "base", "langgraph.json"), "utf8"),
-            );
-            expect(await readFile(join(initiativeRoot, "langgraph.json"), "utf8")).toBe(
-                await readFile(join(distTemplates, "initiative", "langgraph.json"), "utf8"),
-            );
-            expect(
-                await json<{
-                    readonly scripts?: {
-                        readonly test?: string;
-                    };
-                }>(join(baseRoot, "package.json")),
-            ).toEqual(
-                expect.objectContaining({
-                    scripts: expect.objectContaining({
-                        test: "vitest run",
-                    }),
+        const baseRoot = join(project, ".mawm", "graphs", "base-template");
+        const initiativeRoot = join(project, ".mawm", "graphs", "initiative-template");
+        expect(await json<Meta>(join(baseRoot, "mawm.json"))).toEqual(
+            await json<Meta>(join(distTemplates, "base", "mawm.json")),
+        );
+        expect(await json<Meta>(join(initiativeRoot, "mawm.json"))).toEqual(
+            await json<Meta>(join(distTemplates, "initiative", "mawm.json")),
+        );
+        expect(await readFile(join(baseRoot, "langgraph.json"), "utf8")).toBe(
+            await readFile(join(distTemplates, "base", "langgraph.json"), "utf8"),
+        );
+        expect(await readFile(join(initiativeRoot, "langgraph.json"), "utf8")).toBe(
+            await readFile(join(distTemplates, "initiative", "langgraph.json"), "utf8"),
+        );
+        expect(
+            await json<{
+                readonly scripts?: {
+                    readonly test?: string;
+                };
+            }>(join(baseRoot, "package.json")),
+        ).toEqual(
+            expect.objectContaining({
+                scripts: expect.objectContaining({
+                    test: "vitest run",
                 }),
-            );
-            expect(
-                await json<{
-                    readonly scripts?: {
-                        readonly test?: string;
-                    };
-                }>(join(initiativeRoot, "package.json")),
-            ).toEqual(
-                expect.objectContaining({
-                    scripts: expect.objectContaining({
-                        test: "vitest run",
-                    }),
+            }),
+        );
+        expect(
+            await json<{
+                readonly scripts?: {
+                    readonly test?: string;
+                };
+            }>(join(initiativeRoot, "package.json")),
+        ).toEqual(
+            expect.objectContaining({
+                scripts: expect.objectContaining({
+                    test: "vitest run",
                 }),
-            );
+            }),
+        );
 
-            const baseRun = await launch(baseRoot, {});
-            expect(baseRun.status).toBe("completed");
-            expect(baseRun.summary).toBe("Standalone workflow completed.");
+        const baseRun = await launch(baseRoot, {});
+        expect(baseRun.status).toBe("completed");
+        expect(baseRun.summary).toBe("Standalone workflow completed.");
 
-            const initiativeSpecPath = await createInitiativeSpec(repo);
-            const runSpecPath = join(repo, ".mawm", "runs", "run-1", "spec.md");
-            const initiativeRun = await launch(
-                initiativeRoot,
-                {
-                    initiativeSpecPath,
-                    runSpecPath,
-                },
-                {
-                    initiativeBranch: "initiative/workflow-templates",
-                    targetRepoPath: repo,
-                },
-            );
+        const initiativeSpecPath = await createInitiativeSpec(repo);
+        const runSpecPath = join(repo, ".mawm", "runs", "run-1", "spec.md");
+        const initiativeRun = await launch(
+            initiativeRoot,
+            {
+                initiativeSpecPath,
+                runSpecPath,
+            },
+            {
+                initiativeBranch: "initiative/workflow-templates",
+                targetRepoPath: repo,
+            },
+        );
 
-            expect(initiativeRun.status).toBe("completed");
-            expect(initiativeRun.interrupt).toBeUndefined();
-            expect(initiativeRun.runSpecPath).toBe(runSpecPath);
-            expect(await readFile(runSpecPath, "utf8")).toContain(
-                "# Run Spec: Run 1: First runnable template",
-            );
-            expect(await readFile(runSpecPath, "utf8")).toContain("initiative/workflow-templates");
-        },
-        300000,
-    );
+        expect(initiativeRun.status).toBe("completed");
+        expect(initiativeRun.interrupt).toBeUndefined();
+        expect(initiativeRun.runSpecPath).toBe(runSpecPath);
+        expect(await readFile(runSpecPath, "utf8")).toContain(
+            "# Run Spec: Run 1: First runnable template",
+        );
+        expect(await readFile(runSpecPath, "utf8")).toContain("initiative/workflow-templates");
+    }, 300000);
 });

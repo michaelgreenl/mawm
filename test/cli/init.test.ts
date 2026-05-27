@@ -15,8 +15,6 @@ const repoRoot = dirname(fileURLToPath(new URL("../../package.json", import.meta
 const binPath = join(repoRoot, "bin", "mawm.js");
 const templateRoot = join(repoRoot, "dist", "assets", "workflow-templates");
 const roots = trackRoots();
-const isReleaseHook = process.env.MAWM_RELEASE_HOOK === "true";
-const releaseHookOnlyTest = isReleaseHook ? test.skip : test;
 
 const runBuiltCli = async (cwd: string, home: string, args: readonly string[]) => {
     if (!(await pathExists(join(templateRoot, "base", "package.json")))) {
@@ -148,48 +146,42 @@ describe("init command", () => {
         });
     });
 
-    releaseHookOnlyTest(
-        "scaffolds the base template into the current directory with -t",
-        async () => {
-            const home = await roots.dir("mawm-home-");
-            const projectRoot = await roots.dir("mawm-project-");
+    test("scaffolds the base template into the current directory with -t", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
 
-            const result = await runBuiltCli(projectRoot, home, ["init", "-t"]);
+        const result = await runBuiltCli(projectRoot, home, ["init", "-t"]);
 
-            expect(result).toEqual({
-                exitCode: 0,
-                stderr: "",
-                stdout: "Initialized base template scaffold.\n",
-            });
-            expect(await pathExists(join(projectRoot, "package.json"))).toBe(true);
-            expect(await pathExists(join(projectRoot, "mawm.json"))).toBe(true);
-            expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
-            expect(await pathExists(join(projectRoot, ".opencode"))).toBe(false);
-            expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
-        },
-    );
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized base template scaffold.\n",
+        });
+        expect(await pathExists(join(projectRoot, "package.json"))).toBe(true);
+        expect(await pathExists(join(projectRoot, "mawm.json"))).toBe(true);
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+        expect(await pathExists(join(projectRoot, ".opencode"))).toBe(false);
+        expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
+    });
 
-    releaseHookOnlyTest(
-        "scaffolds the initiative template when -t initiative is passed",
-        async () => {
-            const home = await roots.dir("mawm-home-");
-            const projectRoot = await roots.dir("mawm-project-");
+    test("scaffolds the initiative template when -t initiative is passed", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
 
-            const result = await runBuiltCli(projectRoot, home, ["init", "-t", "initiative"]);
+        const result = await runBuiltCli(projectRoot, home, ["init", "-t", "initiative"]);
 
-            expect(result).toEqual({
-                exitCode: 0,
-                stderr: "",
-                stdout: "Initialized initiative template scaffold.\n",
-            });
-            expect(await pathExists(join(projectRoot, "package.json"))).toBe(true);
-            expect(await pathExists(join(projectRoot, "mawm.json"))).toBe(true);
-            expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
-            expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
-        },
-    );
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Initialized initiative template scaffold.\n",
+        });
+        expect(await pathExists(join(projectRoot, "package.json"))).toBe(true);
+        expect(await pathExists(join(projectRoot, "mawm.json"))).toBe(true);
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
+        expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
+    });
 
-    releaseHookOnlyTest("fails for unsupported template types", async () => {
+    test("fails for unsupported template types", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
 
@@ -205,7 +197,7 @@ describe("init command", () => {
         expect(await pathExists(join(home, ".config", "mawm"))).toBe(false);
     });
 
-    releaseHookOnlyTest("rejects template mode when combined with other init flows", async () => {
+    test("rejects template mode when combined with other init flows", async () => {
         const cases = [
             ["init", "-g", "-t"],
             ["init", "-it"],
