@@ -36,7 +36,7 @@
     "rebuild": "bun clean && bun run build",
     "rebuild:link": "bun rebuild && bun link",
     "prepublishOnly": "bun rebuild",
-    "release": "semantic-release",
+    "release": "CI=true semantic-release",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write src test",
