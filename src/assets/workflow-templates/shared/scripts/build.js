@@ -41,6 +41,9 @@ writeFileSync(
     [
         "node_modules",
         "",
+        "# Build artifact",
+        "graph.js",
+        "",
         "# LangGraph API",
         ".langgraph_api",
         ".langgraph-dev.json",
