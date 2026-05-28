@@ -1,0 +1,5 @@
+The Commons Clause addition is specifically directed at preventing use of this code as training data for AI/ML models
+
+Any other use — internal tooling, commercial products that consume the CLI, open source projects — is granted under standard MIT terms
+
+If your use case doesn't involve AI training data, you can treat this as MIT

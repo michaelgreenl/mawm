@@ -3,7 +3,7 @@
 # MAWM 
 
 [![npm: @mawm/cli](https://img.shields.io/npm/v/%40mawm%2Fcli?label=%40mawm%2Fcli&color=CB3837&labelColor=5a5a5a&logo=npm&logoColor=white)](https://www.npmjs.com/package/@mawm/cli)
-[![License](https://img.shields.io/badge/License-MIT_+_Commons_Clause-DBC897)](https://github.com/michaelgreenl/mawm?tab=License-1-ov-file)
+[![License](https://img.shields.io/badge/License-MIT_+_Commons_Clause-DBC897)](./LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active_Development-f59e0b)](#status)
 
 </div>
@@ -132,4 +132,8 @@ MAWM is in active development and pre-release.
 [![LangGraph](https://img.shields.io/badge/LangChain-7FC8FF?style=for-the-badge&logo=langgraph&logoColor=0B1220)](https://docs.langchain.com/) 
 [![Node](https://img.shields.io/badge/Node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/) 
 [![OpenCode](https://img.shields.io/badge/OpenCode-Workflow_Orchestration-5A5A5A?style=for-the-badge&labelColor=120F0F&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzEzMTAxMCIvPjxwYXRoIGQ9Ik0zMjAgMjI0djEyOEgxOTJWMjI0aDEyOFoiIGZpbGw9IiM1QTU4NTgiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zODQgNDE2SDEyOFY5NmgyNTZ2MzIwWk0zMjAgMTYwSDE5MnYxOTJoMTI4VjE2MFoiIGZpbGw9IiNmZmYiLz48L3N2Zz4%3D)](https://opencode.ai/docs)
+## License
 
+MIT with Commons Clause — see [LICENSE](./LICENSE) and [NOTICE](./NOTICE) for details.
+
+The Commons Clause restriction applies specifically to AI/ML training use. For all other purposes, including commercial use, this project is effectively MIT licensed.
