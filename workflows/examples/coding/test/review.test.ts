@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeImplementationReview } from "../src/graph/review/implementation.ts";
-import { parseReviewPayload } from "../src/graph/review/parse.ts";
-import {
-    normalizePlanningReview,
-} from "../src/graph/review/planning.ts";
+import { normalizeImplementationReview } from "../src/graph/phases/implementing/decision.ts";
+import { normalizePlanningReview } from "../src/graph/phases/planning/decision.ts";
+import { parseReviewPayload } from "../src/graph/review/payload.ts";
 
 describe("review helpers", () => {
     test("parses a fenced JSON review block", () => {

@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runImplementation } from "../src/graph/implementing.ts";
-import { materializeRunSpec } from "../src/graph/planning.ts";
+import { runImplementation } from "../src/graph/phases/implementing/run.ts";
+import { materializeRunSpec } from "../src/graph/phases/planning/materialize.ts";
 
 const createSpec = async (dir: string, mode: "headless" | "manual") => {
     const path = join(dir, "initiative-spec.md");

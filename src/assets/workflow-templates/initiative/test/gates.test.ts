@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { implementationGate, planningGate } from "../src/graph/gates.ts";
+import { implementationGate } from "../src/graph/phases/implementing/gate.ts";
+import { planningGate } from "../src/graph/phases/planning/gate.ts";
 
 describe("initiative template gates", () => {
     test("interrupts blocked planning", () => {

@@ -1,6 +1,6 @@
 import { END, START, MemorySaver, StateGraph } from "@langchain/langgraph";
-import { implementationGate, planningGate } from "./gates.js";
-import { invokeImplementing, invokePlanning } from "./nodes.js";
+import { implementingPhase } from "./phases/implementing/index.js";
+import { planningPhase } from "./phases/planning/index.js";
 import {
     WorkflowContextAnnotation,
     WorkflowInputAnnotation,
@@ -11,6 +11,10 @@ import {
 /**
  * Creates the top-level workflow graph.
  *
+ * The workflow runs as a sequence of review phases joined by gates: planning
+ * produces an accepted run spec, then implementing applies it. Each gate routes
+ * forward, loops back, or interrupts for a human.
+ *
  * @returns The compiled workflow graph.
  */
 export const createGraph = () => {
@@ -19,12 +23,12 @@ export const createGraph = () => {
         input: WorkflowInputAnnotation,
         output: WorkflowOutputAnnotation,
     })
-        .addNode("planning", invokePlanning)
-        .addNode("planning_gate", planningGate, {
+        .addNode("planning", planningPhase.node)
+        .addNode("planning_gate", planningPhase.gate, {
             ends: [END, "implementing"],
         })
-        .addNode("implementing", invokeImplementing)
-        .addNode("implementation_gate", implementationGate, {
+        .addNode("implementing", implementingPhase.node)
+        .addNode("implementation_gate", implementingPhase.gate, {
             ends: [END, "implementing"],
         })
         .addEdge(START, "planning")

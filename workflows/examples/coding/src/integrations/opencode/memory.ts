@@ -1,9 +1,21 @@
+import { Annotation } from "@langchain/langgraph";
 import type { OpenCodeMemory } from "./types.js";
 
 interface OpenCodeMemoryUpdate {
     readonly sessions?: Readonly<Record<string, string>>;
     readonly cursors?: Readonly<Record<string, number>>;
 }
+
+/**
+ * Workflow state slot that retains the latest OpenCode memory snapshot.
+ *
+ * Owned by the OpenCode integration so the graph schema stays free of
+ * integration-specific reducer details.
+ */
+export const opencodeMemory = Annotation<OpenCodeMemory | undefined>({
+    reducer: (_left, right) => right,
+    default: () => undefined,
+});
 
 /**
  * Merges OpenCode session metadata while preserving unrelated memory fields.

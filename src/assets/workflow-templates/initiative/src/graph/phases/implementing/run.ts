@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { WorkflowState, WorkflowUpdate } from "./state.js";
+import type { WorkflowState, WorkflowUpdate } from "../../state.js";
 
 const section = (text: string, heading: string) => {
     const marker = `## ${heading}`;

@@ -1,7 +1,26 @@
+import type { Runtime } from "@langchain/langgraph";
+
 export interface RuntimeContextCarrier<Context extends Record<string, unknown>> {
     readonly configurable?: Partial<Context>;
     readonly context?: Partial<Context>;
 }
+
+/**
+ * Returns the runtime interrupt helper or throws when interrupts are unavailable.
+ *
+ * @param runtime - LangGraph runtime.
+ * @returns The runtime interrupt helper.
+ * @throws When the runtime does not expose interrupts.
+ */
+export const requireInterrupt = <Context extends Record<string, unknown>>(
+    runtime: Runtime<Context>,
+) => {
+    if (!runtime.interrupt) {
+        throw new Error("LangGraph runtime interrupt helper is unavailable.");
+    }
+
+    return runtime.interrupt;
+};
 
 /**
  * Returns a trimmed string when the runtime context value is present.

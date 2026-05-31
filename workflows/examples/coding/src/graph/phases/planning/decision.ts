@@ -1,4 +1,4 @@
-import type { PlanningReviewResult, ReviewPayload } from "./types.js";
+import type { PlanningReviewResult, ReviewPayload } from "../../review/types.js";
 
 /**
  * Normalizes a planning review decision and applies revision limits.

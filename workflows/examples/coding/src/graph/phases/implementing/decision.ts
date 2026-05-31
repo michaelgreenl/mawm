@@ -1,4 +1,4 @@
-import type { ImplementationReviewResult, ReviewPayload } from "./types.js";
+import type { ImplementationReviewResult, ReviewPayload } from "../../review/types.js";
 
 /**
  * Normalizes an implementation review decision and applies revision limits.

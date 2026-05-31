@@ -1,30 +1,6 @@
 import { Annotation } from "@langchain/langgraph";
-import type { OpenCodeMemory } from "../integrations/opencode/types.js";
+import { opencodeMemory } from "../integrations/opencode/memory.js";
 import { int, messages, optionalText, text } from "../shared/reducers.js";
-
-/**
- * Keeps the latest OpenCode memory update in workflow state.
- *
- * @param _left - Previous OpenCode memory.
- * @param right - Incoming OpenCode memory.
- * @returns The incoming OpenCode memory.
- */
-const replaceOpenCodeMemory = (
-    _left: OpenCodeMemory | undefined,
-    right: OpenCodeMemory | undefined,
-): OpenCodeMemory | undefined => right;
-
-/**
- * Provides the default empty OpenCode memory slot.
- *
- * @returns `undefined`.
- */
-const defaultOpenCodeMemory = (): OpenCodeMemory | undefined => undefined;
-
-const opencode = Annotation<OpenCodeMemory | undefined>({
-    reducer: replaceOpenCodeMemory,
-    default: defaultOpenCodeMemory,
-});
 
 const initiativeSpecPath = text();
 const runSpecPath = text();
@@ -56,7 +32,7 @@ export const WorkflowOutputAnnotation = Annotation.Root({
 
 export const WorkflowStateAnnotation = Annotation.Root({
     messages,
-    opencode,
+    opencode: opencodeMemory,
     initiativeSpecPath,
     runSpecPath,
     selectedRunLabel,

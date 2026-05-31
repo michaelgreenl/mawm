@@ -2,12 +2,10 @@ import { afterAll, describe, expect, test } from "vitest";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createGraph } from "../../src/assets/workflow-templates/initiative/src/graph/index.ts";
-import {
-    implementationGate,
-    planningGate,
-} from "../../src/assets/workflow-templates/initiative/src/graph/gates.ts";
-import { runImplementation } from "../../src/assets/workflow-templates/initiative/src/graph/implementing.ts";
-import { materializeRunSpec } from "../../src/assets/workflow-templates/initiative/src/graph/planning.ts";
+import { implementationGate } from "../../src/assets/workflow-templates/initiative/src/graph/phases/implementing/gate.ts";
+import { planningGate } from "../../src/assets/workflow-templates/initiative/src/graph/phases/planning/gate.ts";
+import { runImplementation } from "../../src/assets/workflow-templates/initiative/src/graph/phases/implementing/run.ts";
+import { materializeRunSpec } from "../../src/assets/workflow-templates/initiative/src/graph/phases/planning/materialize.ts";
 import { spawnSync } from "../support/process.js";
 import { templateDir, trackTemplateWorkspaces } from "../support/template.js";
 

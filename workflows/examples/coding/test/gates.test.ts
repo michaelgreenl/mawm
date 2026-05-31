@@ -1,6 +1,7 @@
 import { END } from "@langchain/langgraph";
 import { describe, expect, mock, test } from "bun:test";
-import { implementationGate, planningGate } from "../src/graph/gates.ts";
+import { implementationGate } from "../src/graph/phases/implementing/gate.ts";
+import { planningGate } from "../src/graph/phases/planning/gate.ts";
 import type { WorkflowState } from "../src/graph/state.ts";
 
 const createState = (overrides: Partial<WorkflowState> = {}): WorkflowState => {

@@ -1,8 +1,8 @@
 import { Command, END } from "@langchain/langgraph";
 import type { Runtime } from "@langchain/langgraph";
-import type { WorkflowContext, WorkflowState } from "./state.js";
+import type { WorkflowContext, WorkflowState } from "../../state.js";
 
-const append = (left: string | undefined, right: string | undefined) => {
+const appendVerificationSummary = (left: string | undefined, right: string | undefined) => {
     if (!right) {
         return left;
     }
@@ -14,33 +14,12 @@ const append = (left: string | undefined, right: string | undefined) => {
     return `${left}\n\nManual smoke verification: ${right}`;
 };
 
-const interrupt = (runtime: Runtime<WorkflowContext>) => {
+const requireInterrupt = (runtime: Runtime<WorkflowContext>) => {
     if (!runtime.interrupt) {
         throw new Error("LangGraph runtime interrupt helper is unavailable.");
     }
 
     return runtime.interrupt;
-};
-
-/** Route planning outcomes to implementation or emit a planning interrupt. */
-export const planningGate = (state: WorkflowState, runtime: Runtime<WorkflowContext>) => {
-    if (state.planningDecision === "accept") {
-        return new Command({
-            goto: "implementing",
-        });
-    }
-
-    interrupt(runtime)({
-        kind: "planning_blocked",
-        revisions: state.planningRevisions,
-        runSpecPath: state.runSpecPath,
-        selectedRunLabel: state.selectedRunLabel,
-        summary: state.planningSummary ?? "Planning did not produce an accepted run spec.",
-    });
-
-    return new Command({
-        goto: END,
-    });
 };
 
 /** Route implementation outcomes, including manual smoke resume handling. */
@@ -65,7 +44,7 @@ export const implementationGate = (state: WorkflowState, runtime: Runtime<Workfl
     }
 
     if (state.implementationDecision === "manual_smoke") {
-        const resume = interrupt(runtime)({
+        const resume = requireInterrupt(runtime)({
             instructions: state.manualSmokeInstructions,
             kind: "manual_smoke",
             runSpecPath: state.runSpecPath,
@@ -87,7 +66,7 @@ export const implementationGate = (state: WorkflowState, runtime: Runtime<Workfl
                 goto: END,
                 update: {
                     finalStatus: "completed",
-                    verificationSummary: append(
+                    verificationSummary: appendVerificationSummary(
                         state.verificationSummary,
                         typeof summary === "string" ? summary.trim() : undefined,
                     ),
@@ -115,7 +94,7 @@ export const implementationGate = (state: WorkflowState, runtime: Runtime<Workfl
         );
     }
 
-    interrupt(runtime)({
+    requireInterrupt(runtime)({
         kind: "implementation_blocked",
         revisions: state.implementationRevisions,
         runSpecPath: state.runSpecPath,

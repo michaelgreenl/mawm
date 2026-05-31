@@ -1,24 +1,12 @@
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
-import type { Runtime } from "@langchain/langgraph";
-import { implementationGate, planningGate } from "./gates.js";
-import { runImplementation } from "./implementing.js";
-import { materializeRunSpec } from "./planning.js";
+import { implementingPhase } from "./phases/implementing/index.js";
+import { planningPhase } from "./phases/planning/index.js";
 import {
     WorkflowContextAnnotation,
     WorkflowInputAnnotation,
     WorkflowOutputAnnotation,
     WorkflowStateAnnotation,
-    type WorkflowContext,
-    type WorkflowState,
 } from "./state.js";
-
-const planning = async (state: WorkflowState, runtime: Runtime<WorkflowContext>) => {
-    return materializeRunSpec(state, runtime.context);
-};
-
-const implementing = async (state: WorkflowState) => {
-    return runImplementation(state);
-};
 
 /** Create the initiative workflow graph. */
 export const createGraph = () => {
@@ -27,12 +15,12 @@ export const createGraph = () => {
         input: WorkflowInputAnnotation,
         output: WorkflowOutputAnnotation,
     })
-        .addNode("planning", planning)
-        .addNode("planning_gate", planningGate, {
+        .addNode("planning", planningPhase.node)
+        .addNode("planning_gate", planningPhase.gate, {
             ends: [END, "implementing"],
         })
-        .addNode("implementing", implementing)
-        .addNode("implementation_gate", implementationGate, {
+        .addNode("implementing", implementingPhase.node)
+        .addNode("implementation_gate", implementingPhase.gate, {
             ends: [END, "implementing"],
         })
         .addEdge(START, "planning")
