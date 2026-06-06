@@ -107,7 +107,7 @@ The package ships the CLI plus assets copied into `dist/assets` during build:
 
 - Project-local `.mawm` scaffolds for workflow manifests and initiative/adhoc planning docs.
 - User-level MAWM config scaffold with an empty workflow manifest.
-- OpenCode agent and tool assets, including workflow-runner and initiative-manager agents plus the `execute-graph` tool.
+- OpenCode agent and tool assets, including workflow-runner and mawma-manager agents plus the `execute-graph` tool.
 - `base` and `initiative` workflow templates built from shared LangGraph template assets.
 
 The repository also includes `workflows/examples/coding` as a source example for a richer initiative workflow. It is not a CLI command and is not installed by `mawm init`.

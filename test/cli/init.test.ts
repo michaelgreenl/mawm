@@ -234,9 +234,9 @@ describe("init command", () => {
             stderr: "",
             stdout: "Initialized local MAWM graphs scaffold.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
         });
-        expect(
-            await pathExists(join(projectRoot, ".opencode", "agents", "initiative-manager.md")),
-        ).toBe(true);
+        expect(await pathExists(join(projectRoot, ".opencode", "agents", "mawma-manager.md"))).toBe(
+            true,
+        );
         expect(
             await pathExists(join(projectRoot, ".opencode", "agents", "workflow-runner.md")),
         ).toBe(true);
@@ -261,9 +261,9 @@ describe("init command", () => {
         expect(
             await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
         ).toBe(true);
-        expect(
-            await pathExists(join(projectRoot, ".opencode", "agents", "initiative-manager.md")),
-        ).toBe(true);
+        expect(await pathExists(join(projectRoot, ".opencode", "agents", "mawma-manager.md"))).toBe(
+            true,
+        );
     });
 
     test("initializes global agent assets with -g -a <agent>", async () => {
@@ -278,7 +278,7 @@ describe("init command", () => {
             stdout: "Initialized global MAWM config.\nInitialized global agent assets.\n",
         });
         expect(
-            await pathExists(join(home, ".config", "opencode", "agents", "initiative-manager.md")),
+            await pathExists(join(home, ".config", "opencode", "agents", "mawma-manager.md")),
         ).toBe(true);
         expect(await pathExists(join(projectRoot, ".opencode"))).toBe(false);
     });
@@ -300,7 +300,7 @@ describe("init command", () => {
             stdout: "Initialized global agent assets.\n",
         });
         expect(
-            await pathExists(join(home, ".config", "opencode", "agents", "initiative-manager.md")),
+            await pathExists(join(home, ".config", "opencode", "agents", "mawma-manager.md")),
         ).toBe(true);
         expect(await readFile(join(home, ".config", "opencode", "settings.json"), "utf8")).toBe(
             "{}\n",
@@ -311,7 +311,7 @@ describe("init command", () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
 
-        const path = join(projectRoot, ".opencode", "agents", "initiative-manager.md");
+        const path = join(projectRoot, ".opencode", "agents", "mawma-manager.md");
         await mkdir(join(projectRoot, ".opencode", "agents"), { recursive: true });
         await writeFile(path, "stale\n");
 
@@ -331,7 +331,7 @@ describe("init command", () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
 
-        const path = join(home, ".config", "opencode", "agents", "initiative-manager.md");
+        const path = join(home, ".config", "opencode", "agents", "mawma-manager.md");
         await mkdir(join(home, ".config", "mawm"), { recursive: true });
         await mkdir(join(home, ".config", "opencode", "agents"), { recursive: true });
         await writeFile(path, "stale\n");
@@ -351,7 +351,7 @@ describe("init command", () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
 
-        const path = join(projectRoot, ".opencode", "agents", "initiative-manager.md");
+        const path = join(projectRoot, ".opencode", "agents", "mawma-manager.md");
         await mkdir(join(projectRoot, ".opencode", "agents"), { recursive: true });
         await writeFile(path, "keep\n");
 
@@ -408,9 +408,9 @@ describe("init command", () => {
             stderr: "",
             stdout: "No changes required.\n",
         });
-        expect(
-            await pathExists(join(projectRoot, ".opencode", "agents", "initiative-manager.md")),
-        ).toBe(true);
+        expect(await pathExists(join(projectRoot, ".opencode", "agents", "mawma-manager.md"))).toBe(
+            true,
+        );
     });
 
     test("reports no changes for a successful rerun of init -g -a <agent>", async () => {
@@ -427,7 +427,7 @@ describe("init command", () => {
             stdout: "No changes required.\n",
         });
         expect(
-            await pathExists(join(home, ".config", "opencode", "agents", "initiative-manager.md")),
+            await pathExists(join(home, ".config", "opencode", "agents", "mawma-manager.md")),
         ).toBe(true);
     });
 });
