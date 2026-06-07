@@ -1,4 +1,4 @@
-# initiatives/adhoc/
+# agents/adhoc/
 
 - Purpose: for ad-hoc runs
 
