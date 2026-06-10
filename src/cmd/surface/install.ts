@@ -40,9 +40,12 @@ const install = defineCommand({
                     ? sourceWorkflowPath
                     : dirname(sourceWorkflowPath);
                 const workflowRoot = await resolveWorkflowRoot(sourceDistRoot);
+
                 const workflowMetadata = await resolveWorkflowMetadata(workflowRoot);
                 assertValidWorkflowId(workflowMetadata.id);
+
                 await initializeUserConfig(context.env);
+
                 const configRoot = resolveUserConfigRoot(context.env);
                 const targetWorkflowRoot = join(configRoot, workflowMetadata.id);
                 const installArtifactsAtWorkflowRoot =
@@ -50,6 +53,7 @@ const install = defineCommand({
                 const targetArtifactRoot = installArtifactsAtWorkflowRoot
                     ? targetWorkflowRoot
                     : join(targetWorkflowRoot, "dist");
+
                 const sourceLanggraphConfigPath = join(workflowRoot, "langgraph.json");
                 const targetLanggraphConfigPath = join(targetWorkflowRoot, "langgraph.json");
 
