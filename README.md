@@ -37,6 +37,12 @@ Add the project initiative workspace when you want MAWM's project-local planning
 mawm init -i
 ```
 
+Refresh the managed planning templates, README files, and manifest later without overwriting your roadmap or active docs:
+
+```sh
+mawm update -i
+```
+
 Install the bundled OpenCode agent assets into the current project:
 
 ```sh
@@ -78,6 +84,7 @@ Reinstall from source or remove:
 ```sh
 mawm update [workflow-id]           # reinstall workflow(s) (project-local)
 mawm update -g [workflow-id]        # reinstall workflow(s) (global)
+mawm update -i                      # refresh managed planning assets (.mawm/agents/)
 mawm remove <workflow-id>           # remove from project
 mawm remove -g <workflow-id>        # remove from global config
 ```
@@ -94,8 +101,8 @@ mawm [i, install] [-g] [workflow-or-path]
 # list project-local or global workflows
 mawm list [-g]                                 
 
-# reinstall one or all workflows from their source
-mawm [u, update] [-g] [workflow]               
+# reinstall one or all workflows from their source, or refresh project planning assets
+mawm [u, update] [-g] [workflow] | -i          
 
 # remove an installed workflow
 mawm [rm, remove] [-g] <workflow>              

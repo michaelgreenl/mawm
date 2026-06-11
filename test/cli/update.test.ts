@@ -1,12 +1,18 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test } from "vitest";
 import { runCli } from "../support/cli.js";
 import { pathExists, readJson, writeJson } from "../support/fs.js";
 import { trackRoots } from "../support/tmp.js";
 import { manifestEntry, metadata } from "../support/workflow.js";
 
+const planningRoot = fileURLToPath(
+    new URL("../../src/assets/.mawm.project-local/agents", import.meta.url),
+);
 const roots = trackRoots();
+
+const readAsset = (path: string) => readFile(join(planningRoot, path), "utf8");
 
 describe("update command", () => {
     afterEach(async () => {
@@ -22,7 +28,112 @@ describe("update command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Usage: mawm {u,update} [-g] [workflow] - Reinstalls workflows into a project or into user config\n",
+            stdout: "Usage: mawm {u,update} [-g] [workflow] | {u,update} -i - Reinstalls workflows or refreshes project planning assets\n",
+        });
+    });
+
+    test("rejects -g when combined with planning asset refresh mode", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
+
+        const result = await runCli(projectRoot, home, ["update", "-g", "-i"]);
+
+        expect(result).toEqual({
+            exitCode: 1,
+            stderr: "The -i option refreshes project planning assets only and cannot be used with -g.\n",
+            stdout: "",
+        });
+    });
+
+    test("rejects workflow arguments in planning asset refresh mode", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
+
+        const result = await runCli(projectRoot, home, ["update", "-i", "demo-workflow"]);
+
+        expect(result).toEqual({
+            exitCode: 1,
+            stderr: "The -i option refreshes project planning assets and does not accept a workflow argument.\n",
+            stdout: "",
+        });
+    });
+
+    test("seeds project planning assets with -i", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
+        const agentsRoot = join(projectRoot, ".mawm", "agents");
+
+        const result = await runCli(projectRoot, home, ["update", "-i"]);
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Updated project planning assets in .mawm/agents.\n",
+        });
+        expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
+            await readAsset("adhoc/README.md"),
+        );
+        expect(await readFile(join(agentsRoot, "initiatives", "manifest.json"), "utf8")).toBe(
+            await readAsset("initiatives/manifest.json"),
+        );
+        expect(await readFile(join(agentsRoot, "initiatives", "roadmap.md"), "utf8")).toBe(
+            await readAsset("initiatives/roadmap.md"),
+        );
+        expect(
+            await pathExists(join(agentsRoot, "_templates", "initiative-spec.template.md")),
+        ).toBe(true);
+    });
+
+    test("refreshes only managed planning assets and preserves custom planning docs", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
+        const agentsRoot = join(projectRoot, ".mawm", "agents");
+        const roadmap = join(agentsRoot, "initiatives", "roadmap.md");
+        const active = join(agentsRoot, "initiatives", "active", "demo", "spec.md");
+        const adhoc = join(agentsRoot, "adhoc", "active", "demo.md");
+
+        await runCli(projectRoot, home, ["update", "-i"]);
+        await writeFile(join(agentsRoot, "_templates", "run-spec.template.md"), "stale template\n");
+        await writeFile(join(agentsRoot, "adhoc", "README.md"), "stale adhoc readme\n");
+        await writeFile(
+            join(agentsRoot, "initiatives", "manifest.json"),
+            '{"bundleVersion":"old"}\n',
+        );
+        await writeFile(roadmap, "# Custom roadmap\n");
+        await mkdir(join(agentsRoot, "initiatives", "active", "demo"), { recursive: true });
+        await mkdir(join(agentsRoot, "adhoc", "active"), { recursive: true });
+        await writeFile(active, "# Active initiative doc\n");
+        await writeFile(adhoc, "# Adhoc run doc\n");
+
+        const result = await runCli(projectRoot, home, ["update", "-i"]);
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Updated project planning assets in .mawm/agents.\n",
+        });
+        expect(await readFile(join(agentsRoot, "_templates", "run-spec.template.md"), "utf8")).toBe(
+            await readAsset("_templates/run-spec.template.md"),
+        );
+        expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
+            await readAsset("adhoc/README.md"),
+        );
+        expect(await readFile(join(agentsRoot, "initiatives", "README.md"), "utf8")).toBe(
+            await readAsset("initiatives/README.md"),
+        );
+        expect(await readFile(join(agentsRoot, "initiatives", "manifest.json"), "utf8")).toBe(
+            await readAsset("initiatives/manifest.json"),
+        );
+        expect(await readFile(roadmap, "utf8")).toBe("# Custom roadmap\n");
+        expect(await readFile(active, "utf8")).toBe("# Active initiative doc\n");
+        expect(await readFile(adhoc, "utf8")).toBe("# Adhoc run doc\n");
+
+        const noop = await runCli(projectRoot, home, ["update", "-i"]);
+
+        expect(noop).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "No changes required.\n",
         });
     });
 

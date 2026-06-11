@@ -4,7 +4,7 @@ This directory is planning context for humans and agents. Keep the active set sm
 
 ## Source of Truth
 
-- `.mawm/initiatives/roadmap.md` and initiative specs under `active/` are the current planning source of truth.
+- `.mawm/agents/initiatives/roadmap.md` and initiative specs under `active/` are the current planning source of truth.
 - Run specs under `active/<initiative-slug>/runs/active/` become active source-of-truth docs only after an executed workflow generates them.
 - Active docs must reflect the project's current direction, current codebase state, and current sequencing.
 - When plans shift, update every affected active doc in the same change. Do not leave stale text in one active file while another active file carries the correction.
