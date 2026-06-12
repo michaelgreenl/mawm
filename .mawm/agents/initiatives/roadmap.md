@@ -15,9 +15,9 @@
 
 ### Strategic Outcomes
 
-- Root CLI and asset tests only encode behavior the project currently supports in v0.
-- Repo and workflow-template asset tests share a Vitest-based path that can run headlessly from the repo root.
-- Example workflow coverage stays isolated from repo-level test cleanup unless a separate initiative explicitly expands scope.
+- Workflows have one canonical installed location (`~/.config/mawm/<workflow-id>`) that is both managed by the CLI and executed by `execute-graph`.
+- Project-local `.mawm/` holds only planning docs (`agents/`) and ignored runtime logs (`logs/`); no executable workflow copies live in target projects.
+- CLI surface, shipped agent prompts, templates, and README all describe the global install model with no dual-mode (`-g`) remnants.
 
 ## State Model
 
@@ -34,17 +34,17 @@
 
 | Initiative            | State    | Horizon | Why it matters                                                                 | Depends on             | Working doc                                                            |
 | --------------------- | -------- | ------- | ------------------------------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------- |
-| `Testing refactor and cleanup` | `active` | `Now`   | Replaces stale test coverage with a Vitest-based suite that matches current supported behavior. | `none` | `.mawm/agents/initiatives/active/testing-refactor-cleanup/spec.md` |
+| `Global workflow install model` | `active` | `Now`   | Collapses the dual project/global install model so workflows are managed and executed from one global location. | `none` | `.mawm/agents/initiatives/active/global-workflow-install-model/spec.md` |
 
 ## Now
 
-### Testing refactor and cleanup
+### Global workflow install model
 
 - State: `active`
-- Goal: Move repo and workflow-template asset coverage to Vitest and keep only tests for current legitimate behavior.
-- Exit signal: Repo-root and workflow-template asset coverage pass headlessly on the new stack, stale legacy/implementation-detail tests are removed, and `workflows/examples/coding/test/**` remains untouched.
-- Working doc: `.mawm/agents/initiatives/active/testing-refactor-cleanup/spec.md`
-- Notes: This initiative applies to workflow-template asset tests, but explicitly excludes `workflows/examples/coding/test/**`.
+- Goal: Make globally installed workflows (`~/.config/mawm/<workflow-id>`) the single executable source; project-local `.mawm/` keeps only planning docs and ignored runtime logs.
+- Exit signal: `execute-graph` resolves global workflows, generates a project-local runtime config under `.mawm/logs/<workflow>/`, and runs with all per-project runtime state there; `install`/`update`/`remove`/`list` are global-only with `-g` removed (`update` defaults to today's `-g` behavior); `init` no longer scaffolds `.mawm/graphs/`; prompts/templates/README match; this repo's committed `.mawm/graphs/` is deleted.
+- Working doc: `.mawm/agents/initiatives/active/global-workflow-install-model/spec.md`
+- Notes: `init -i` / `update -i` planning-asset behavior is unchanged. v0 pre-release: no migration shims for existing project-local installs.
 
 ## Next
 
