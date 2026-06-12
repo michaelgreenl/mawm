@@ -44,7 +44,7 @@ Workflows are installed, updated, listed, removed, and executed from a single gl
 
 ### Run 1: execute-graph resolves and runs global workflows (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/global-workflow-install-model/runs/active/execute-graph-global-resolution/spec.md` (created by the assigned workflow when this run starts)
 - Task: Rework the `execute-graph` tool (both the repo dev copy at `.opencode/tools/execute-graph.ts` and the shipped asset at `src/assets/.config/agents/opencode/tools/execute-graph.ts`, plus their `execute-graph-lib.ts` helpers as needed) to resolve workflows globally and keep runtime state per-project.
 - Current state: `resolveWorkflowLocation` (`.opencode/tools/execute-graph.ts:191-240`) walks up from the OpenCode context directory looking for `<root>/.mawm/graphs/<workflow>`. `ensureLangGraphServer` (lines 375-451) spawns `npx --yes @langchain/langgraph-cli dev --no-browser` with `cwd` set to the workflow root and writes `.langgraph-dev.log`, `.langgraph-dev.json`, and `.langgraph_api/` there. `ensureWorkflowRuntime` (lines 317-349) installs `node_modules` into the workflow root. The tool schema description hardcodes the project-local path contract.
