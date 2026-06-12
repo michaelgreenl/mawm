@@ -83,16 +83,16 @@ Workflows are installed, updated, listed, removed, and executed from a single gl
 
 ### Run 4: Migrate this repo off the committed project-local install (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/global-workflow-install-model/runs/active/repo-graphs-removal/spec.md` (created by the assigned workflow when this run starts)
-- Task: Delete the committed `<repo>/.mawm/graphs/` tree (the `coding` workflow copy and `manifest.json`) so this repo runs purely on the global model.
-- Current state: `.mawm/graphs/coding/` (workflow files committed; runtime junk ignored by its own `.gitignore`) and `.mawm/graphs/manifest.json` are tracked in git. `~/.config/mawm/coding` is installed globally on the development machine. After Runs 1-3, nothing in the product resolves `.mawm/graphs/`.
-- Outcome: `.mawm/graphs/` is removed from the repo and from git tracking. `rg -n "\.mawm/graphs"` across the repo returns no current-truth references. Initiative runs in this repo continue to execute via `~/.config/mawm/coding` with runtime state in `.mawm/logs/coding/`.
-- Scope: Deletion of `.mawm/graphs/**` from the working tree and index; any leftover repo references discovered by the audit.
-- Out of scope: Changes to `~/.config/mawm` contents; product code or docs (complete in prior runs).
-- Contracts: `.mawm/agents/` planning docs are untouched. The deletion must not remove `.mawm/logs/` if present.
-- Verification: `bun run typecheck`, `bun run lint:all`, `bun run test`; `git status` clean apart from the intended deletions; `rg -n "\.mawm/graphs"` audit.
-- Smoke verification: `manual` - HITL confirms `~/.config/mawm/coding` is present and current (re-run `mawm install` from the workflow's dist if stale), then executes a trivial `execute-graph` invocation from this repo and confirms it resolves globally and writes runtime state to `.mawm/logs/coding/`.
+- Task: Reconcile this repo's active planning docs to the actual initiative-branch state and re-verify that this repo executes `coding` only from `~/.config/mawm/coding`.
+- Current state: `git diff --name-status main..HEAD -- ".mawm/graphs"` already shows the committed `coding` workflow copy and `.mawm/graphs/manifest.json` deleted, and `git ls-tree -r --name-only HEAD -- ".mawm/graphs"` is empty. The working-tree `.mawm/` directory now contains planning assets under `agents/` plus ignored runtime logs under `logs/`; any `.mawm/logs/coding/` artifacts are runtime state and must remain untouched. Product code and current-truth docs already reflect the global model, so the remaining mismatch is this stale Run 4 summary.
+- Outcome: Active planning docs match the real initiative-branch state: this repo is already off the committed project-local install, no product paths describe `.mawm/graphs/` as current truth, and Run 4 finishes with reconciliation plus validation instead of new product-code changes. Manual smoke verification confirms `execute-graph` resolves `coding` from `~/.config/mawm/coding`, keeps runtime state under `.mawm/logs/coding/`, and does not recreate `.mawm/graphs/`.
+- Scope: `.mawm/agents/initiatives/active/global-workflow-install-model/spec.md`; `.mawm/agents/initiatives/roadmap.md` only if its active wording must change to stay consistent; final audits, repo verification, and manual smoke evidence for this repo.
+- Out of scope: Any further code or asset changes under `src/`, `.opencode/`, `test/`, or `dist/`; any attempt to delete `.mawm/graphs/` again on this branch; editing or deleting `.mawm/logs/**`; rewriting historical run specs or completed docs that mention `.mawm/graphs/` only as past context.
+- Contracts: `.mawm/graphs/` stays absent from both `HEAD` and the working tree; this run must not reintroduce or recreate it. `.mawm/logs/**` remains ignored runtime state and must not be deleted, staged, or otherwise modified. Product paths (`src`, `.opencode`, `README.md`, `.mawm/agents/_templates`) stay free of current-truth `.mawm/graphs` references; historical mentions elsewhere remain out of scope unless they would contradict this active spec or the roadmap.
+- Verification: `git diff --name-status main..HEAD -- ".mawm/graphs"`; `git ls-tree -r --name-only HEAD -- ".mawm/graphs"`; `rg -n "\.mawm/graphs" src .opencode README.md .mawm/agents/_templates`; `bun run typecheck`; `bun run lint:all`; `bun run test`.
+- Smoke verification: `manual` - HITL confirms `~/.config/mawm/coding` is installed and current enough to run, invokes `execute-graph` against `coding` from this repo, and verifies the workflow root resolves under `~/.config/mawm/coding`, runtime artifacts remain under `.mawm/logs/coding/`, and no `.mawm/graphs/` directory is recreated.
 
 ## Initiative Verification Gates
 
