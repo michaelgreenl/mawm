@@ -84,8 +84,30 @@ export function parseOptions<const TOptions extends readonly AnyOptionDef[]>(
     tokens: readonly string[],
 ): ParsedOptions<TOptions> {
     if (!defs || defs.length === 0) {
+        const positionalTokens: string[] = [];
+        let parseOnlyPositionals = false;
+
+        for (const token of tokens) {
+            if (token === "--") {
+                parseOnlyPositionals = true;
+                continue;
+            }
+
+            if (!parseOnlyPositionals && token.startsWith("--")) {
+                const { key } = splitOptionToken(token, 2);
+                throw new Error(`Unknown option: --${key}`);
+            }
+
+            if (!parseOnlyPositionals && token.startsWith("-") && token !== "-") {
+                const { key } = splitOptionToken(token, 1);
+                throw new Error(`Unknown option: -${key[0]}`);
+            }
+
+            positionalTokens.push(token);
+        }
+
         return {
-            positionalTokens: [...tokens],
+            positionalTokens,
             options: {} as ParsedOptions<TOptions>["options"],
         };
     }

@@ -1,23 +1,14 @@
 import { readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { resolveUserConfigRoot } from "../../config/user-config.js";
-import { defineCommand, option } from "../../utils/builders/command-builder.js";
+import { defineCommand } from "../../utils/builders/command-builder.js";
 
 const list = defineCommand({
     name: "list",
-    description: "Lists installed workflows",
-    usage: "list [-g]",
-    options: [
-        option("global", {
-            alias: "g",
-            type: "boolean",
-        }),
-    ] as const,
-    async run({ context, options }) {
+    description: "Lists workflows in global user config",
+    usage: "list",
+    async run({ context }) {
         try {
-            const workflowsRoot = options.global
-                ? resolveUserConfigRoot(context.env)
-                : join(context.cwd, ".mawm", "graphs");
+            const workflowsRoot = resolveUserConfigRoot(context.env);
             const workflows = (await readdir(workflowsRoot, { withFileTypes: true }))
                 .filter((entry) => entry.isDirectory())
                 .map((entry) => entry.name)

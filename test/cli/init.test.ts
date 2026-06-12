@@ -49,7 +49,7 @@ describe("init command", () => {
         await roots.cleanup();
     });
 
-    test("initializes project assets and missing global config by default", async () => {
+    test("initializes missing global config by default", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
 
@@ -58,13 +58,10 @@ describe("init command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Initialized local MAWM graphs scaffold.\nInitialized global MAWM config.\n",
+            stdout: "Initialized global MAWM config.\n",
         });
-        expect(await readFile(join(projectRoot, ".mawm", "graphs", "manifest.json"), "utf8")).toBe(
-            "[]\n",
-        );
         expect(await readFile(join(home, ".config", "mawm", "manifest.json"), "utf8")).toBe("[]\n");
-        expect(await pathExists(join(projectRoot, ".mawm", "agents"))).toBe(false);
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });
 
     test("copies initiative scaffolds when -i is passed", async () => {
@@ -76,7 +73,7 @@ describe("init command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Initialized local MAWM graphs scaffold.\nInitialized project initiative workspace.\nInitialized global MAWM config.\n",
+            stdout: "Initialized project initiative workspace.\nInitialized global MAWM config.\n",
         });
         expect(await pathExists(join(projectRoot, ".mawm", "agents", "adhoc", "README.md"))).toBe(
             true,
@@ -84,6 +81,7 @@ describe("init command", () => {
         expect(
             await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
         ).toBe(true);
+        expect(await pathExists(join(projectRoot, ".mawm", "graphs"))).toBe(false);
     });
 
     test("initializes the global mawm config with -g without creating a project scaffold", async () => {
@@ -232,7 +230,7 @@ describe("init command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Initialized local MAWM graphs scaffold.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
+            stdout: "Initialized global MAWM config.\nInitialized project agent assets.\n",
         });
         expect(await pathExists(join(projectRoot, ".opencode", "agents", "mawma-manager.md"))).toBe(
             true,
@@ -244,7 +242,7 @@ describe("init command", () => {
             true,
         );
         expect(await readFile(join(home, ".config", "mawm", "manifest.json"), "utf8")).toBe("[]\n");
-        expect(await pathExists(join(projectRoot, ".mawm", "agents"))).toBe(false);
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });
 
     test("initializes project initiative and agent assets with -ia <agent>", async () => {
@@ -256,7 +254,7 @@ describe("init command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Initialized local MAWM graphs scaffold.\nInitialized project initiative workspace.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
+            stdout: "Initialized project initiative workspace.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
         });
         expect(
             await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
@@ -321,10 +319,10 @@ describe("init command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Initialized local MAWM graphs scaffold.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
+            stdout: "Initialized global MAWM config.\nInitialized project agent assets.\n",
         });
         expect(await readFile(path, "utf8")).not.toBe("stale\n");
-        expect(await pathExists(join(projectRoot, ".mawm", "graphs", "manifest.json"))).toBe(true);
+        expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });
 
     test("overwrites existing global agent assets when overwrite is confirmed", async () => {

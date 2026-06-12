@@ -37,6 +37,12 @@ Add the project initiative workspace when you want MAWM's project-local planning
 mawm init -i
 ```
 
+Refresh the managed planning templates, README files, and manifest later without overwriting your roadmap or active docs:
+
+```sh
+mawm update -i
+```
+
 Install the bundled OpenCode agent assets into the current project:
 
 ```sh
@@ -52,61 +58,56 @@ mawm init -t initiative
 
 ## Workflow Management
 
-MAWM separates reusable workflow installation from project-local workflow use.
+MAWM installs workflows globally under `~/.config/mawm/<workflow>`. Project-local `.mawm/` is reserved for planning docs under `.mawm/agents/` and workflow runtime logs under `.mawm/logs/<workflow>/`.
 
 Install a workflow package or built workflow directory into the user-level MAWM config:
 
 ```sh
-mawm install -g [workflow-or-path]  # installs globally (~/.config/mawm/)
+mawm install [workflow-or-path]
 ```
 
-Pull a globally installed workflow into the current project:
+List, reinstall, or remove globally installed workflows:
 
 ```sh
-mawm install <workflow-id>          # copies into .mawm/graphs/
+mawm list
+mawm update [workflow]
+mawm remove <workflow>
 ```
 
-List installed workflows:
+Manage project-local planning assets separately:
 
 ```sh
-mawm list                           # project-local
-mawm list -g                        # global
+mawm init -i     # initialize .mawm/agents/
+mawm update -i   # refresh managed planning assets
 ```
 
-Reinstall from source or remove:
-
-```sh
-mawm update [workflow-id]           # reinstall workflow(s) (project-local)
-mawm update -g [workflow-id]        # reinstall workflow(s) (global)
-mawm remove <workflow-id>           # remove from project
-mawm remove -g <workflow-id>        # remove from global config
-```
+Use `mawm init -g` to initialize `~/.config/mawm/`; use `mawm init -g -a opencode` to install global OpenCode agent assets.
 
 ## Command Reference
 
 ```sh
-# initialize project state, user config, agent assets, or workflow templates
+# initialize project state, global config, agent assets, or workflow templates
 mawm init [-g] [-i] [-a <agent>] [-t [type]]  
 
-# install workflows globally or into the current project
-mawm [i, install] [-g] [workflow-or-path]      
+# install workflows into global user config
+mawm [i, install] [workflow-or-path]      
 
-# list project-local or global workflows
-mawm list [-g]                                 
+# list globally installed workflows
+mawm list                                 
 
-# reinstall one or all workflows from their source
-mawm [u, update] [-g] [workflow]               
+# reinstall one or all globally installed workflows, or refresh project planning assets
+mawm [u, update] [workflow] | -i          
 
-# remove an installed workflow
-mawm [rm, remove] [-g] <workflow>              
+# remove a globally installed workflow
+mawm [rm, remove] <workflow>              
 ```
 
 ## Shipped Assets
 
 The package ships the CLI plus assets copied into `dist/assets` during build:
 
-- Project-local `.mawm` scaffolds for workflow manifests and initiative/adhoc planning docs.
-- User-level MAWM config scaffold with an empty workflow manifest.
+- Project-local `.mawm` scaffolds for initiative and adhoc planning docs under `.mawm/agents/`.
+- User-level MAWM config scaffold with an empty global workflow manifest.
 - OpenCode agent and tool assets, including workflow-runner and mawma-manager agents plus the `execute-graph` tool.
 - `base` and `initiative` workflow templates built from shared LangGraph template assets.
 
@@ -114,14 +115,13 @@ The repository also includes `workflows/examples/coding` as a source example for
 
 ## Running Workflows
 
-Workflow execution is currently handled outside the top-level CLI. Generated workflow packages include LangGraph project files, and the bundled OpenCode assets include an `execute-graph` tool that can launch installed workflows when used by the relevant OpenCode agent.
+Workflow execution is currently handled outside the top-level CLI. Generated workflow packages include the `mawm.json` and `langgraph.json` files, and the bundled OpenCode assets include an `execute-graph` tool that runs globally installed workflows from `~/.config/mawm/<workflow>` while writing project-local runtime state under `<target-project>/.mawm/logs/<workflow>/`.
 
 ## Status
 
 MAWM is in active development and pre-release.
 
-**Post-v0.1.0 Direction:**
-- Running globally installed workflows with project-local customization.
+**Current Direction:**
 - Expanding the root MAWM config into a broader hub for workflow and agent-development settings.
 - Broader agentic-development integrations, including ClaudeCode and Codex support alongside OpenCode.
 - Other features, improvements, and fixes.

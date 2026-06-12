@@ -1,12 +1,18 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test } from "vitest";
 import { runCli } from "../support/cli.js";
 import { pathExists, readJson, writeJson } from "../support/fs.js";
 import { trackRoots } from "../support/tmp.js";
 import { manifestEntry, metadata } from "../support/workflow.js";
 
+const planningRoot = fileURLToPath(
+    new URL("../../src/assets/.mawm.project-local/agents", import.meta.url),
+);
 const roots = trackRoots();
+
+const readAsset = (path: string) => readFile(join(planningRoot, path), "utf8");
 
 describe("update command", () => {
     afterEach(async () => {
@@ -22,138 +28,118 @@ describe("update command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Usage: mawm {u,update} [-g] [workflow] - Reinstalls workflows into a project or into user config\n",
+            stdout: "Usage: mawm {u,update} [workflow] | {u,update} -i - Reinstalls global workflows or refreshes project planning assets\n",
         });
     });
 
-    test("updates a project workflow by replacing files and refreshing metadata", async () => {
+    test("rejects the removed --global flag", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
 
-        const globalRoot = join(home, ".config", "mawm", "demo-workflow");
-        await mkdir(join(globalRoot, "dist"), { recursive: true });
-        await writeJson(
-            join(globalRoot, "mawm.json"),
-            metadata({
-                displayName: "Demo Workflow",
-                id: "demo-workflow",
-                workflowVersion: "2.0.0",
-            }),
-        );
-        await writeJson(join(globalRoot, "langgraph.json"), {
-            graphs: { demo: "./dist/index.js:graph" },
+        const result = await runCli(projectRoot, home, ["update", "--global"]);
+
+        expect(result).toEqual({
+            exitCode: 1,
+            stderr: "Unknown option: --global\n\nUsage: mawm {u,update} [workflow] | {u,update} -i\n",
+            stdout: "",
         });
-        await writeFile(join(globalRoot, "dist", "fresh.js"), "export const fresh = true;\n");
-        await writeFile(join(globalRoot, "dist", "index.js"), "export const graph = 'new';\n");
+    });
 
-        const graphsRoot = join(projectRoot, ".mawm", "graphs");
-        const workflowRoot = join(graphsRoot, "demo-workflow");
-        await mkdir(join(workflowRoot, "dist"), { recursive: true });
-        await writeFile(join(workflowRoot, "dist", "index.js"), "export const graph = 'old';\n");
-        await writeFile(join(workflowRoot, "dist", "stale.js"), "export const stale = true;\n");
-        await writeJson(join(graphsRoot, "manifest.json"), [
-            manifestEntry({
-                displayName: "Old Demo Workflow",
-                id: "demo-workflow",
-            }),
-        ]);
+    test("rejects workflow arguments in planning asset refresh mode", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
 
-        const result = await runCli(projectRoot, home, ["update", "demo-workflow"]);
+        const result = await runCli(projectRoot, home, ["update", "-i", "demo-workflow"]);
+
+        expect(result).toEqual({
+            exitCode: 1,
+            stderr: "The -i option refreshes project planning assets and does not accept a workflow argument.\n",
+            stdout: "",
+        });
+    });
+
+    test("seeds project planning assets with -i", async () => {
+        const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
+        const agentsRoot = join(projectRoot, ".mawm", "agents");
+
+        const result = await runCli(projectRoot, home, ["update", "-i"]);
 
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Updated workflow `demo-workflow` in .mawm/graphs/demo-workflow.\n",
+            stdout: "Updated project planning assets in .mawm/agents.\n",
         });
-        expect(await readJson(join(workflowRoot, "mawm.json"))).toEqual(
-            metadata({
-                displayName: "Demo Workflow",
-                id: "demo-workflow",
-                workflowVersion: "2.0.0",
-            }),
+        expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
+            await readAsset("adhoc/README.md"),
         );
-        expect(await pathExists(join(workflowRoot, "dist", "fresh.js"))).toBe(true);
-        expect(await pathExists(join(workflowRoot, "dist", "stale.js"))).toBe(false);
-        expect(await readJson(join(graphsRoot, "manifest.json"))).toEqual([
-            manifestEntry({
-                displayName: "Demo Workflow",
-                id: "demo-workflow",
-                workflowVersion: "2.0.0",
-            }),
-        ]);
+        expect(await readFile(join(agentsRoot, "initiatives", "manifest.json"), "utf8")).toBe(
+            await readAsset("initiatives/manifest.json"),
+        );
+        expect(await readFile(join(agentsRoot, "initiatives", "roadmap.md"), "utf8")).toBe(
+            await readAsset("initiatives/roadmap.md"),
+        );
+        expect(
+            await pathExists(join(agentsRoot, "_templates", "initiative-spec.template.md")),
+        ).toBe(true);
     });
 
-    test("updates all project workflows from manifest entries and continues after failures", async () => {
+    test("refreshes only managed planning assets and preserves custom planning docs", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
+        const agentsRoot = join(projectRoot, ".mawm", "agents");
+        const roadmap = join(agentsRoot, "initiatives", "roadmap.md");
+        const active = join(agentsRoot, "initiatives", "active", "demo", "spec.md");
+        const adhoc = join(agentsRoot, "adhoc", "active", "demo.md");
 
-        const alphaGlobalRoot = join(home, ".config", "mawm", "alpha");
-        await mkdir(join(alphaGlobalRoot, "dist"), { recursive: true });
-        await writeJson(
-            join(alphaGlobalRoot, "mawm.json"),
-            metadata({
-                displayName: "Alpha Workflow",
-                id: "alpha",
-                workflowVersion: "3.0.0",
-            }),
+        await runCli(projectRoot, home, ["update", "-i"]);
+        await writeFile(join(agentsRoot, "_templates", "run-spec.template.md"), "stale template\n");
+        await writeFile(join(agentsRoot, "adhoc", "README.md"), "stale adhoc readme\n");
+        await writeFile(
+            join(agentsRoot, "initiatives", "manifest.json"),
+            '{"bundleVersion":"old"}\n',
         );
-        await writeJson(join(alphaGlobalRoot, "langgraph.json"), {
-            graphs: { alpha: "./dist/index.js:graph" },
+        await writeFile(roadmap, "# Custom roadmap\n");
+        await mkdir(join(agentsRoot, "initiatives", "active", "demo"), { recursive: true });
+        await mkdir(join(agentsRoot, "adhoc", "active"), { recursive: true });
+        await writeFile(active, "# Active initiative doc\n");
+        await writeFile(adhoc, "# Adhoc run doc\n");
+
+        const result = await runCli(projectRoot, home, ["update", "-i"]);
+
+        expect(result).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "Updated project planning assets in .mawm/agents.\n",
         });
-        await writeFile(join(alphaGlobalRoot, "dist", "fresh.js"), "export const fresh = true;\n");
-        await writeFile(
-            join(alphaGlobalRoot, "dist", "index.js"),
-            "export const graph = 'alpha';\n",
+        expect(await readFile(join(agentsRoot, "_templates", "run-spec.template.md"), "utf8")).toBe(
+            await readAsset("_templates/run-spec.template.md"),
         );
+        expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
+            await readAsset("adhoc/README.md"),
+        );
+        expect(await readFile(join(agentsRoot, "initiatives", "README.md"), "utf8")).toBe(
+            await readAsset("initiatives/README.md"),
+        );
+        expect(await readFile(join(agentsRoot, "initiatives", "manifest.json"), "utf8")).toBe(
+            await readAsset("initiatives/manifest.json"),
+        );
+        expect(await readFile(roadmap, "utf8")).toBe("# Custom roadmap\n");
+        expect(await readFile(active, "utf8")).toBe("# Active initiative doc\n");
+        expect(await readFile(adhoc, "utf8")).toBe("# Adhoc run doc\n");
 
-        const graphsRoot = join(projectRoot, ".mawm", "graphs");
-        const alphaProjectRoot = join(graphsRoot, "alpha");
-        const betaProjectRoot = join(graphsRoot, "beta");
-        const ignoredProjectRoot = join(graphsRoot, "ignored");
-        await mkdir(join(alphaProjectRoot, "dist"), { recursive: true });
-        await mkdir(join(betaProjectRoot, "dist"), { recursive: true });
-        await mkdir(join(ignoredProjectRoot, "dist"), { recursive: true });
-        await writeFile(
-            join(alphaProjectRoot, "dist", "index.js"),
-            "export const graph = 'old';\n",
-        );
-        await writeFile(join(alphaProjectRoot, "dist", "stale.js"), "export const stale = true;\n");
-        await writeFile(
-            join(betaProjectRoot, "dist", "index.js"),
-            "export const graph = 'beta';\n",
-        );
-        await writeFile(
-            join(ignoredProjectRoot, "dist", "index.js"),
-            "export const graph = 'ignored';\n",
-        );
-        await writeJson(join(graphsRoot, "manifest.json"), [
-            manifestEntry({ displayName: "Alpha Workflow", id: "alpha" }),
-            manifestEntry({ displayName: "Beta Workflow", id: "beta" }),
-        ]);
+        const noop = await runCli(projectRoot, home, ["update", "-i"]);
 
-        const result = await runCli(projectRoot, home, ["update"]);
-
-        expect(result.exitCode).toBe(1);
-        expect(result.stdout).toContain("Updated workflow `alpha` in .mawm/graphs/alpha.\n");
-        expect(result.stderr).toContain("beta");
-        expect(result.stderr).toContain("not installed globally");
-        expect(await pathExists(join(alphaProjectRoot, "dist", "fresh.js"))).toBe(true);
-        expect(await pathExists(join(alphaProjectRoot, "dist", "stale.js"))).toBe(false);
-        expect(await pathExists(join(betaProjectRoot, "dist", "index.js"))).toBe(true);
-        expect(await pathExists(join(betaProjectRoot, "dist", "fresh.js"))).toBe(false);
-        expect(await pathExists(join(ignoredProjectRoot, "dist", "index.js"))).toBe(true);
-        expect(await readJson(join(graphsRoot, "manifest.json"))).toEqual([
-            manifestEntry({
-                displayName: "Alpha Workflow",
-                id: "alpha",
-                workflowVersion: "3.0.0",
-            }),
-            manifestEntry({ displayName: "Beta Workflow", id: "beta" }),
-        ]);
+        expect(noop).toEqual({
+            exitCode: 0,
+            stderr: "",
+            stdout: "No changes required.\n",
+        });
     });
 
     test("updates a global workflow from its manifest absolute path and replaces files", async () => {
         const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
         const sourceWorkflowRoot = await roots.dir("mawm-source-");
 
         const sourceDistRoot = join(sourceWorkflowRoot, "dist");
@@ -190,7 +176,7 @@ describe("update command", () => {
             }),
         ]);
 
-        const result = await runCli(home, home, ["update", "-g", "demo-workflow"]);
+        const result = await runCli(projectRoot, home, ["update", "demo-workflow"]);
 
         expect(result).toEqual({
             exitCode: 0,
@@ -213,6 +199,7 @@ describe("update command", () => {
 
     test("updates a global workflow when absolutePath points at a dist directory with parent metadata", async () => {
         const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
         const sourceWorkflowRoot = await roots.dir("mawm-source-");
 
         const sourceDistRoot = join(sourceWorkflowRoot, "dist");
@@ -238,7 +225,7 @@ describe("update command", () => {
             manifestEntry({ absolutePath: sourceDistRoot, id: "coding" }),
         ]);
 
-        const result = await runCli(home, home, ["update", "-g", "coding"]);
+        const result = await runCli(projectRoot, home, ["update", "coding"]);
 
         expect(result).toEqual({
             exitCode: 0,
@@ -258,6 +245,7 @@ describe("update command", () => {
 
     test("updates all global workflows from manifest entries and reports missing sources", async () => {
         const home = await roots.dir("mawm-home-");
+        const projectRoot = await roots.dir("mawm-project-");
         const sourceWorkflowRoot = await roots.dir("mawm-source-");
 
         const sourceDistRoot = join(sourceWorkflowRoot, "dist");
@@ -287,7 +275,7 @@ describe("update command", () => {
             }),
         ]);
 
-        const result = await runCli(home, home, ["update", "-g"]);
+        const result = await runCli(projectRoot, home, ["update"]);
 
         expect(result.exitCode).toBe(1);
         expect(result.stdout).toContain(`Updated workflow \`alpha\` in ${alphaGlobalRoot}.\n`);
@@ -309,7 +297,7 @@ describe("update command", () => {
         ]);
     });
 
-    test("errors when the workflow is not installed in the project manifest", async () => {
+    test("errors when the workflow is not installed in the global manifest", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
 
@@ -320,15 +308,13 @@ describe("update command", () => {
             graphs: { demo: "./dist/index.js:graph" },
         });
         await writeFile(join(globalRoot, "dist", "index.js"), "export const graph = 'new';\n");
-        await mkdir(join(projectRoot, ".mawm", "graphs"), { recursive: true });
-        await writeJson(join(projectRoot, ".mawm", "graphs", "manifest.json"), []);
+        await writeJson(join(home, ".config", "mawm", "manifest.json"), []);
 
         const result = await runCli(projectRoot, home, ["update", "demo-workflow"]);
 
         expect(result.exitCode).toBe(1);
         expect(result.stdout).toBe("");
         expect(result.stderr).toContain("demo-workflow");
-        expect(result.stderr).toContain("not installed in this project");
-        expect(await pathExists(join(projectRoot, ".mawm", "graphs", "demo-workflow"))).toBe(false);
+        expect(result.stderr).toContain("not installed globally");
     });
 });
