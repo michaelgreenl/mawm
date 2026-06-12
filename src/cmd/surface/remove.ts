@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { arg, defineCommand, option } from "../../utils/builders/command-builder.js";
+import { arg, defineCommand } from "../../utils/builders/command-builder.js";
 import { exists, writeJson } from "../../utils/fs.js";
 import { resolveUserConfigRoot } from "../../config/user-config.js";
 import { readManifest } from "../../config/workflow/manifest.js";
@@ -47,43 +47,24 @@ const removeInstalledWorkflow = async ({
 const remove = defineCommand({
     name: "remove",
     aliases: ["rm"],
-    description: "Removes workflows from a project or from user config",
-    usage: "{rm,remove} [-g] <workflow>",
+    description: "Removes workflows from global user config",
+    usage: "{rm,remove} <workflow>",
     args: [
         arg("workflow", {
             required: true,
             type: "string",
         }),
     ] as const,
-    options: [
-        option("global", {
-            alias: "g",
-            type: "boolean",
-        }),
-    ] as const,
-    async run({ args, context, options }) {
+    async run({ args, context }) {
         try {
-            if (options.global) {
-                const configRoot = resolveUserConfigRoot(context.env);
-
-                await removeInstalledWorkflow({
-                    manifestPath: join(configRoot, "manifest.json"),
-                    missingMessage: `Workflow \`${args.workflow}\` is not installed globally.`,
-                    outputPath: join(configRoot, args.workflow),
-                    workflowId: args.workflow,
-                    workflowRoot: join(configRoot, args.workflow),
-                });
-                return 0;
-            }
-
-            const targetGraphsRoot = join(context.cwd, ".mawm", "graphs");
+            const configRoot = resolveUserConfigRoot(context.env);
 
             await removeInstalledWorkflow({
-                manifestPath: join(targetGraphsRoot, "manifest.json"),
-                missingMessage: `Workflow \`${args.workflow}\` is not installed in this project.`,
-                outputPath: `.mawm/graphs/${args.workflow}`,
+                manifestPath: join(configRoot, "manifest.json"),
+                missingMessage: `Workflow \`${args.workflow}\` is not installed globally.`,
+                outputPath: join(configRoot, args.workflow),
                 workflowId: args.workflow,
-                workflowRoot: join(targetGraphsRoot, args.workflow),
+                workflowRoot: join(configRoot, args.workflow),
             });
             return 0;
         } catch (error) {

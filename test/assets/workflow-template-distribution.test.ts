@@ -317,32 +317,27 @@ describe("workflow template distribution", () => {
             }
         }
 
+        expect(await exists(join(root, "dist", "assets", ".mawm.project-local", "graphs"))).toBe(
+            false,
+        );
+
         const home = await mkdtemp(join(tmpdir(), "mawm-home-"));
-        const project = await mkdtemp(join(tmpdir(), "mawm-project-"));
         const repo = await mkdtemp(join(tmpdir(), "mawm-repo-"));
-        temp.push(home, project, repo);
+        temp.push(home, repo);
         await writeFile(join(repo, "README.md"), "# Demo\n");
 
         const env = { HOME: home };
         ok(
-            "global install base-template",
-            run(["bun", bin, "install", "-g", join(distTemplates, "base")], root, env),
+            "install base-template",
+            run(["bun", bin, "install", join(distTemplates, "base")], root, env),
         );
         ok(
-            "global install initiative-template",
-            run(["bun", bin, "install", "-g", join(distTemplates, "initiative")], root, env),
-        );
-        ok(
-            "project install base-template",
-            run(["bun", bin, "install", "base-template"], project, env),
-        );
-        ok(
-            "project install initiative-template",
-            run(["bun", bin, "install", "initiative-template"], project, env),
+            "install initiative-template",
+            run(["bun", bin, "install", join(distTemplates, "initiative")], root, env),
         );
 
-        const baseRoot = join(project, ".mawm", "graphs", "base-template");
-        const initiativeRoot = join(project, ".mawm", "graphs", "initiative-template");
+        const baseRoot = join(home, ".config", "mawm", "base-template");
+        const initiativeRoot = join(home, ".config", "mawm", "initiative-template");
         expect(await json<Meta>(join(baseRoot, "mawm.json"))).toEqual(
             await json<Meta>(join(distTemplates, "base", "mawm.json")),
         );
@@ -403,6 +398,7 @@ describe("workflow template distribution", () => {
         expect(initiativeRun.status).toBe("completed");
         expect(initiativeRun.interrupt).toBeUndefined();
         expect(initiativeRun.runSpecPath).toBe(runSpecPath);
+        expect(await exists(join(repo, ".mawm", "graphs"))).toBe(false);
         expect(await readFile(runSpecPath, "utf8")).toContain(
             "# Run Spec: Run 1: First runnable template",
         );

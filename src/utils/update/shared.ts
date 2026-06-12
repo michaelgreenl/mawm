@@ -3,7 +3,7 @@ import type { WorkflowManifestEntry } from "../../config/workflow/manifest.js";
 /**
  * Resolve the workflows targeted by an update command.
  *
- * @param manifest - Installed workflows available in the selected scope
+ * @param manifest - Installed workflows available in the manifest
  * @param workflowId - Optional specific workflow id filter
  * @param missingMessage - Error message when the requested workflow is absent
  * @returns Target workflows to update

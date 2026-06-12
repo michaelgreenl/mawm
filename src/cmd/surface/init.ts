@@ -14,7 +14,6 @@ import { defineCommand, option } from "../../utils/builders/command-builder.js";
 const PROJECT_LOCAL_ASSETS_ROOT = fileURLToPath(
     new URL("../../assets/.mawm.project-local", import.meta.url),
 );
-const PROJECT_LOCAL_GRAPHS_ROOT = join(PROJECT_LOCAL_ASSETS_ROOT, "graphs");
 const PROJECT_LOCAL_AGENTS_ROOT = join(PROJECT_LOCAL_ASSETS_ROOT, "agents");
 const AGENT_ASSETS_ROOT = fileURLToPath(new URL("../../assets/.config/agents", import.meta.url));
 const TEMPLATE_ASSETS_ROOT = fileURLToPath(
@@ -193,7 +192,6 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
                 }
             }
 
-            let graphs = false;
             let workspace = false;
             let config = false;
             let projectAssets = false;
@@ -206,14 +204,10 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
                     config = await scaffoldUserConfig(context.env);
                 }
             } else {
-                const mawmRoot = join(context.cwd, ".mawm");
-
-                graphs = await copyMissing(PROJECT_LOCAL_GRAPHS_ROOT, join(mawmRoot, "graphs"));
-
                 if (options.includeAgents) {
                     workspace = await copyMissing(
                         PROJECT_LOCAL_AGENTS_ROOT,
-                        join(mawmRoot, "agents"),
+                        join(context.cwd, ".mawm", "agents"),
                     );
                 }
 
@@ -234,7 +228,6 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
             }
 
             const lines = [
-                graphs ? "Initialized local MAWM graphs scaffold." : undefined,
                 workspace ? "Initialized project initiative workspace." : undefined,
                 config ? "Initialized global MAWM config." : undefined,
                 projectAssets ? "Initialized project agent assets." : undefined,

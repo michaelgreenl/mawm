@@ -57,7 +57,7 @@ Workflows are installed, updated, listed, removed, and executed from a single gl
 
 ### Run 2: CLI surface goes global-only (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/global-workflow-install-model/runs/active/cli-global-only/spec.md` (created by the assigned workflow when this run starts)
 - Task: Collapse the dual project/global CLI modes so workflow commands operate only on `~/.config/mawm`, remove the `-g`/`--global` flag everywhere, and stop scaffolding `.mawm/graphs/` in `init`.
 - Current state: `src/cmd/surface/install.ts` has a global branch (lines 29-81) and a project branch (lines 83-114). `src/cmd/surface/update.ts` has `-i` planning mode (lines 36-52), `-g` global mode (lines 54-75), and a default project mode (lines 77-95) backed by `src/utils/update/project.ts`. `src/cmd/surface/remove.ts` (project removal lines 79-87) and `src/cmd/surface/list.ts` (line 20) both read `.mawm/graphs`. `src/cmd/surface/init.ts` seeds `.mawm/graphs/manifest.json` (lines 17, 209-211) from `src/assets/.mawm.project-local/graphs/`. Tests in `test/cli/{install,update,remove,list,init}.test.ts` and `test/assets/workflow-template-distribution.test.ts:296-357` encode the dual model.
