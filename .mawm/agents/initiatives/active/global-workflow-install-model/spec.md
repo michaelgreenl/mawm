@@ -70,7 +70,7 @@ Workflows are installed, updated, listed, removed, and executed from a single gl
 
 ### Run 3: Prompts, templates, and README describe the global model (`coding`)
 
-- [ ] complete
+- [x] complete
 - Run spec path: `.mawm/agents/initiatives/active/global-workflow-install-model/runs/active/docs-global-model/spec.md` (created by the assigned workflow when this run starts)
 - Task: Update every shipped and repo-local prompt, planning template, tool description remnant, and README section that still references `.mawm/graphs/` or the dual install model.
 - Current state: Shipped agent prompts `src/assets/.config/agents/opencode/agents/{workflow-runner,mawma-manager,mawma-planner}.md` (and their `.opencode/agents/` mirrors in this repo) reference `<target-project>/.mawm/graphs/<workflow>` as the installed-workflow source of truth. `src/assets/.mawm.project-local/agents/_templates/run-spec.template.md:17` (mirrored at `.mawm/agents/_templates/run-spec.template.md`) uses the placeholder `<workflow-name-under-.mawm/graphs>`. README.md lines 59-109 document the dual command model ("copies into .mawm/graphs/") and line 131 lists global execution as a post-v0.1.0 item.
