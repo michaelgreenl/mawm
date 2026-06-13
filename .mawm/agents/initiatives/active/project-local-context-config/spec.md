@@ -48,7 +48,7 @@ This initiative spans two git repos and uses one initiative branch and one PR pe
 
 ### Run 1: Execution-time prompt assembly and context-bundle injection (`coding`)
 
-- [ ] complete
+- [x] complete
 - Target repo: `coding` (branch `initiative/project-local-context-config`)
 - Run spec path: `.mawm/agents/initiatives/active/project-local-context-config/runs/active/node-context-injection/spec.md` (created by the assigned workflow when this run starts)
 - Task: Move system-prompt assembly into the OpenCode node's per-invocation path and append a per-agent context bundle supplied through runtime context, without changing default behavior.
