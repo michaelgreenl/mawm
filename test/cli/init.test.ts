@@ -78,9 +78,6 @@ describe("init command", () => {
         expect(await pathExists(join(projectRoot, ".mawm", "agents", "adhoc", "README.md"))).toBe(
             true,
         );
-        expect(
-            await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
-        ).toBe(true);
         expect(await pathExists(join(projectRoot, ".mawm", "graphs"))).toBe(false);
     });
 
@@ -256,9 +253,7 @@ describe("init command", () => {
             stderr: "",
             stdout: "Initialized project initiative workspace.\nInitialized global MAWM config.\nInitialized project agent assets.\n",
         });
-        expect(
-            await pathExists(join(projectRoot, ".mawm", "agents", "initiatives", "manifest.json")),
-        ).toBe(true);
+        expect(await pathExists(join(projectRoot, ".mawm", "agents", "initiatives"))).toBe(true);
         expect(await pathExists(join(projectRoot, ".opencode", "agents", "mawma-manager.md"))).toBe(
             true,
         );

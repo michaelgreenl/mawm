@@ -73,12 +73,6 @@ describe("update command", () => {
         expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
             await readAsset("adhoc/README.md"),
         );
-        expect(await readFile(join(agentsRoot, "initiatives", "manifest.json"), "utf8")).toBe(
-            await readAsset("initiatives/manifest.json"),
-        );
-        expect(await readFile(join(agentsRoot, "initiatives", "roadmap.md"), "utf8")).toBe(
-            await readAsset("initiatives/roadmap.md"),
-        );
         expect(
             await pathExists(join(agentsRoot, "_templates", "initiative-spec.template.md")),
         ).toBe(true);
@@ -88,17 +82,13 @@ describe("update command", () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
         const agentsRoot = join(projectRoot, ".mawm", "agents");
-        const roadmap = join(agentsRoot, "initiatives", "roadmap.md");
+        const roadmap = join(agentsRoot, "roadmap.md");
         const active = join(agentsRoot, "initiatives", "active", "demo", "spec.md");
         const adhoc = join(agentsRoot, "adhoc", "active", "demo.md");
 
         await runCli(projectRoot, home, ["update", "-i"]);
         await writeFile(join(agentsRoot, "_templates", "run-spec.template.md"), "stale template\n");
         await writeFile(join(agentsRoot, "adhoc", "README.md"), "stale adhoc readme\n");
-        await writeFile(
-            join(agentsRoot, "initiatives", "manifest.json"),
-            '{"bundleVersion":"old"}\n',
-        );
         await writeFile(roadmap, "# Custom roadmap\n");
         await mkdir(join(agentsRoot, "initiatives", "active", "demo"), { recursive: true });
         await mkdir(join(agentsRoot, "adhoc", "active"), { recursive: true });
@@ -118,11 +108,8 @@ describe("update command", () => {
         expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
             await readAsset("adhoc/README.md"),
         );
-        expect(await readFile(join(agentsRoot, "initiatives", "README.md"), "utf8")).toBe(
-            await readAsset("initiatives/README.md"),
-        );
-        expect(await readFile(join(agentsRoot, "initiatives", "manifest.json"), "utf8")).toBe(
-            await readAsset("initiatives/manifest.json"),
+        expect(await readFile(join(agentsRoot, "README.md"), "utf8")).toBe(
+            await readAsset("README.md"),
         );
         expect(await readFile(roadmap, "utf8")).toBe("# Custom roadmap\n");
         expect(await readFile(active, "utf8")).toBe("# Active initiative doc\n");
