@@ -11,9 +11,6 @@
 
 ### Strategic Outcomes
 
-- Workflow installs and updates can be reproduced from either local workflow paths or explicit Git URLs recorded in the global manifest.
-- Project-local `.mawm/` holds planning docs (`agents/`), project execution config (`mawm.json`), and ignored runtime logs (`logs/`); no executable workflow copies live in target projects.
-- CLI surface, shipped agent prompts, templates, and README all describe the global install model with no dual-mode (`-g`) remnants.
 - Workflow templates and installed workflows expose a versioned `mawm.json` contract that declares execution requirements, phase/agent topology, and configurable runtime surfaces.
 - Project-local and per-run context and model config are resolved by deterministic MAWM-authored runtime code in the shared `@mawm/core` layer that workflows consume, not interpreted ad hoc by manager-agent prose. Execution-only values such as target repo, initiative branch, and sessions still arrive from the launcher through LangGraph runtime context.
 - OpenCode-backed workflows can receive stacked context and per-agent model overlays while OpenCode remains responsible for provider connectivity and credential handling.
