@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "read": {
+      "../workflows/coding/**": "allow",
+      "*": "deny"
+    },
+    "write": {
+      "../workflows/coding/**": "allow",
+      "*": "deny"
+    }
+  }
+}
