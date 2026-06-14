@@ -83,6 +83,11 @@ This initiative spans two git repos and uses one initiative branch and one PR pe
 - Scope: a new config-resolution module in the coding repo, entry/bootstrap wiring that builds the bundle into runtime context, the coding `mawm.json` topology declaration, and tests.
 - Out of scope: per-run sidecars and model config (per-run-config initiative), the `@mawm/core` lift, and `execute-graph` changes.
 - Contracts: all matching context stacks with duplicates allowed; unknown agent/phase keys raise a clear validation error; absent `.mawm/mawm.json` yields no injected context and unchanged prompts; file-read failures are surfaced, not swallowed; paths resolve only from the project-local and global prompts roots; `.env` is never read.
+- Architecture constraints (must be followed):
+  - The new config-resolution module lives in `src/agents/`, not `src/graph/`. Agent context injection is agent-layer logic.
+  - Agent names and phase-to-agent mappings must be derived from `workflowAgentDefinitions` in `src/agents/definitions.ts` — the single source of truth for agent identity. Do not redeclare agent name strings anywhere else.
+  - Phase topology (`planning`→`[planner, plan-reviewer]`, `implementing`→`[coder, code-reviewer]`) lives alongside agent definitions in `src/agents/` and is derived from the existing definitions, not hardcoded independently.
+  - The new module must not duplicate any data already expressed in `definitions.ts` or `config.ts`.
 - Smoke verification: `manual` - author a representative `.mawm/mawm.json` in a smoke target (for example `mawm-smoke`), run `bun run build:mawm` in the coding repo to reinstall, execute the coding workflow through `execute-graph`, and have HITL confirm the configured context reaches the correct agents and phases and stacks as expected. Headless tests cover resolution, validation, and stacking logic.
 
 ## Initiative Verification Gates
