@@ -61,6 +61,7 @@ afterAll(async () => {
 describe("initiative template assets", () => {
     test("matches the initiative-run metadata contract", async () => {
         const meta = JSON.parse(await readFile(join(initiative, "mawm.json"), "utf8")) as {
+            agents?: string[];
             displayName: string;
             executionContract: {
                 optionalContext: string[];
@@ -71,11 +72,14 @@ describe("initiative template assets", () => {
             };
             id: string;
             kind: string;
+            phases?: string[];
         };
 
         expect(meta.id).toBe("initiative-template");
         expect(meta.displayName).toBe("Initiative Template");
         expect(meta.kind).toBe("initiative-run");
+        expect(meta.agents).toEqual(["agent"]);
+        expect(meta.phases).toEqual(["planning", "implementing"]);
         expect(meta.executionContract).toEqual({
             optionalContext: ["opencodeBaseUrl", "parentSessionID"],
             optionalInput: ["selectedRunLabel"],

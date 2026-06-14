@@ -61,12 +61,12 @@ This initiative spans two git repos and uses one initiative branch and one PR pe
 
 ### Run 2: Workflow topology contract, config schema, and scaffolds (`coding`)
 
-- [ ] complete
+- [x] complete
 - Target repo: `mawm` (branch `initiative/project-local-context-config`)
 - Run spec path: `.mawm/agents/initiatives/active/project-local-context-config/runs/active/config-topology-contract/spec.md` (created by the assigned workflow when this run starts)
 - Task: Extend the mawm workflow contract so an installed workflow can declare its agent and phase topology, define and document the `.mawm/mawm.json` shape with a JSON schema, and scaffold the project-local config stub and the global prompts directory.
 - Current state: `normalizeWorkflowMetadata`/`normalizeExecutionContract` (`src/config/workflow/metadata.ts:75-144`) carry only scalar input/context arrays and drop unknown fields; `src/config/workflow/manifest.ts` propagates only those fields to `~/.config/mawm/manifest.json`. `mawm init` scaffolds `.mawm/agents/` only (`src/assets/.mawm.project-local/agents/`), with no `mawm.json`. The global config scaffold (`src/assets/.config/mawm/`) ships only `manifest.json`; there is no `prompts/` directory and no `.mawm/mawm.json` schema.
-- Outcome: a workflow `mawm.json` can declare `agents` (kebab) and `phases` topology, and `readWorkflowMetadata`/manifest carry it through to the global manifest and `mawm list`. The `.mawm/mawm.json` shape is documented with a JSON schema that validates structure (scoped path arrays). `mawm init` writes a commented `.mawm/mawm.json` stub, the global config scaffold creates `~/.config/mawm/prompts/`, and README plus workflow templates reflect the new contract.
+- Outcome: a workflow `mawm.json` can declare `agents` (kebab) and `phases` topology, and `readWorkflowMetadata`/manifest carry it through to the global manifest and `mawm list`. The `.mawm/mawm.json` shape is documented with a JSON schema that validates structure (scoped path arrays). `mawm init` writes a schema-backed `.mawm/mawm.json` stub that remains valid JSON, the global config scaffold creates `~/.config/mawm/prompts/`, and README plus workflow templates reflect the new contract.
 - Scope: `src/config/workflow/metadata.ts`, `src/config/workflow/manifest.ts`, scaffolds under `src/assets/.mawm.project-local/` and `src/assets/.config/mawm/`, `src/assets/workflow-templates/*/mawm.json`, the `.mawm/mawm.json` JSON schema asset, README, and mawm-repo tests.
 - Out of scope: the runtime config reader (coding repo, Run 3), `execute-graph` runtime behavior, and any model config.
 - Contracts: topology fields are optional and backward-compatible; existing manifests without topology stay valid. Agents are kebab; phases name the workflow's real phases. The schema validates shape only and does not assert that referenced files exist. No change to install/update source behavior.

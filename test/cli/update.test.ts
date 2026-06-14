@@ -8,7 +8,7 @@ import { trackRoots } from "../support/tmp.js";
 import { manifestEntry, metadata } from "../support/workflow.js";
 
 const planningRoot = fileURLToPath(
-    new URL("../../src/assets/.mawm.project-local/agents", import.meta.url),
+    new URL("../../src/assets/.mawm.project-local", import.meta.url),
 );
 const roots = trackRoots();
 
@@ -28,7 +28,7 @@ describe("update command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Usage: mawm {u,update} [workflow] | {u,update} -i - Reinstalls global workflows or refreshes project planning assets\n",
+            stdout: "Usage: mawm {u,update} [workflow] | {u,update} -i - Reinstalls global workflows or refreshes project .mawm assets\n",
         });
     });
 
@@ -53,7 +53,7 @@ describe("update command", () => {
 
         expect(result).toEqual({
             exitCode: 1,
-            stderr: "The -i option refreshes project planning assets and does not accept a workflow argument.\n",
+            stderr: "The -i option refreshes project .mawm assets and does not accept a workflow argument.\n",
             stdout: "",
         });
     });
@@ -61,35 +61,57 @@ describe("update command", () => {
     test("seeds project planning assets with -i", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
-        const agentsRoot = join(projectRoot, ".mawm", "agents");
+        const mawmRoot = join(projectRoot, ".mawm");
+        const agentsRoot = join(mawmRoot, "agents");
 
         const result = await runCli(projectRoot, home, ["update", "-i"]);
 
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Updated project planning assets in .mawm/agents.\n",
+            stdout: "Updated project MAWM assets in .mawm/.\n",
         });
+        expect(await readFile(join(mawmRoot, "mawm.json"), "utf8")).toBe(
+            await readAsset("mawm.json"),
+        );
+        expect(await readFile(join(mawmRoot, "mawm.schema.json"), "utf8")).toBe(
+            await readAsset("mawm.schema.json"),
+        );
         expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
-            await readAsset("adhoc/README.md"),
+            await readAsset(join("agents", "adhoc", "README.md")),
         );
         expect(
             await pathExists(join(agentsRoot, "_templates", "initiative-spec.template.md")),
         ).toBe(true);
     });
 
-    test("refreshes only managed planning assets and preserves custom planning docs", async () => {
+    test("refreshes managed .mawm assets and preserves custom config/docs", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
-        const agentsRoot = join(projectRoot, ".mawm", "agents");
+        const mawmRoot = join(projectRoot, ".mawm");
+        const agentsRoot = join(mawmRoot, "agents");
+        const config = join(mawmRoot, "mawm.json");
         const roadmap = join(agentsRoot, "roadmap.md");
+        const schema = join(mawmRoot, "mawm.schema.json");
         const active = join(agentsRoot, "initiatives", "active", "demo", "spec.md");
         const adhoc = join(agentsRoot, "adhoc", "active", "demo.md");
+        const custom = `${JSON.stringify(
+            {
+                $schema: "./mawm.schema.json",
+                context: {
+                    global: ["docs/custom.md"],
+                },
+            },
+            null,
+            2,
+        )}\n`;
 
         await runCli(projectRoot, home, ["update", "-i"]);
         await writeFile(join(agentsRoot, "_templates", "run-spec.template.md"), "stale template\n");
         await writeFile(join(agentsRoot, "adhoc", "README.md"), "stale adhoc readme\n");
+        await writeFile(config, custom);
         await writeFile(roadmap, "# Custom roadmap\n");
+        await writeFile(schema, "stale schema\n");
         await mkdir(join(agentsRoot, "initiatives", "active", "demo"), { recursive: true });
         await mkdir(join(agentsRoot, "adhoc", "active"), { recursive: true });
         await writeFile(active, "# Active initiative doc\n");
@@ -100,18 +122,20 @@ describe("update command", () => {
         expect(result).toEqual({
             exitCode: 0,
             stderr: "",
-            stdout: "Updated project planning assets in .mawm/agents.\n",
+            stdout: "Updated project MAWM assets in .mawm/.\n",
         });
         expect(await readFile(join(agentsRoot, "_templates", "run-spec.template.md"), "utf8")).toBe(
-            await readAsset("_templates/run-spec.template.md"),
+            await readAsset(join("agents", "_templates", "run-spec.template.md")),
         );
         expect(await readFile(join(agentsRoot, "adhoc", "README.md"), "utf8")).toBe(
-            await readAsset("adhoc/README.md"),
+            await readAsset(join("agents", "adhoc", "README.md")),
         );
         expect(await readFile(join(agentsRoot, "README.md"), "utf8")).toBe(
-            await readAsset("README.md"),
+            await readAsset(join("agents", "README.md")),
         );
+        expect(await readFile(config, "utf8")).toBe(custom);
         expect(await readFile(roadmap, "utf8")).toBe("# Custom roadmap\n");
+        expect(await readFile(schema, "utf8")).toBe(await readAsset("mawm.schema.json"));
         expect(await readFile(active, "utf8")).toBe("# Active initiative doc\n");
         expect(await readFile(adhoc, "utf8")).toBe("# Adhoc run doc\n");
 
@@ -135,6 +159,16 @@ describe("update command", () => {
             name: "demo-workflow",
             version: "4.0.0",
         });
+        await writeJson(
+            join(sourceWorkflowRoot, "mawm.json"),
+            metadata({
+                agents: ["agent", "reviewer"],
+                displayName: "Demo Workflow",
+                id: "demo-workflow",
+                phases: ["planning", "implementing"],
+                workflowVersion: "4.0.0",
+            }),
+        );
         await writeJson(join(sourceWorkflowRoot, "langgraph.json"), {
             graphs: { demo: "./dist/index.js:graph" },
         });
@@ -173,12 +207,21 @@ describe("update command", () => {
         expect(await pathExists(join(globalRoot, "dist", "fresh.js"))).toBe(true);
         expect(await pathExists(join(globalRoot, "dist", "stale.js"))).toBe(false);
         expect(await readJson(join(globalRoot, "mawm.json"))).toEqual(
-            metadata({ id: "demo-workflow", workflowVersion: "4.0.0" }),
+            metadata({
+                agents: ["agent", "reviewer"],
+                displayName: "Demo Workflow",
+                id: "demo-workflow",
+                phases: ["planning", "implementing"],
+                workflowVersion: "4.0.0",
+            }),
         );
         expect(await readJson(join(home, ".config", "mawm", "manifest.json"))).toEqual([
             manifestEntry({
                 absolutePath: sourceDistRoot,
+                agents: ["agent", "reviewer"],
+                displayName: "Demo Workflow",
                 id: "demo-workflow",
+                phases: ["planning", "implementing"],
                 workflowVersion: "4.0.0",
             }),
         ]);

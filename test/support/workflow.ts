@@ -2,8 +2,10 @@ import type { WorkflowManifestEntry } from "../../src/config/workflow/manifest.j
 import type { WorkflowMetadata } from "../../src/config/workflow/metadata.js";
 
 interface MetadataInput {
+    agents?: string[];
     displayName?: string;
     id: string;
+    phases?: string[];
     workflowVersion?: string;
 }
 
@@ -14,7 +16,12 @@ interface ManifestEntryInput extends MetadataInput {
 /** Builds normalized workflow metadata that matches current persisted test fixtures. */
 export const metadata = (input: MetadataInput): WorkflowMetadata => {
     return {
+        id: input.id,
         displayName: input.displayName ?? input.id,
+        workflowVersion: input.workflowVersion ?? "1.0.0",
+        kind: "standalone",
+        ...(typeof input.agents !== "undefined" ? { agents: [...input.agents] } : {}),
+        ...(typeof input.phases !== "undefined" ? { phases: [...input.phases] } : {}),
         executionContract: {
             optionalContext: [],
             optionalInput: [],
@@ -22,9 +29,6 @@ export const metadata = (input: MetadataInput): WorkflowMetadata => {
             requiredInput: [],
             supportsResume: false,
         },
-        id: input.id,
-        kind: "standalone",
-        workflowVersion: input.workflowVersion ?? "1.0.0",
     };
 };
 

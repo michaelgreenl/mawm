@@ -1,0 +1,8 @@
+{
+  "$schema": "./mawm.schema.json",
+  "context": {
+    "global": [],
+    "phases": {},
+    "workflows": {}
+  }
+}

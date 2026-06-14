@@ -18,6 +18,8 @@ export interface WorkflowMetadata {
     displayName: string;
     workflowVersion: string;
     kind: WorkflowKind;
+    agents?: string[];
+    phases?: string[];
     executionContract: WorkflowExecutionContract;
 }
 
@@ -29,6 +31,7 @@ type PackageMetadata = {
 type RecordValue = Record<string, unknown>;
 
 const DEFAULT_WORKFLOW_KIND: WorkflowKind = "standalone";
+const TOPOLOGY_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const createDefaultExecutionContract = (): WorkflowExecutionContract => {
     return {
@@ -52,10 +55,6 @@ const isStringArray = (value: unknown): value is string[] => {
     return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 };
 
-const isWorkflowKind = (value: unknown): value is WorkflowKind => {
-    return value === "initiative-run" || value === "standalone";
-};
-
 const toStringArray = (value: unknown): string[] | undefined => {
     if (typeof value === "undefined") {
         return [];
@@ -70,6 +69,28 @@ const toBoolean = (value: unknown, fallback: boolean): boolean | undefined => {
     }
 
     return typeof value === "boolean" ? value : undefined;
+};
+
+const normalizeTopology = (value: unknown): string[] | undefined => {
+    if (typeof value === "undefined") {
+        return undefined;
+    }
+
+    if (!isStringArray(value)) {
+        return undefined;
+    }
+
+    const ids = new Set<string>();
+
+    for (const entry of value) {
+        if (!TOPOLOGY_ID_PATTERN.test(entry) || ids.has(entry)) {
+            return undefined;
+        }
+
+        ids.add(entry);
+    }
+
+    return [...value];
 };
 
 const normalizeExecutionContract = (value: unknown): WorkflowExecutionContract | undefined => {
@@ -125,21 +146,30 @@ export const normalizeWorkflowMetadata = (value: unknown): WorkflowMetadata | un
     const kind =
         typeof value["kind"] === "undefined"
             ? DEFAULT_WORKFLOW_KIND
-            : isWorkflowKind(value["kind"])
+            : value["kind"] === "initiative-run" || value["kind"] === "standalone"
               ? value["kind"]
               : undefined;
+    const agents = normalizeTopology(value["agents"]);
+    const phases = normalizeTopology(value["phases"]);
     const executionContract = normalizeExecutionContract(value["executionContract"]);
 
-    if (!kind || !executionContract) {
+    if (
+        !kind ||
+        !executionContract ||
+        (typeof value["agents"] !== "undefined" && typeof agents === "undefined") ||
+        (typeof value["phases"] !== "undefined" && typeof phases === "undefined")
+    ) {
         return undefined;
     }
 
     return {
-        displayName: value["displayName"],
-        executionContract,
         id: value["id"],
-        kind,
+        displayName: value["displayName"],
         workflowVersion: value["workflowVersion"],
+        kind,
+        ...(typeof agents !== "undefined" ? { agents } : {}),
+        ...(typeof phases !== "undefined" ? { phases } : {}),
+        executionContract,
     };
 };
 

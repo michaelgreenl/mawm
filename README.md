@@ -19,7 +19,7 @@ Install the package globally
 bun install -g @mawm/cli
 ```
 
-Initialize `.mawm/` in target-project
+Initialize the global MAWM config
 
 ```sh
 mawm init    
@@ -31,13 +31,13 @@ Or run it without a global install:
 bunx @mawm/cli init
 ```
 
-Add the project initiative workspace when you want MAWM's project-local planning docs and templates:
+Add the project initiative workspace when you want MAWM's project-local planning docs, context config, and templates:
 
 ```sh
 mawm init -i
 ```
 
-Refresh the managed planning templates, README files, and manifest later without overwriting your roadmap or active docs:
+Refresh the managed `.mawm/` assets later without overwriting your roadmap, active docs, or local `mawm.json`:
 
 ```sh
 mawm update -i
@@ -58,7 +58,7 @@ mawm init -t initiative
 
 ## Workflow Management
 
-MAWM installs workflows globally under `~/.config/mawm/<workflow>`. Project-local `.mawm/` is reserved for planning docs under `.mawm/agents/` and workflow runtime logs under `.mawm/logs/<workflow>/`.
+MAWM installs workflows globally under `~/.config/mawm/<workflow>`. The global scaffold also creates `~/.config/mawm/prompts/` for shared prompt files. Project-local `.mawm/` holds planning docs under `.mawm/agents/`, optional context config in `.mawm/mawm.json`, its schema in `.mawm/mawm.schema.json`, and workflow runtime logs under `.mawm/logs/<workflow>/`.
 
 Install a workflow package or built workflow directory into the user-level MAWM config:
 
@@ -74,14 +74,53 @@ mawm update [workflow]
 mawm remove <workflow>
 ```
 
-Manage project-local planning assets separately:
+`mawm list` reads installed manifest metadata and surfaces declared topology when present, for example `initiative-template (agents: agent; phases: planning, implementing)`.
+
+Manage project-local `.mawm/` assets separately:
 
 ```sh
-mawm init -i     # initialize .mawm/agents/
-mawm update -i   # refresh managed planning assets
+mawm init -i     # initialize .mawm/ plus planning assets
+mawm update -i   # refresh managed .mawm/ assets
 ```
 
 Use `mawm init -g` to initialize `~/.config/mawm/`; use `mawm init -g -a opencode` to install global OpenCode agent assets.
+
+### Workflow Metadata
+
+Workflow `mawm.json` files can declare optional top-level `agents` and `phases` arrays alongside the execution contract. Use kebab-case identifiers so the topology can be reused in project-local context keys and surfaced by `mawm list`.
+
+```json
+{
+  "id": "initiative-template",
+  "displayName": "Initiative Template",
+  "workflowVersion": "0.0.0",
+  "kind": "initiative-run",
+  "agents": ["agent"],
+  "phases": ["planning", "implementing"],
+  "executionContract": {
+    "requiredInput": ["initiativeSpecPath", "runSpecPath"],
+    "optionalInput": ["selectedRunLabel"],
+    "requiredContext": ["targetRepoPath", "initiativeBranch"],
+    "optionalContext": ["opencodeBaseUrl", "parentSessionID"],
+    "supportsResume": true
+  }
+}
+```
+
+### Project-Local Config
+
+`mawm init -i` seeds `.mawm/mawm.json` with a local `$schema` reference to `.mawm/mawm.schema.json`. The schema covers `context.global[]`, `context.phases.<phase-id>[]`, `context.workflows.<workflow-id>.global[]`, `context.workflows.<workflow-id>.agent.<agent-id>[]`, and `context.workflows.<workflow-id>.phases.<phase-id>[]`, with every leaf expressed as an array of strings.
+
+```json
+{
+  "$schema": "./mawm.schema.json",
+  "context": {
+    "global": [],
+    "phases": {},
+    "workflows": {}
+  }
+}
+```
 
 ## Command Reference
 
@@ -95,7 +134,7 @@ mawm [i, install] [workflow-or-path]
 # list globally installed workflows
 mawm list                                 
 
-# reinstall one or all globally installed workflows, or refresh project planning assets
+# reinstall one or all globally installed workflows, or refresh project .mawm assets
 mawm [u, update] [workflow] | -i          
 
 # remove a globally installed workflow
@@ -107,7 +146,8 @@ mawm [rm, remove] <workflow>
 The package ships the CLI plus assets copied into `dist/assets` during build:
 
 - Project-local `.mawm` scaffolds for initiative and adhoc planning docs under `.mawm/agents/`.
-- User-level MAWM config scaffold with an empty global workflow manifest.
+- Project-local `.mawm/mawm.json` plus `.mawm/mawm.schema.json` for local context authoring.
+- User-level MAWM config scaffold with an empty global workflow manifest and `prompts/README.md` placeholder.
 - OpenCode agent and tool assets, including workflow-runner and mawma-manager agents plus the `execute-graph` tool.
 - `base` and `initiative` workflow templates built from shared LangGraph template assets.
 

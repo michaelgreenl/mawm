@@ -3,6 +3,7 @@
   "displayName": "Base Template",
   "workflowVersion": "0.0.0",
   "kind": "standalone",
+  "agents": ["agent"],
   "executionContract": {
     "requiredInput": [],
     "optionalInput": [],

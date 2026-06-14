@@ -16,6 +16,7 @@ afterAll(async () => {
 describe("base template assets", () => {
     test("matches the standalone metadata contract", async () => {
         const meta = JSON.parse(await readFile(join(base, "mawm.json"), "utf8")) as {
+            agents?: string[];
             displayName: string;
             executionContract: {
                 optionalContext: string[];
@@ -31,6 +32,7 @@ describe("base template assets", () => {
         expect(meta.id).toBe("base-template");
         expect(meta.displayName).toBe("Base Template");
         expect(meta.kind).toBe("standalone");
+        expect(meta.agents).toEqual(["agent"]);
         expect(meta.executionContract).toEqual({
             optionalContext: [],
             optionalInput: [],
@@ -82,6 +84,7 @@ describe("base template assets", () => {
         expect(tests.exitCode).toBe(0);
 
         const meta = JSON.parse(await readFile(join(dir, "dist", "mawm.json"), "utf8")) as {
+            agents?: string[];
             kind: string;
         };
         const langgraph = JSON.parse(
@@ -96,6 +99,7 @@ describe("base template assets", () => {
         };
 
         expect(meta.kind).toBe("standalone");
+        expect(meta.agents).toEqual(["agent"]);
         expect(langgraph.graphs.agent).toBe("./graph.js:graph");
         expect(
             await module.graph.invoke(

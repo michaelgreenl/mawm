@@ -39,7 +39,7 @@ describe("install command", () => {
         });
     });
 
-    test("installs a workflow from the current dist directory and writes current metadata", async () => {
+    test("installs a workflow from the current dist directory and preserves declared topology", async () => {
         const home = await roots.dir("mawm-home-");
         const workflowRoot = await roots.dir("mawm-workflow-");
 
@@ -52,6 +52,16 @@ describe("install command", () => {
             name: "demo-workflow",
             version: "1.2.3",
         });
+        await writeJson(
+            join(workflowRoot, "mawm.json"),
+            metadata({
+                agents: ["agent", "reviewer"],
+                displayName: "Demo Workflow",
+                id: "demo-workflow",
+                phases: ["planning", "implementing"],
+                workflowVersion: "1.2.3",
+            }),
+        );
         await writeFile(join(distRoot, "index.js"), "export const graph = {};\n");
 
         const result = await runCli(distRoot, home, ["install"]);
@@ -64,14 +74,23 @@ describe("install command", () => {
             stdout: `Installed workflow \`demo-workflow\` into ${root}.\n`,
         });
         expect(await readJson(join(root, "mawm.json"))).toEqual(
-            metadata({ id: "demo-workflow", workflowVersion: "1.2.3" }),
+            metadata({
+                agents: ["agent", "reviewer"],
+                displayName: "Demo Workflow",
+                id: "demo-workflow",
+                phases: ["planning", "implementing"],
+                workflowVersion: "1.2.3",
+            }),
         );
         expect(await pathExists(join(root, "langgraph.json"))).toBe(true);
         expect(await pathExists(join(root, "dist", "index.js"))).toBe(true);
         expect(await readJson(join(home, ".config", "mawm", "manifest.json"))).toEqual([
             manifestEntry({
                 absolutePath: distRoot,
+                agents: ["agent", "reviewer"],
+                displayName: "Demo Workflow",
                 id: "demo-workflow",
+                phases: ["planning", "implementing"],
                 workflowVersion: "1.2.3",
             }),
         ]);

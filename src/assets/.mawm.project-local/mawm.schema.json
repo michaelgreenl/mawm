@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "./mawm.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "global": {
+          "$ref": "#/$defs/pathList"
+        },
+        "phases": {
+          "$ref": "#/$defs/phaseMap"
+        },
+        "workflows": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9._-]+$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/workflowContext"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "pathList": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "phaseMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/pathList"
+      }
+    },
+    "agentMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/pathList"
+      }
+    },
+    "workflowContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "global": {
+          "$ref": "#/$defs/pathList"
+        },
+        "agent": {
+          "$ref": "#/$defs/agentMap"
+        },
+        "phases": {
+          "$ref": "#/$defs/phaseMap"
+        }
+      }
+    }
+  }
+}

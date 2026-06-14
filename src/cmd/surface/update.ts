@@ -8,12 +8,12 @@ import { getManifestTargets, outputWorkflowError } from "../../utils/update/shar
 
 const UPDATE_USAGE = "{u,update} [workflow] | {u,update} -i";
 const PLANNING_WORKFLOW_ERROR =
-    "The -i option refreshes project planning assets and does not accept a workflow argument.";
+    "The -i option refreshes project .mawm assets and does not accept a workflow argument.";
 
 const update = defineCommand({
     name: "update",
     aliases: ["u"],
-    description: "Reinstalls global workflows or refreshes project planning assets",
+    description: "Reinstalls global workflows or refreshes project .mawm assets",
     usage: UPDATE_USAGE,
     args: [arg("workflow", { type: "string" })] as const,
     options: [
@@ -33,9 +33,7 @@ const update = defineCommand({
 
                 const changed = await updateProjectPlanningAssets(context.cwd);
                 process.stdout.write(
-                    changed
-                        ? "Updated project planning assets in .mawm/agents.\n"
-                        : "No changes required.\n",
+                    changed ? "Updated project MAWM assets in .mawm/.\n" : "No changes required.\n",
                 );
                 return 0;
             }

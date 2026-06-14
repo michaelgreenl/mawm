@@ -3,6 +3,8 @@
   "displayName": "Initiative Template",
   "workflowVersion": "0.0.0",
   "kind": "initiative-run",
+  "agents": ["agent"],
+  "phases": ["planning", "implementing"],
   "executionContract": {
     "requiredInput": ["initiativeSpecPath", "runSpecPath"],
     "optionalInput": ["selectedRunLabel"],

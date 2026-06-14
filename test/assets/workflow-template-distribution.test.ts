@@ -36,6 +36,7 @@ const required = [
 ] as const;
 
 type Meta = {
+    readonly agents?: readonly string[];
     readonly displayName: string;
     readonly executionContract: {
         readonly optionalContext: readonly string[];
@@ -46,6 +47,7 @@ type Meta = {
     };
     readonly id: string;
     readonly kind: string;
+    readonly phases?: readonly string[];
 };
 
 type RunSummary = {
@@ -299,6 +301,18 @@ describe("workflow template distribution", () => {
         for (const variant of ["base", "initiative"] as const) {
             const sourceMeta = await json<Meta>(join(sourceTemplates, variant, "mawm.json"));
             const distMeta = await json<Meta>(join(distTemplates, variant, "mawm.json"));
+
+            if (variant === "base") {
+                expect(sourceMeta).toMatchObject({ agents: ["agent"] });
+            }
+
+            if (variant === "initiative") {
+                expect(sourceMeta).toMatchObject({
+                    agents: ["agent"],
+                    phases: ["planning", "implementing"],
+                });
+            }
+
             expect(distMeta).toEqual(sourceMeta);
             const pkg = await json<{
                 readonly devDependencies?: {

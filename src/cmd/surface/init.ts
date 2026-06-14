@@ -14,7 +14,6 @@ import { defineCommand, option } from "../../utils/builders/command-builder.js";
 const PROJECT_LOCAL_ASSETS_ROOT = fileURLToPath(
     new URL("../../assets/.mawm.project-local", import.meta.url),
 );
-const PROJECT_LOCAL_AGENTS_ROOT = join(PROJECT_LOCAL_ASSETS_ROOT, "agents");
 const AGENT_ASSETS_ROOT = fileURLToPath(new URL("../../assets/.config/agents", import.meta.url));
 const TEMPLATE_ASSETS_ROOT = fileURLToPath(
     new URL("../../../dist/assets/workflow-templates", import.meta.url),
@@ -206,8 +205,8 @@ export const createInitCommand = (confirmOverwrite: ConfirmOverwrite = confirmOv
             } else {
                 if (options.includeAgents) {
                     workspace = await copyMissing(
-                        PROJECT_LOCAL_AGENTS_ROOT,
-                        join(context.cwd, ".mawm", "agents"),
+                        PROJECT_LOCAL_ASSETS_ROOT,
+                        join(context.cwd, ".mawm"),
                     );
                 }
 

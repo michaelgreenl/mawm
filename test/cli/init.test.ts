@@ -61,6 +61,7 @@ describe("init command", () => {
             stdout: "Initialized global MAWM config.\n",
         });
         expect(await readFile(join(home, ".config", "mawm", "manifest.json"), "utf8")).toBe("[]\n");
+        expect(await pathExists(join(home, ".config", "mawm", "prompts", "README.md"))).toBe(true);
         expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });
 
@@ -78,6 +79,18 @@ describe("init command", () => {
         expect(await pathExists(join(projectRoot, ".mawm", "agents", "adhoc", "README.md"))).toBe(
             true,
         );
+        expect(JSON.parse(await readFile(join(projectRoot, ".mawm", "mawm.json"), "utf8"))).toEqual(
+            {
+                $schema: "./mawm.schema.json",
+                context: {
+                    global: [],
+                    phases: {},
+                    workflows: {},
+                },
+            },
+        );
+        expect(await pathExists(join(projectRoot, ".mawm", "mawm.schema.json"))).toBe(true);
+        expect(await pathExists(join(home, ".config", "mawm", "prompts", "README.md"))).toBe(true);
         expect(await pathExists(join(projectRoot, ".mawm", "graphs"))).toBe(false);
     });
 
@@ -93,6 +106,7 @@ describe("init command", () => {
             stdout: "Initialized global MAWM config.\n",
         });
         expect(await readFile(join(home, ".config", "mawm", "manifest.json"), "utf8")).toBe("[]\n");
+        expect(await pathExists(join(home, ".config", "mawm", "prompts", "README.md"))).toBe(true);
         expect(await pathExists(join(projectRoot, ".mawm"))).toBe(false);
     });
 
@@ -377,8 +391,20 @@ describe("init command", () => {
     test("reports no changes for a successful rerun of init -i", async () => {
         const home = await roots.dir("mawm-home-");
         const projectRoot = await roots.dir("mawm-project-");
+        const path = join(projectRoot, ".mawm", "mawm.json");
+        const value = `${JSON.stringify(
+            {
+                $schema: "./mawm.schema.json",
+                context: {
+                    global: ["docs/custom.md"],
+                },
+            },
+            null,
+            2,
+        )}\n`;
 
         await runCli(projectRoot, home, ["init", "-i"]);
+        await writeFile(path, value);
         const result = await runCli(projectRoot, home, ["init", "-i"]);
 
         expect(result).toEqual({
@@ -386,6 +412,7 @@ describe("init command", () => {
             stderr: "",
             stdout: "No changes required.\n",
         });
+        expect(await readFile(path, "utf8")).toBe(value);
     });
 
     test("reports no changes for a successful rerun of init -a <agent>", async () => {
