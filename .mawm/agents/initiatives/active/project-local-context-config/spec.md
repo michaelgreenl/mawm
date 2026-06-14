@@ -74,7 +74,7 @@ This initiative spans two git repos and uses one initiative branch and one PR pe
 
 ### Run 3: Project-local config reader, resolver, and injector (`coding`)
 
-- [ ] complete
+- [x] complete
 - Target repo: `coding` (branch `initiative/project-local-context-config`)
 - Run spec path: `.mawm/agents/initiatives/active/project-local-context-config/runs/active/project-local-config-reader/spec.md` (created by the assigned workflow when this run starts)
 - Task: Read and validate `.mawm/mawm.json` at runtime, resolve every scope into stacked per-agent context, read the referenced files, populate the injection bundle from Run 1, and declare the coding workflow's topology in its `mawm.json`.
