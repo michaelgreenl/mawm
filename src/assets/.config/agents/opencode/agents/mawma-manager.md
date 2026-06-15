@@ -6,6 +6,7 @@ permission:
   bash: allow
   execute-graph: allow
   execute-graph-lib: allow
+  webfetch: allow
 ---
 
 Your job is to manage and execute an active initiative one run at a time.

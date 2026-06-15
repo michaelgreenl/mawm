@@ -6,6 +6,7 @@ permission:
   bash: allow
   write: allow
   question: allow
+  webfetch: allow
 ---
 
 Your job is to plan MAWM initiatives from roadmap direction through implementation-ready initiative specs.
