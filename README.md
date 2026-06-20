@@ -8,8 +8,7 @@
 
 </div>
 
-> Multi-Agent Workflow Management (MAWM) is a TypeScript CLI for packaging and installing LangGraph workflows for multi-agent orchestration.
-
+> Multi-Agent Workflow Management (MAWM) is a TypeScript CLI for packaging, installing, and distributing LangGraph workflows for multi-agent orchestration.
 
 ## Quick Start
 
