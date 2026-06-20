@@ -1,7 +1,7 @@
 {
   "name": "@mawm/cli",
   "version": "0.1.2",
-  "description": "TypeScript CLI for packaging and installing LangGraph workflows for agent orchestration.",
+  "description": "TypeScript CLI for packaging, installing, and distributing LangGraph workflows for multi-agent orchestration.",
   "license": "MIT-with-Commons-Clause",
   "publishConfig": {
     "access": "public"
