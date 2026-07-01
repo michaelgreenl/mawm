@@ -1,6 +1,6 @@
 {
   "name": "@mawm/cli",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A TypeScript CLI for packaging, installing, and running LangGraph workflow templates with manifest-based distribution and bundled OpenCode execution assets.",
   "license": "MIT-with-Commons-Clause",
   "publishConfig": {
